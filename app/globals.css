@@ -1,26 +1,162 @@
 @import "tailwindcss";
 
+@theme {
+  /* 브랜드 — 회사소개서의 청록. 표지 #00AFA2, 구자료 #00A79D 를 기준으로 잡음 */
+  --color-brand-50: #eaf8f7;
+  --color-brand-100: #cff0ed;
+  --color-brand-400: #35c2b8;
+  --color-brand: #00a79d;
+  --color-brand-600: #008e86;
+  --color-brand-700: #00726c;
+
+  /* 액센트 — 구자료 표지 헤드라인 오렌지. 강조·필수표시·에러에만 */
+  --color-accent: #ff5900;
+  --color-accent-600: #e04e00;
+
+  /* 잉크 — 다크 섹션 배경 (청록 쪽으로 살짝 기울인 먹색) */
+  --color-ink: #0f1a19;
+  --color-ink-800: #172523;
+  --color-ink-700: #22302e;
+  --color-ink-500: #5a6b69;
+
+  --color-line: #e3e6e4;
+  --color-paper: #f5f5f2; /* 신자료 본문 배경 */
+
+  --font-sans: var(--font-noto-kr), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f1a19;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  word-break: keep-all; /* 한글 단어 중간 줄바꿈 방지 */
+}
+
+/**
+ * 공통 가로 컨테이너.
+ * 사이트 전체 폭·좌우 여백을 여기 한 곳에서 조절합니다.
+ *   max-width  = 콘텐츠가 최대로 넓어지는 한계
+ *   padding-inline = 화면 가장자리와 콘텐츠 사이 최소 여백
+ */
+.wrap {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1520px;
+  padding-inline: 1.25rem; /* 20px — 모바일 */
+}
+@media (min-width: 640px) {
+  .wrap {
+    padding-inline: 2rem; /* 32px */
+  }
+}
+@media (min-width: 1024px) {
+  .wrap {
+    padding-inline: 3rem; /* 48px */
+  }
+}
+@media (min-width: 1440px) {
+  .wrap {
+    padding-inline: 4rem; /* 64px */
+  }
+}
+
+/* 접근성 — 스킵 링크 */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+}
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-ink);
+  color: #fff;
+  border-radius: 0.5rem;
+}
+
+/* 스크롤 유도 인디케이터 */
+@keyframes scroll-dot {
+  0% {
+    transform: translateY(-110%);
+  }
+  60%,
+  100% {
+    transform: translateY(260%);
+  }
+}
+.scroll-dot {
+  animation: scroll-dot 1.9s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+}
+
+/* 뷰포트 진입 시 떠오르기 — components/Reveal.tsx 에서 .is-in 을 붙입니다 */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* 스크롤 진입 애니메이션 */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .rise {
+    animation: none;
+  }
+  .scroll-dot {
+    animation: none;
+  }
+  /* 움직임을 줄여달라고 한 사용자에게는 처음부터 보이게 */
+  .reveal,
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 모바일 하단 고정바가 콘텐츠를 가리지 않도록 */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 4.5rem;
+  }
 }

@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# 예시 파일은 실제 키가 없으므로 함께 관리합니다
+!.env.local.example
 
 # vercel
 .vercel
@@ -39,3 +41,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 견적문의 접수 기록
+/data
+
+
+# 개인 사진·임시 파일
+KakaoTalk_*.jpg

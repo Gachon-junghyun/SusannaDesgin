@@ -1,36 +1,277 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 수산나디자인 홈페이지
 
-## Getting Started
+간판 제작·시공 기업 홈페이지. Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4.
 
-First, run the development server:
+## 실행
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build   # 프로덕션 빌드
+npm run lint    # 린트
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 브랜드
 
-To learn more about Next.js, take a look at the following resources:
+회사소개서(`수산나디자인3.pdf`, `회사소개서_20240429.pdf`)에서 추출했습니다.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| | 값 | 쓰임 |
+|---|---|---|
+| Brand (청록) | `#00A79D` | 버튼·링크·활성 상태·CTA 밴드. 신자료 표지 `#00AFA2`, 구자료 `#00A79D` 중 공통값 |
+| Accent (주황) | `#FF5900` | 섹션 eyebrow·필수표시·에러. 구자료 표지 국문 헤드라인 색 |
+| Paper | `#F5F5F2` | 본문 배경. 신자료 내지 배경 |
+| Ink | `#0F1A19` | 다크 섹션. 청록 쪽으로 살짝 기울인 먹색 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+토큰은 `app/globals.css` 의 `@theme` 블록에 있습니다.
 
-## Deploy on Vercel
+**로고는 벡터(SVG)로 변환해 두었습니다.** PDF 안에 벡터 원본이 없어서(임베드 래스터뿐)
+가장 해상도 높은 래스터를 potrace로 트레이싱했습니다. → `public/logo.svg`, `public/logo-white.svg`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+> ⚠️ 원본 AI/EPS 파일이 있으면 그걸로 교체하세요. 현재 SVG는 저해상도 래스터를 되살린
+> 것이라 곡선이 원본 설계와 미세하게 다릅니다. 큰 사이즈(현수막·차량 랩핑)로 쓰기엔
+> 원본이 필요합니다. 웹에서 쓰는 크기(헤더 36px, 푸터 32px)에서는 차이가 보이지 않습니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 관리자 기능 켜기 (Supabase)
+
+첫 화면 사진과 주요 실적을 **코드 수정·재배포 없이** 브라우저에서 직접 바꾸는 기능입니다.
+설정 전에도 공개 홈페이지는 지금 그대로 동작하니, 급하지 않으면 나중에 하셔도 됩니다.
+
+> **📘 화면 그대로 따라가는 안내서: [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md)** (15분)
+> 막히면 `npm run supabase:check` 로 무엇이 잘못됐는지 확인할 수 있습니다.
+> 아래는 요약입니다.
+
+### 1. Supabase 프로젝트 만들기
+
+[supabase.com](https://supabase.com) 에서 프로젝트를 하나 만듭니다 (무료 플랜으로 충분합니다).
+지역은 **Northeast Asia (Seoul)** 을 고르세요. 멀수록 관리 화면이 느려집니다.
+
+> 계정 생성과 비밀번호 입력은 직접 하셔야 합니다.
+
+### 2. 테이블 만들기
+
+대시보드 왼쪽 **SQL Editor** 에서 [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql)
+파일 내용을 통째로 붙여넣고 **RUN**. 테이블·권한 정책·사진 보관함이 한 번에 만들어지고,
+지금 사이트에 있는 슬라이드 3개와 실적 15건이 그대로 들어갑니다.
+여러 번 실행해도 중복으로 쌓이지 않습니다.
+
+### 3. 접속 정보 넣기
+
+**Project Settings → API** 에서 두 값을 복사해 `.env.local` 파일에 넣습니다.
+([`.env.local.example`](.env.local.example) 을 복사해서 쓰세요.)
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
+```
+
+넣은 뒤 개발 서버를 **다시 시작**해야 반영됩니다.
+
+> `service_role` 키는 쓰지 않습니다. 그 키는 모든 권한 검사를 무시하므로 절대 넣지 마세요.
+
+### 4. 관리자 계정 만들기
+
+대시보드 **Authentication → Users → Add user** 로 이메일·비밀번호 계정을 만듭니다.
+
+**가장 먼저 만든 계정이 자동으로 관리자가 됩니다.** 그 다음부터 만들어지는 계정은
+권한 없는 일반 계정이 되니, 계정을 만든 직후 **Authentication → Providers → Email** 에서
+회원가입(Enable sign-ups)을 꺼 두세요. 아무나 가입해서 계정이 늘어나는 걸 막습니다.
+
+이제 `/admin` 으로 들어가 로그인하면 됩니다.
+
+### 무엇을 바꿀 수 있나
+
+| 메뉴 | 할 수 있는 일 |
+|---|---|
+| 첫 화면 사진 | 사진 추가·교체·삭제, 순서 바꾸기, 문구 수정, 잠시 숨기기 |
+| 주요 실적 | 카드 추가·삭제, 사진·업종·지역·태그 수정, 순서 바꾸기, 숨기기 |
+
+저장하면 공개 페이지가 즉시 다시 만들어집니다(`revalidatePath`). 배포할 필요 없습니다.
+
+### 안전장치
+
+- **권한은 DB 가 판단합니다.** 테이블마다 RLS 정책이 걸려 있어, 코드에 실수가 있어도
+  관리자가 아닌 사람은 데이터를 고칠 수 없습니다. 화면에서 막는 건 1차 필터일 뿐입니다.
+- **서버 액션마다 권한을 다시 확인합니다.** 서버 액션은 화면과 별개로 인터넷에 열린
+  엔드포인트라, 화면에서만 막으면 그대로 호출할 수 있기 때문입니다.
+- **관리자 화면은 미리 구워지지 않습니다** (`dynamic = "force-dynamic"`) — 내용이 정적
+  파일로 굳어 새어 나가는 걸 막습니다. 검색엔진 수집도 막아 뒀습니다(`noindex`).
+- **사진은 브라우저에서 스토리지로 곧장 올라갑니다.** 서버 액션은 본문 한도가 1MB 라
+  사진을 못 넘깁니다. 업로드 권한 역시 스토리지 정책이 판단합니다.
+- **Supabase 가 죽어도 홈페이지는 살아 있습니다.** DB 를 못 읽으면 `config/content.ts`
+  내용으로 자동 대체됩니다. 회사 홈페이지가 빈 화면이 되는 상황을 만들지 않습니다.
+- **세션 확인은 `/admin` 에서만 합니다.** 전체 경로에 걸면 방문자마다 인증 서버를
+  거치느라 공개 페이지가 느려집니다.
+
+### 사진은 어디에 저장되나
+
+| 경로 형태 | 의미 |
+|---|---|
+| `/images/hero-night.jpg` | `public/images/` 에 직접 넣은 파일 |
+| `https://xxxxx.supabase.co/storage/...` | 관리자 화면에서 올린 파일 |
+
+둘 다 섞어 쓸 수 있습니다. 기존 사진은 그대로 두고 필요한 것만 관리 화면에서 교체하면 됩니다.
+
+---
+
+## 지금 해야 할 일 3가지
+
+### 1. 남은 회사 정보 채우기 → `config/site.ts`
+
+회사소개서에서 옮길 수 있는 값은 이미 채워 넣었습니다 (상호·대표이사·연락처·주소·설립연도·자본금·임직원·인증 6종).
+남은 `// TODO` 는 아래뿐입니다.
+
+| 항목 | 키 | 비고 |
+|---|---|---|
+| 사업자등록번호 | `bizNo` | **현재 비어 있어 화면에 안 나옵니다.** 값을 넣으면 푸터에 자동 표기 |
+| 옥외광고사업자 등록번호 | `outdoorAdNo` | 채우면 푸터·회사개요에 자동 노출 |
+| ~~도메인~~ | ~~`url`~~ | ✅ `https://susannadesign.co.kr` 확정. **배포 시 www → 비www 301 설정 필요** |
+| 우편번호 | `zip` | 35374 로 추정 입력해 둠, 확인 필요 |
+| 운영시간 | `hours` | 평일 09:00~18:00 으로 가정 |
+| 누적 시공 건수 | `config/content.ts` 의 `stats` | 현재 `0,000건` |
+| 카카오톡 채널 | `kakaoChannelUrl` | 비워두면 톡상담 버튼 미노출 |
+| 지도 | `mapUrl` | 카카오맵/네이버지도 공유 URL |
+
+**전화번호 2개를 나눠 씁니다.**
+`phone`(010-7449-4600)이 대표번호로 헤더·푸터·CTA·모바일 하단바 전부에 나가고,
+`officePhone`(042-541-0171)은 회사개요·오시는길·푸터 법정표기 줄에만 병기됩니다.
+유선만 노출하고 싶으시면 `config/site.ts` 에서 둘을 맞바꾸면 됩니다.
+
+### 2. 사진 넣기 → `public/images/`
+
+**파일명만 맞춰서 넣으면 코드 수정 없이 자동 교체됩니다.**
+파일이 없으면 화면에 "어떤 파일을, 몇 픽셀로" 넣어야 하는지 적힌 회색 박스가 뜹니다.
+
+필요한 사진 목록과 크기는 [`public/images/README.md`](public/images/README.md) 참고. 총 30장 내외입니다.
+
+### 3. 견적 문의 받을 곳 연결 → `app/api/quote/route.ts`
+
+지금은 **콘솔 로그 + `data/quotes.jsonl` 파일**에만 쌓입니다. 실제 운영 전에 아래 중 하나를 붙이세요.
+
+- 이메일 발송 (Resend, SendGrid, 네이버웍스 SMTP)
+- 알림톡·문자 (알리고, 솔라피)
+- 구글 시트 / 노션 DB 적재
+- 슬랙 · 카카오워크 웹훅
+
+파일 안에 `// TODO` 위치를 표시해 뒀습니다.
+
+---
+
+## 구조
+
+```
+app/
+  page.tsx              홈 (히어로 + 간편폼 → 간판종류 → 강점 → 공정 → 실적 → 장비 → CTA)
+  quote/                무료 견적 문의 (전체 폼)
+  signs/                간판종류
+  works/                시공실적 (업종 필터)
+  process/              제작공정
+  about/                회사소개 + 보유장비 + 회사개요
+  support/              고객지원 (FAQ · 오시는길)
+  privacy/ terms/ no-email-collect/   법정 고지
+  api/quote/route.ts    견적 문의 수신 (서버 재검증 · 허니팟 · 레이트리밋)
+  admin/                관리자 화면 ★ (로그인 · 첫화면사진 · 주요실적)
+  admin/actions.ts      저장·삭제·순서변경 서버 액션 (권한 재확인 + 캐시 갱신)
+  sitemap.ts robots.ts not-found.tsx
+
+proxy.ts                /admin 세션 갱신·접근 차단 (구 middleware.ts)
+supabase/migrations/    DB 스키마·권한정책·초기데이터 SQL
+
+components/
+  admin/                관리 화면 전용 (업로드 · 폼 · 셸)
+  Header / Footer / FloatingBar        공통 레이아웃
+  SiteChrome                           /admin 에서 공개 헤더·푸터 숨김
+  HeroSlider                           히어로 슬라이더 (막대 인디케이터)
+  QuickQuoteForm                       히어로 인라인 3필드 폼
+  QuoteForm                            전체 견적 폼
+  PrivacyConsent                       개인정보 동의 (고지 4요소 포함)
+  Img / Placeholder                    사진 자동 교체
+  WorksGrid / Field / Section
+
+config/
+  site.ts               회사 정보 ★
+  content.ts            간판종류 · 공정 · 실적 · 장비 · 폼 선택지
+
+lib/
+  validate.ts           폼 검증 (클라이언트·서버 공용)
+  images.ts             사진 존재 여부 확인 (로컬 파일 · 업로드 URL 모두 처리)
+  cms.ts                DB 에서 콘텐츠 읽기 + 실패 시 content.ts 로 폴백 ★
+  auth.ts               로그인·관리자 권한 확인
+  supabase/             접속 정보 · 클라이언트 3종 · 테이블 타입
+```
+
+`config/content.ts` 는 이제 **초기값 겸 비상용 콘텐츠**입니다. Supabase 를 연결하면
+실제 내용은 DB 에서 오고, DB 를 못 읽을 때만 이 파일이 쓰입니다.
+
+---
+
+## 설계 근거
+
+국내 중견기업 6곳 + 간판업체 3곳의 실제 DOM을 조사해 만들었습니다. 근거는 [`reference/SPEC.md`](reference/SPEC.md), 캡처는 `reference/*.png` 에 있습니다.
+
+- **GNB 6개 + 강조 CTA 1개** — 삼익THK `문의하기 ↗` 패턴
+- **히어로 아래 간판종류 5분할 바** — 이건창호·아이에스동서의 사업분야 바
+- **막대형 인디케이터** — 이건·시스메이트 (점 아님)
+- **견적폼 필드** — 비스퀘어 구조 + 홍간판의 `설치 층수` (고소작업차 여부가 갈리는 견적 변수)
+- **푸터 법정 표기** — 개인정보처리방침 볼드 강조, 이메일무단수집거부 (6곳 공통 규격)
+
+## 레이아웃 폭
+
+좌우 여백은 `app/globals.css` 의 **`.wrap`** 한 곳에서 관리합니다. 헤더·푸터·모든 섹션이 이 클래스를 씁니다.
+
+```
+max-width       1520px          콘텐츠가 최대로 넓어지는 한계
+padding-inline  20 → 32 → 48 → 64px   (모바일 / 640 / 1024 / 1440 이상)
+```
+
+`max-width` 를 키우면 큰 모니터에서 더 넓게, `padding-inline` 을 키우면 화면 가장자리 여백이 넓어집니다.
+읽기용으로 일부러 좁게 둔 곳은 예외입니다 — 업무프로세스 `max-w-6xl`, 개인정보처리방침·이용약관 `max-w-3xl`.
+
+## 스크롤 연출
+
+- **헤더**: 홈에서는 히어로 사진 위에 투명하게 얹혀 있다가(흰 로고·흰 메뉴), 40px 넘게 내리면
+  흰 배경 + 청록 로고로 바뀝니다. `components/Header.tsx` 의 `clear` 상태.
+  다른 페이지는 처음부터 흰 헤더입니다.
+- **히어로 패럴랙스**: 스크롤하면 배경이 살짝 당겨지며 어두워지고, 카피가 위로 밀려 사라집니다.
+  `HeroSlider` 의 `FADE_DISTANCE`(520px)로 속도 조절.
+- **다음 섹션 진입**: 사업영역 바가 둥근 모서리로 히어로 위에 올라탑니다 (`-mt-8 rounded-t-[28px]`).
+- **떠오르기**: 각 섹션이 뷰포트에 들어오면 살짝 올라오며 나타납니다 (`components/Reveal.tsx`).
+  카드들은 `delay` 로 순차 등장. IntersectionObserver가 안 돌아도 3초 뒤 무조건 보이게 하는
+  안전장치가 들어 있습니다.
+- **휠 한 번에 다음 섹션으로**: 히어로 위에서 마우스를 조금만 굴려도 사업영역 섹션까지
+  780ms(easeInOutCubic) 동안 부드럽게 실려 갑니다. `HeroSlider` 의 `glide()`.
+  아래 조건에서만 개입하고 나머지는 브라우저 기본 스크롤 그대로 둡니다.
+
+  | 개입함 | 개입 안 함 |
+  |---|---|
+  | 스크롤 80px 안 (`SNAP_MAX_SCROLL`) | 그 아래 전부 — 히어로 중간에서 읽는 사람은 안 건드림 |
+  | 아래로 굴릴 때 | 위로 굴릴 때 |
+  | 위로 굴린 지 700ms 지난 뒤 | 위로 굴린 직후 (`UP_GUARD_MS`) — 올라가다 멈춘 사람이 살짝 내려도 안 끌려감 |
+  | 빈 영역 | 자체 스크롤이 있는 요소 위 (약관 박스 등) |
+  | 마우스 휠 | 터치 스크롤 (모바일) |
+  | | `Ctrl+휠` 확대/축소, 이동 직후 260ms 쿨다운 |
+
+  이동 중 터치·키 입력이 들어오면 즉시 멈춥니다.
+- **SCROLL 유도**: 히어로 하단 인디케이터. 휠과 **똑같은** `glide()` 를 호출해 착지 위치가
+  일치합니다. 도착 지점은 헤더 높이를 실측해 계산하므로 헤더 크기가 바뀌어도 따라갑니다.
+
+모두 `prefers-reduced-motion: reduce` 를 존중해 자동으로 꺼집니다(휠 스냅 포함).
+
+## 폼 안전장치
+
+- 클라이언트 검증 + **서버 재검증** (클라이언트 우회 시 400)
+- 허니팟 봇 트랩 (캡차는 전환을 깎아서 미사용)
+- IP 기준 레이트리밋 (10분 5회)
+- 첨부파일 최대 5개 · 개당 10MB
+- 개인정보 동의는 체크박스 + **수집항목·목적·보유기간·거부권 고지** (개인정보보호법 제15조)
+
+## 접근성
+
+스킵 링크, `aria-current`, `aria-invalid` + `role="alert"` 인라인 에러, 폼 label 연결, `prefers-reduced-motion` 대응.
