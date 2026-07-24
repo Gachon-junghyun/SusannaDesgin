@@ -12,7 +12,7 @@
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
 | 렌더링 | 공개 페이지 정적(ISR) · 관리자 화면 동적 |
-| 배포 | **Netlify 무료** 권장 — Vercel Hobby 는 상업적 이용 금지라 사용 불가 ([DEPLOY.md](DEPLOY.md)) |
+| 배포 | **Cloudflare Workers 무료** — Vercel Hobby 는 상업적 이용 금지, Netlify 무료는 크레딧 소진 시 사이트 중단 위험 ([DEPLOY.md](DEPLOY.md)) |
 
 ---
 
@@ -44,8 +44,9 @@ Susanna/
 ├── scripts/                ← check-supabase.mjs(연결 진단) · check-rls.mjs(권한 검증)
 ├── reference/              ← 레퍼런스 조사 자료 (SPEC.md + 캡처)
 │
-├── proxy.ts                ← 구 middleware.ts. /admin 세션·접근제어
 ├── next.config.ts          ← 이미지 원격 호스트 허용
+├── wrangler.jsonc          ← Cloudflare 배포 설정
+├── open-next.config.ts     ← Next.js → Cloudflare 어댑터
 ├── .env.local              ← Supabase 키 (git 제외)
 ├── .env.local.example      ← 위 파일의 서식
 ├── AGENTS.md / CLAUDE.md   ← AI 에이전트 작업 규칙
@@ -191,11 +192,15 @@ lib/supabase/public.ts
 
 ### F8. 인증 · 권한
 ```
-proxy.ts                     matcher: ["/admin/:path*"] 만
-├── Supabase 세션 토큰 갱신 (서버 컴포넌트는 쿠키를 못 써서 여기서만 가능)
-├── 비로그인 + /admin → /admin/login?next=...
-└── 로그인 + /admin/login → /admin
-    ※ 전체 경로에 걸지 않음 — 방문자마다 인증서버 왕복이 생겨 공개 페이지가 느려짐
+components/admin/SessionKeeper.tsx (client, 화면 없음)
+└── 브라우저 클라이언트가 토큰 자동 갱신 → 쿠키에 기록 → 서버도 그 쿠키를 읽음
+    ※ 예전에는 proxy.ts(구 middleware)가 했으나 배포처를 가리는 원인이라 제거.
+      지금은 특정 호스팅에 묶이지 않습니다.
+
+접근 차단
+└── 각 관리자 페이지의 requireAdmin() 이 redirect("/admin/login")
+    /admin/login 은 이미 로그인돼 있으면 /admin 으로 되돌림
+    ※ 레이아웃이 아니라 페이지마다 검사 — 레이아웃은 이동 시 다시 안 그려짐
 
 lib/auth.ts (server-only)
 ├── getCurrentUser()  React cache 로 렌더당 1회. getUser()로 토큰 검증
@@ -346,7 +351,8 @@ RLS
 | TODO | 견적 문의 **실시간 알림**(이메일·알림톡) 미연결 — DB 저장은 되므로 `/admin/quotes` 를 주기적으로 봐야 함 | `app/api/quote/route.ts` |
 | TODO | 레이트리밋이 인메모리 — 서버리스에서 인스턴스마다 따로 세므로 사실상 헐거움 | 〃 |
 | ⚠️ 배포 | `0002_quotes.sql` 미실행 시 **견적 문의 유실**. 배포 전 필수 | [`DEPLOY.md`](DEPLOY.md) 0단계 |
-| ⚠️ 배포 | **Vercel Hobby 사용 금지** — 상업적 이용 위반, 사전 통보 없이 중단 가능. Netlify 무료 또는 Vercel Pro | 〃 |
+| ⚠️ 배포 | **Vercel Hobby 사용 금지** — 상업적 이용 위반, 사전 통보 없이 중단 가능 | 〃 |
+| 해소 | ~~proxy.ts 로 인한 배포처 제약~~ → 제거 완료. 어느 호스팅에서든 동작 | F8 |
 | 해소 | ~~Supabase 7일 자동 정지~~ → GitHub Actions 로 3일마다 자동 깨우기 (시크릿 등록 필요) | `.github/workflows/keep-supabase-awake.yml` |
 | TODO | 사업자등록번호 · 옥외광고사업 등록번호 · 도메인 · 우편번호 · 운영시간 · 누적건수 | `config/site.ts` |
 | ⚠️ 배포 | 도메인은 `https://susannadesign.co.kr` (**www 없음**) 확정. 배포 시 **www → 비www 301 리다이렉트 필수** — 안 하면 중복 콘텐츠로 평가가 쪼개짐 | 호스팅 설정 |

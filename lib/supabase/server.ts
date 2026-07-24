@@ -28,8 +28,8 @@ export async function createClient() {
             cookieStore.set(name, value, options);
           }
         } catch {
-          // 서버 컴포넌트에서는 쿠키를 쓸 수 없습니다.
-          // 세션 갱신은 proxy.ts 가 담당하므로 여기서는 무시해도 안전합니다.
+          // 서버 컴포넌트에서는 쿠키를 쓸 수 없습니다(서버 액션·라우트 핸들러에서는 됩니다).
+          // 토큰 갱신은 브라우저 쪽 SessionKeeper 가 담당하므로 여기서는 무시해도 안전합니다.
         }
       },
     },

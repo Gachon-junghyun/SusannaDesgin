@@ -48,3 +48,7 @@ next-env.d.ts
 
 # 개인 사진·임시 파일
 KakaoTalk_*.jpg
+
+# Cloudflare 배포 산출물
+.open-next/
+.wrangler/

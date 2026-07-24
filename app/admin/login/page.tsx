@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import LoginForm from "@/components/admin/LoginForm";
+import { getCurrentUser } from "@/lib/auth";
 import { isCmsEnabled } from "@/lib/supabase/env";
+
+/** 로그인 상태를 매번 확인해야 하므로 미리 굽지 않습니다. */
+export const dynamic = "force-dynamic";
 
 export default async function LoginPage({
   searchParams,
@@ -9,6 +14,13 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const { next, error } = await searchParams;
+
+  // 이미 관리자로 로그인해 있으면 로그인 화면을 다시 보여줄 이유가 없습니다.
+  // (권한 없는 계정은 error=forbidden 안내를 봐야 하므로 그대로 둡니다.)
+  if (error !== "forbidden") {
+    const user = await getCurrentUser();
+    if (user?.role === "admin") redirect("/admin");
+  }
 
   // 로그인 후 돌아갈 곳. 외부 주소로 튕겨 보내는 공격을 막기 위해
   // 반드시 우리 사이트의 /admin 아래 경로여야 합니다.

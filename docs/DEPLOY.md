@@ -22,25 +22,31 @@ Vercel 공식 문서 [Fair Use Guidelines](https://vercel.com/docs/limits/fair-u
 
 ### 선택지
 
-| | 상업적 이용 | 비용 | Next.js 16 | 비고 |
+| | 상업적 이용 | 비용 | 한도 | 소진되면 |
 |---|---|---|---|---|
-| **Netlify 무료** | ✅ 허용 | **0원** | 공식 지원 | **권장** — 무료로 합법 |
-| Vercel Pro | ✅ | $20/월 (연 ~35만원) | 원조 | 가장 매끄럽지만 유일하게 유료 |
-| Cloudflare Workers 무료 | ✅ 허용 | 0원 | 어댑터 필요 | `proxy.ts` 미지원 위험 |
-| ~~Vercel Hobby~~ | ❌ **위반** | — | — | 쓰면 안 됨 |
+| **Cloudflare Workers** | ✅ 허용 | **0원** | 하루 10만 요청 · **대역폭 무제한** | 넉넉해서 사실상 안 닿음 |
+| Netlify 무료 | ✅ 허용 | 0원 | 월 300크레딧 (배포 1회 = 15) | ⚠️ **사이트가 오프라인** 될 수 있음 |
+| Vercel Pro | ✅ | 연 ~35만원 | 넉넉 | — |
+| ~~Vercel Hobby~~ | ❌ **위반** | — | — | 통보 없이 중단 |
 
-**Netlify 를 권합니다.** 상업적 이용이 명시적으로 허용되고, Next.js 16 을
-설정 없이 지원합니다. Next.js 16.2 의 공식 어댑터 파트너이기도 합니다.
+**Cloudflare Workers 를 권합니다.**
 
-> **Cloudflare 를 뺀 이유**: 우리 `proxy.ts`(관리자 접근 제어)가 Node 미들웨어인데,
-> Cloudflare 어댑터가 아직 지원하지 않습니다. 다만 **보안은 무너지지 않습니다** —
-> 실제 권한 판단은 각 화면의 `requireAdmin()` 과 DB 의 RLS 가 하고, proxy 는
-> 편의를 위한 1차 필터일 뿐이라 그렇게 설계했습니다(원칙 A2).
-> 그래도 굳이 위험을 안을 이유는 없습니다.
+Netlify 는 2026년부터 크레딧제로 바뀌었는데, **배포 1회에 15크레딧**이라
+초기에 고쳐가며 20번만 배포해도 월 한도 300이 소진됩니다. 그러면 공식 문서상
+*"사이트가 오프라인이 될 수 있다"* 고 되어 있어, 회사 홈페이지에는 위험합니다.
+
+Cloudflare 는 하루 10만 요청에 **대역폭 과금이 아예 없습니다.** 지역 간판업체
+홈페이지가 닿을 수 있는 규모가 아닙니다.
+
+> **예전에 Cloudflare 를 뺐던 이유는 해결했습니다.**
+> 관리자 세션 갱신을 `proxy.ts`(구 middleware)에서 하고 있었는데, 이게
+> Cloudflare 미지원이라 걸림돌이었습니다. 갱신을 브라우저 쪽으로 옮기고
+> `proxy.ts` 를 없앴습니다(`components/admin/SessionKeeper.tsx`).
+> 그 결과 **어느 호스팅에서든 돌아갑니다** — 나중에 옮기고 싶어도 자유롭습니다.
 
 > **돈을 조금 써도 편한 게 낫다면** Vercel Pro 가 가장 매끄럽습니다.
 > 연 35만원은 국내 웹에이전시 유지보수 계약(보통 월 5~15만원)보다 쌉니다.
-> 아래 안내는 Netlify 기준이며, Vercel Pro 도 절차는 거의 같습니다.
+> 아래 안내는 Cloudflare 기준입니다.
 
 ---
 
@@ -50,7 +56,7 @@ Vercel 공식 문서 [Fair Use Guidelines](https://vercel.com/docs/limits/fair-u
 |---|---|---|
 | 0 | 견적 문의 테이블 만들기 ★ | 2분 |
 | 1 | GitHub 에 코드 올리기 | 10분 |
-| 2 | Netlify 연결 + 환경변수 | 10분 |
+| 2 | Cloudflare 연결 + 환경변수 | 10분 |
 | 3 | 배포 확인 | 5분 |
 | 4 | Supabase 정지 방지 켜기 | 3분 |
 | 5 | (나중에) 도메인 연결 | 10분 |
@@ -120,36 +126,51 @@ git push -u origin master
 
 ---
 
-## 2단계 — Netlify 연결
+## 2단계 — Cloudflare 연결
+
+Cloudflare 에서 돌리는 데 필요한 설정 파일(`wrangler.jsonc`, `open-next.config.ts`)은
+이미 넣어 뒀고, **빌드가 통과하는 것까지 확인했습니다**
+(용량 1.45 MiB / 무료 한도 3 MiB — 절반 정도).
 
 ### 2-1. 프로젝트 가져오기
 
-1. [netlify.com](https://www.netlify.com) → **Sign up** → **GitHub** 으로 가입
-2. **Add new site** → **Import an existing project** → **GitHub**
-3. 방금 만든 `susanna-design` 저장소 선택
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → 가입 (무료)
+2. 왼쪽 메뉴 **Workers & Pages** → **Create** → **Workers** 탭 → **Import a repository**
+3. GitHub 연결 → `susanna-design` 저장소 선택
 
-빌드 설정은 Next.js 로 자동 인식됩니다. **아무것도 바꾸지 마세요.**
-(수동 확인용: Build command `npm run build`, Publish directory `.next`)
+빌드 설정을 아래와 같이 지정합니다.
+
+| 항목 | 값 |
+|---|---|
+| Build command | `npm run cf:build` |
+| Deploy command | `npx wrangler deploy` |
 
 ### 2-2. 환경변수 넣기 ★
 
-**Deploy 를 누르기 전에** `Add environment variables` 를 펼치고 아래 두 개를 넣습니다.
+**Settings → Variables and Secrets** 에서 아래 두 개를 넣습니다.
 `.env.local` 파일에 있는 값과 **똑같이** 넣으면 됩니다.
 
-| Key | Value |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxxx.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGci...` (긴 문자열) |
+| 이름 | 값 | 종류 |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxxx.supabase.co` | Text |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGci...` (긴 문자열) | Text |
 
+> **빌드 시점에도 필요한 값**이라 Secret 이 아니라 Text(플레인)로 넣습니다.
+> 어차피 브라우저에 노출되는 게 정상인 키이고, 실제 권한은 DB 의 RLS 가 판단합니다.
+>
 > 이걸 빠뜨리면 관리자 화면이 안 열리고 견적 문의도 저장되지 않습니다.
-> 나중에 추가해도 되지만, 그때는 **재배포**를 해야 반영됩니다.
+> 나중에 추가하면 **재배포**를 해야 반영됩니다.
 
 ### 2-3. 배포
 
-**Deploy** 클릭 → 2~3분 기다리면 끝입니다.
+**Deploy** 클릭 → 3~5분 기다리면 끝입니다.
 
-`susanna-design-xxxx.netlify.app` 같은 **임시 주소**가 나옵니다.
+`susanna-design.<계정이름>.workers.dev` 같은 **임시 주소**가 나옵니다.
 이 주소로 전 세계 어디서나 접속됩니다.
+
+> **로컬에서 미리 확인하고 싶으면**: `npm run cf:preview`
+> (Windows 에서는 OpenNext 가 경고를 띄웁니다. 실제 배포는 Cloudflare 서버(리눅스)에서
+> 돌기 때문에 문제되지 않지만, 로컬 미리보기가 이상하면 WSL 을 쓰세요.)
 
 > **임시 주소는 검색에 안 잡히게 막아 뒀습니다.** 임시 주소가 구글에 등록되면
 > 나중에 진짜 도메인과 서로 순위를 깎아먹기 때문입니다. 도메인을 연결하면
@@ -207,34 +228,41 @@ git push -u origin master
 > 가장 쌉니다(갱신 시 가격이 뛰지 않음). 다만 국내 고객 대상이라면 `.co.kr` 이
 > 신뢰 신호로는 낫습니다.
 
-### 5-2. Netlify 에 등록
+### 5-2. Cloudflare 에 도메인 추가
 
-1. Netlify 사이트 → **Domain management** → **Add a domain**
-2. `susannadesign.co.kr` 입력 → **Verify** → **Add domain**
-3. **Primary domain 으로 지정** ★ — www 로 들어와도 이쪽으로 넘어갑니다
+Cloudflare 는 DNS 도 같이 관리하는 게 가장 간단합니다.
+
+1. Cloudflare 대시보드 → **Add a domain** → `susannadesign.co.kr` 입력
+2. Cloudflare 가 알려주는 **네임서버 2개**를 도메인 산 곳(가비아 등)의
+   **네임서버 변경** 화면에 넣습니다
+3. 반영되면(보통 몇 분~수 시간) Cloudflare 가 DNS 를 관리합니다
+
+### 5-3. Worker 에 도메인 연결
+
+1. **Workers & Pages** → `susanna-design` → **Settings** → **Domains & Routes**
+2. **Add** → **Custom domain** → `susannadesign.co.kr`
+3. `www.susannadesign.co.kr` 도 추가
+
+**www 를 비 www 로 넘기기** — DNS 화면에서 규칙 하나를 추가합니다.
+
+**Rules** → **Redirect Rules** → **Create rule**
+
+| 항목 | 값 |
+|---|---|
+| 조건 | Hostname equals `www.susannadesign.co.kr` |
+| 동작 | Dynamic redirect → `concat("https://susannadesign.co.kr", http.request.uri.path)` |
+| 상태 코드 | **301** (영구 이동) |
 
 > **왜 중요한가**: 두 주소가 모두 열리면 검색엔진이 서로 다른 사이트로 보고
-> 평가를 반으로 쪼갭니다. Primary 지정이 이걸 막아 줍니다.
-
-### 5-3. DNS 설정
-
-Netlify 가 화면에 알려주는 값을 도메인 산 곳(가비아 등)의 **DNS 관리** 화면에 넣습니다.
-
-| 종류 | 호스트 | 값 |
-|---|---|---|
-| A | `@` | Netlify 가 알려주는 IP |
-| CNAME | `www` | `<사이트이름>.netlify.app` |
-
-> 실제 값은 **Netlify 화면에 표시된 것**을 쓰세요. 반영에 10분~수 시간 걸립니다.
-> HTTPS 인증서는 도메인이 연결되면 자동으로 발급됩니다.
+> 평가를 반으로 쪼갭니다. HTTPS 인증서는 자동 발급됩니다.
 
 ### 5-4. 환경변수 정리
 
-도메인이 붙으면 Netlify → **Site configuration** → **Environment variables** 확인:
+도메인이 붙으면 **Settings → Variables** 확인:
 
 - `NEXT_PUBLIC_SITE_URL` 이 있다면 **삭제**하거나 `https://susannadesign.co.kr` 로 설정
 
-그 뒤 **Deploys → Trigger deploy → Deploy site**.
+그 뒤 **Deployments → 맨 위 → Retry deployment**.
 
 이러면 검색 차단이 풀리고 sitemap·canonical 이 진짜 도메인으로 바뀝니다.
 
@@ -271,12 +299,15 @@ git push
 
 ## 비용
 
-| 항목 | 비용 |
-|---|---|
-| Netlify | 무료 (상업적 이용 허용) |
-| Supabase | 무료 (저장공간 1GB, 파일 5GB) |
-| 도메인 `.co.kr` | 연 1~2만원 |
-| **합계** | **연 1~2만원** |
+| 항목 | 비용 | 한도 |
+|---|---|---|
+| Cloudflare Workers | 무료 | 하루 10만 요청 · 대역폭 무제한 |
+| Supabase | 무료 | DB 500MB · 파일 1GB |
+| 도메인 `.co.kr` | 연 1~2만원 | — |
+| **합계** | **연 1~2만원** | |
+
+지역 간판업체 홈페이지가 하루 10만 요청에 닿을 일은 없습니다.
+(방문자 1명이 대략 20~40 요청이니, 하루 2,500명까지 무료입니다.)
 
 Vercel Pro 를 쓰신다면 여기에 연 35만원(월 $20)이 추가됩니다.
 
