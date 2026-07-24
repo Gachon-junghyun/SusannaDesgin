@@ -1,0 +1,51 @@
+# Supabase 무료 프로젝트 자동 정지 방지
+#
+# 무료 플랜은 7일간 요청이 하나도 없으면 프로젝트를 멈춥니다.
+# 멈추면 관리자 화면과 견적 문의 저장이 모두 죽습니다.
+# (공개 페이지는 config/content.ts 폴백으로 계속 보이지만, 문의는 못 받습니다.)
+#
+# 방문자가 꾸준하면 어차피 안 멈추지만, 개업 초기나 비수기에는 며칠씩 비는 일이
+# 실제로 생깁니다. 그때 문의가 들어오면 그게 곧 손실입니다.
+# 그래서 사흘에 한 번 가벼운 조회를 보내 깨워 둡니다.
+#
+# ── 설정 (한 번만) ──────────────────────────────────────────
+#  GitHub 저장소 → Settings → Secrets and variables → Actions
+#  → New repository secret 으로 아래 두 개 등록:
+#     SUPABASE_URL       .env.local 의 NEXT_PUBLIC_SUPABASE_URL 값
+#     SUPABASE_ANON_KEY  .env.local 의 NEXT_PUBLIC_SUPABASE_ANON_KEY 값
+#  등록 후 Actions 탭에서 한 번 수동 실행(Run workflow)해 확인하세요.
+
+name: Supabase 깨어 있게 유지
+
+on:
+  schedule:
+    # 사흘에 한 번, 한국시간 오전 9시 (UTC 00:00)
+    # 7일 한도에 여유를 두려고 3일로 잡았습니다. 한 번 실패해도 다음 회차가 남습니다.
+    - cron: "0 0 */3 * *"
+  workflow_dispatch: # 수동 실행 버튼
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 공개 테이블 1건 조회
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "::error::SUPABASE_URL 시크릿이 없습니다. README 의 설정 절차를 확인하세요."
+            exit 1
+          fi
+
+          code=$(curl -s -o /tmp/res.json -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/works?select=id&limit=1")
+
+          echo "HTTP $code"
+          cat /tmp/res.json
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabase 응답이 200 이 아닙니다. 프로젝트가 이미 멈췄거나 키가 틀렸을 수 있습니다."
+            exit 1
+          fi
+
+          echo "✔ Supabase 정상 — 정지 타이머 초기화됨"
