@@ -1,0 +1,28 @@
+# Cloudflare 정적 자산 캐시 규칙
+#
+# 왜 필요한가:
+#   기본값이 `max-age=0, must-revalidate` 라, 재방문해도 로고·사진·스크립트를
+#   매번 다시 받아옵니다. 느릴 뿐 아니라 무료 요청 한도(하루 10만)도 그만큼 씁니다.
+#   내용이 안 바뀌는 파일은 브라우저가 갖고 있게 두는 게 맞습니다.
+#
+# 형식: 경로 한 줄, 그 아래 들여쓴 헤더들.
+
+# 빌드 산출물 — 파일명에 해시가 붙어 내용이 바뀌면 이름도 바뀝니다.
+# 그래서 영구 캐시해도 안전합니다(immutable).
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 로고·파비콘 — 거의 안 바뀝니다. 하루 캐시하되 그 뒤엔 확인합니다.
+/logo.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/logo-white.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/icon.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/apple-icon.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# 사진 — public/images/ 에 직접 넣은 것들.
+# 파일을 교체하면 이름이 같으므로, 하루 뒤에는 새로 확인하게 둡니다.
+/images/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

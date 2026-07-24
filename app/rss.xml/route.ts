@@ -11,7 +11,8 @@ import { seo, site } from "@/config/site";
  * 등록: searchadvisor.naver.com → 사이트 관리 → 요청 → RSS 제출
  *       주소는 https://도메인/rss.xml
  */
-export const revalidate = 600;
+/** 요청 시 생성 — 이유는 `app/page.tsx` 의 dynamic 설정 주석 참고. */
+export const dynamic = "force-dynamic";
 
 function escapeXml(s: string): string {
   return s

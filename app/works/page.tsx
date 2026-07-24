@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/works" },
 };
 
-/** 관리자 저장 시 즉시 갱신됩니다. 아래는 그 외 경로를 위한 안전장치입니다. */
-export const revalidate = 600;
+/** 요청 시 렌더링 — 이유는 `app/page.tsx` 의 같은 설정 주석 참고. */
+export const dynamic = "force-dynamic";
 
 export default async function WorksPage() {
   const works = await getWorks();

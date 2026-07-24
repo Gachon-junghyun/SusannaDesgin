@@ -10,11 +10,14 @@ import { getSlides, getWorks } from "@/lib/cms";
 import { imageExists } from "@/lib/images";
 
 /**
- * 관리자가 저장하면 서버 액션이 `revalidatePath("/")` 로 이 페이지를 즉시 새로 굽습니다.
- * 아래 값은 그 경로를 타지 않는 변경(예: Supabase 대시보드에서 직접 수정)까지
- * 10분 안에는 반영되도록 하는 안전장치입니다.
+ * 요청 시 렌더링합니다.
+ *
+ * ISR(`revalidate`)을 쓰지 않는 이유: Cloudflare 배포에서 ISR 은 별도 캐시 저장소가
+ * 있어야 하는데, 없으면 요청마다 재생성을 시도하다 타임아웃이 납니다.
+ * 대신 `next.config.ts` 의 CDN 캐시 헤더가 같은 역할을 하고,
+ * 관리자가 사진을 바꾸면 10분 기다릴 필요 없이 곧바로 반영됩니다.
  */
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [slides, works] = await Promise.all([getSlides(), getWorks()]);

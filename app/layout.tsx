@@ -45,6 +45,18 @@ export const metadata: Metadata = {
     canonical: "/",
     types: { "application/rss+xml": `${site.url}/rss.xml` },
   },
+  /**
+   * 파비콘을 `public/` 에 두고 여기서 직접 가리킵니다.
+   *
+   * `app/icon.png` 규칙을 쓰면 Next.js 가 자동으로 링크를 만들어 주지만,
+   * 그 경로는 **서버 함수를 거쳐** 응답합니다. 파비콘은 모든 페이지에서
+   * 요청되므로 방문 1회마다 서버 호출이 한 번씩 더 생기고, 캐시도 안 됩니다.
+   * `public/` 에 두면 CDN 이 바로 내려주고 서버를 안 거칩니다.
+   */
+  icons: {
+    icon: [{ url: "/icon.png", sizes: "512x512", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   // 값이 비어 있으면 태그가 나가지 않습니다 (config/site.ts 에서 채웁니다)
   verification: {
     ...(site.googleVerification ? { google: site.googleVerification } : {}),
