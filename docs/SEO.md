@@ -217,41 +217,45 @@ E-E-A-T의 "경험" 축을 채우는 항목이라 업계 일반론 복사는 역
 | 사진 `alt` 자산 | ⚠️ 사진 자체가 없어 플레이스홀더 53자리 — E 표 3번이 실질적 최우선 |
 | 소유확인 코드 | ❌ 미입력 → **네이버·구글에 아직 사이트 등록 자체가 안 된 상태** (C 섹션) |
 
-### AI 답변 엔진에 인용되게 하기 — ⚠️ 대시보드에서 한 번 눌러 주셔야 합니다
+### AI 답변 엔진 인용 — ✅ 열렸습니다 (2026-07-26)
 
 **목표**: "대전 간판업체 추천해줘" 같은 질문에 ChatGPT·Perplexity·구글 AI 개요가
-이 사이트를 인용하게 하는 것. 지금은 막혀 있습니다.
+이 사이트를 인용하게 하는 것.
 
-**원인**: 실제 `robots.txt` 를 받아 보면 우리 `app/robots.ts` 결과 **앞에** Cloudflare
-관리형 블록이 붙어 있고, 거기서 `GPTBot` `ClaudeBot` `Google-Extended` `CCBot`
-`Bytespider` 등을 `Disallow: /` 로 막습니다. **신규 도메인 기본값**이라 대표님이
-켠 게 아닙니다.
+**막혀 있던 원인**: Cloudflare 가 우리 `app/robots.ts` 결과 **앞에** 관리형 블록을
+끼워 넣고 `GPTBot` `ClaudeBot` `Google-Extended` `CCBot` 등을 `Disallow: /` 로
+막고 있었습니다. **신규 도메인 기본값**이라 대표님이 켠 게 아니었습니다.
+(WAF 실차단은 아니었습니다 — AI 봇 UA 로 접근하면 200 이 떨어졌습니다.)
 
-| | |
-|---|---|
-| 일반 검색(네이버·구글) | ✅ 영향 없음 — `search=yes`, `Allow: /` |
-| `/admin` `/api/` 차단 | ✅ 그대로 유효 |
-| AI 답변 인용 | ❌ 막힘 |
-| WAF 실차단인가 | ❌ 아님 — AI 봇 UA 로 접근하면 **200** 이 떨어집니다. `robots.txt` 권고만 걸린 상태 |
+**현재 상태 — 실측 확인**
 
-**코드로 한 조치 (F15)**: `app/robots.ts` 에서 AI 크롤러 14종을 **이름으로 지목해
-`Allow: /`** 를 선언했습니다. robots.txt 는 같은 User-agent 그룹끼리 합쳐지고 동일하게
-구체적인 Allow/Disallow 충돌 시 Allow 가 이기므로(RFC 9309·구글 문서), 이것만으로
-뒤집히는 크롤러도 있습니다. **하지만 크롤러마다 해석이 달라 보장은 못 합니다.**
+```
+$ curl https://susannadesign.co.kr/robots.txt      # 24줄, Cloudflare 블록 0건
+User-Agent: *                    Allow: /  Disallow: /api/  /admin
+User-Agent: GPTBot … CCBot(14종)  Allow: /  Disallow: /api/  /admin
+Sitemap: https://susannadesign.co.kr/sitemap.xml
+```
 
-**확실하게 하려면 — Cloudflare 대시보드에서 (2분)**
+AI 봇에 걸린 `Disallow: /` 가 **하나도 없습니다.** 3회 반복 확인했습니다.
 
-1. [dash.cloudflare.com](https://dash.cloudflare.com) → `susannadesign.co.kr` 선택
-2. 왼쪽 메뉴 **AI Crawl Control** (예전 이름: Bots → Managed robots.txt)
-3. **관리형 `robots.txt` / AI 크롤러 차단**을 **끕니다**
-4. 확인: `curl https://susannadesign.co.kr/robots.txt` 했을 때
-   `# BEGIN Cloudflare Managed content` 블록이 사라져 있으면 완료
+**두 겹으로 되어 있습니다**
 
-> **트레이드오프를 알고 결정하세요.** 이걸 풀면 AI 답변에 인용될 길이 열리는 대신,
-> 같은 봇들이 **콘텐츠를 AI 학습에도 씁니다**(`GPTBot` `Google-Extended`
-> `Applebot-Extended` 등이 학습용). 이 사이트 콘텐츠는 회사 소개·시공실적이라
-> 학습에 쓰여도 잃을 게 거의 없고 인용 유입이 더 큰 이득이라 **여는 쪽을 권합니다.**
-> 시공 사진을 학습에 주고 싶지 않다면 지금 상태를 유지하는 것도 합리적입니다.
+1. **Cloudflare 관리형 `robots.txt` 해제** — 관리형 블록이 응답에서 사라졌습니다
+2. **`app/robots.ts` 의 명시적 허용 (F15)** — AI 크롤러 14종을 이름으로 지목해
+   `Allow: /` 를 선언. Cloudflare 가 나중에 기본값을 다시 켜더라도, robots.txt 는
+   같은 User-agent 그룹끼리 합쳐지고 동일 구체성의 Allow/Disallow 충돌 시 Allow 가
+   이기므로(RFC 9309·구글 문서) 한 겹 더 버팁니다
+
+> ⚠️ **F15 의 AI 그룹에도 `/api/` `/admin` 차단이 들어 있어야 합니다.**
+> 크롤러는 자기 이름의 그룹이 있으면 `*` 그룹을 아예 보지 않으므로, 빼먹으면
+> 이 봇들에게만 관리자 화면이 열립니다. `app/robots.ts` 의 `POLICY` 를 두 그룹이
+> 공유하는 구조가 그래서 중요합니다 — 한쪽만 고치지 마세요.
+
+**알고 계실 트레이드오프**: 이제 같은 봇들이 콘텐츠를 **AI 학습에도** 씁니다
+(`GPTBot` `Google-Extended` `Applebot-Extended` 등). 이 사이트 콘텐츠는 회사
+소개·시공실적이라 학습에 쓰여도 잃을 게 거의 없고 인용 유입이 더 큰 이득입니다.
+나중에 생각이 바뀌면 Cloudflare 대시보드 → **AI Crawl Control** 에서 되돌릴 수 있고,
+그때는 `app/robots.ts` 의 `AI_CRAWLERS` 배열도 함께 비워야 합니다.
 
 ### 도메인 — `www` 301 이 아직 안 걸려 있습니다
 
