@@ -310,18 +310,24 @@ public/icon.png · public/apple-icon.png   ← 정적 자산 (캐시 헤더 적�
 ```
 config/site.ts   export const CANONICAL_URL   ★ 도메인 원본 (A5)
       ↓ import
-next.config.ts   redirects()
-└── source "/:path*"  +  has: [{ type:"host", value:"www.<도메인>" }]
-    → destination `${CANONICAL_URL}/:path*`   statusCode 301
+next.config.ts   redirects()   has: [{ type:"host", value:"www.<도메인>" }]
+├── source "/"       → CANONICAL_URL              statusCode 301
+└── source "/:path+" → `${CANONICAL_URL}/:path+`  statusCode 301
 ```
+- ⚠️ **규칙 두 개를 절대 하나로 합치지 마세요.** `source: "/:path*"` 하나로 두면
+  `/works` 는 되는데 **루트(`/`)가 깨집니다** — `:path*` 가 0개 세그먼트에 매칭될 때
+  Next 가 절대 URL 대상에서 토큰을 치환하지 못해 `https://.../:path*` 라는 깨진
+  주소를 그대로 내보냅니다. **실제 배포에서 터뜨려 확인한 동작입니다**(커밋 `5f31644`
+  → `fbb9b4c` 로 수정). 그래서 루트는 따로 잡고 나머지는 1개 이상인 `:path+` 로 받습니다.
 - **왜 코드에 두나**: Cloudflare Redirect Rules 로도 되지만 그러면 설정이 대시보드에만
   남아 저장소만 봐서는 알 수 없고, 배포처를 옮기면 사라집니다. 이 프로젝트는
   `proxy.ts` 를 없애면서까지 호스팅 종속성을 걷어냈으므로 도메인 규칙도 코드에 둡니다.
 - **왜 `statusCode: 301` 인가**: `permanent: true` 는 **308** 을 냅니다. 308 도 검색엔진은
   301 과 같이 취급하지만, 문서·SEO 자료가 전부 301 기준이라 굳이 다르게 둘 이유가 없습니다.
 - 도메인을 바꿀 때는 `CANONICAL_URL` 한 줄만 고치면 리다이렉트까지 따라옵니다.
-- 검증: `curl -H "Host: www.susannadesign.co.kr" localhost:3000/works` → `301` +
-  `location: https://susannadesign.co.kr/works` (경로 보존 확인)
+- 검증: `Host: www.susannadesign.co.kr` 로 **경로 모양을 전부** 찔러 봅니다 —
+  루트 `/` · 1단 `/works` · 다단 `/admin/hero` · 쿼리스트링 · 정적자산 `/logo.svg` ·
+  없는 경로. 한 가지만 보면 위의 루트 버그를 놓칩니다(실제로 놓쳤습니다).
 
 ### F14. 플레이스홀더 — 개발/운영 분리
 ```

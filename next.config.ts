@@ -15,12 +15,30 @@ import { CANONICAL_URL } from "./config/site";
  */
 function wwwRedirect() {
   const host = new URL(CANONICAL_URL).host; // susannadesign.co.kr
+  const fromWww = [{ type: "host" as const, value: `www.${host}` }];
 
   return [
+    /**
+     * ⚠️ **규칙을 두 개로 나눈 이유 — 하나로 합치면 루트가 깨집니다.**
+     *
+     * `source: "/:path*"` 하나만 두면 `/works` 같은 주소는 잘 넘어가는데
+     * **루트(`/`)에서 `:path*` 가 0개에 매칭**되고, 그때 Next 가 절대 URL
+     * 대상에서 토큰을 치환하지 못해 `https://.../:path*` 라는 깨진 주소를
+     * 그대로 내보냅니다. 실제 배포에서 확인한 동작입니다.
+     *
+     * 그래서 루트는 따로 잡고, 나머지는 **1개 이상**을 뜻하는 `:path+` 로 받습니다.
+     * 고칠 때 이 둘을 다시 합치지 마세요.
+     */
     {
-      source: "/:path*",
-      has: [{ type: "host" as const, value: `www.${host}` }],
-      destination: `${CANONICAL_URL}/:path*`,
+      source: "/",
+      has: fromWww,
+      destination: CANONICAL_URL,
+      statusCode: 301,
+    },
+    {
+      source: "/:path+",
+      has: fromWww,
+      destination: `${CANONICAL_URL}/:path+`,
       statusCode: 301,
     },
   ];
