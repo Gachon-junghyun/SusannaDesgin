@@ -217,12 +217,24 @@ lib/notify.ts (server-only)
 
 ### F16. 견적 문의 실시간 알림
 ```
-lib/notify.ts   notifyNewQuote(q, siteUrl) → 보낸 경로 이름[]
-├── QUOTE_WEBHOOK_URL      슬랙·카카오워크·디스코드 ({text}/{content} 동시 전송)
-├── RESEND_API_KEY + QUOTE_NOTIFY_EMAIL   이메일 (QUOTE_MAIL_FROM 기본 onboarding@resend.dev)
+lib/notify.ts   notifyNewQuote(q) → 보낸 경로 이름[]
+├── QUOTE_WEBHOOK_URL   웹훅 — 슬랙·카카오워크·디스코드 ({text}/{content} 동시 전송)
+├── RESEND_API_KEY      이메일 — 받는 주소는 QUOTE_NOTIFY_EMAIL, 없으면 site.email [A5]
+│   └── HTML 본문: 연락처가 큰 버튼이고 tel: 링크 — 휴대폰에서 눌러 바로 통화
+│       + text 대체본문 (HTML 막아 둔 메일 앱 대비)
 ├── 타임아웃 5초 · Promise.allSettled — 하나 실패해도 나머지 발송
 └── 예외를 밖으로 던지지 않음
+
+scripts/check-notify.mjs   npm run notify:test
+└── 가짜 문의를 만들지 않고 알림만 시험 발송. 401/403 은 원인까지 안내
 ```
+- ⚠️ **SMTP 는 못 씁니다.** Cloudflare Workers 가 TCP 소켓을 못 열어 네이버웍스·Gmail
+  계정을 직접 붙이는 방식이 불가능합니다. HTTP API 방식(Resend)이라 이 제약을 피합니다.
+- ⚠️ **발신 도메인**: 기본 `onboarding@resend.dev` 는 시험용입니다. 한메일·네이버메일이
+  남의 도메인 발신을 스팸으로 거르는 일이 잦아, 운영에서는 Resend 에
+  `susannadesign.co.kr` 을 등록하고 `noreply@susannadesign.co.kr` 로 보내야 합니다.
+- **왜 전화 버튼이 큰가**: 견적은 먼저 연락한 곳이 가져갑니다. 받은 사람이 화면을
+  옮겨 다니지 않고 그 자리에서 통화로 넘어갈 수 있어야 합니다.
 - **저장이 확정된 뒤에만** 부릅니다. 알림 실패로 "접수 실패" 를 띄우면 고객이
   두 번 넣게 되므로, 실패는 로그만 남기고 응답은 정상 처리합니다.
 - 환경변수가 없으면 **조용히 아무것도 안 합니다**(기본 꺼짐). 폼·저장은 그대로 동작 [A1 의 연장]
@@ -457,8 +469,11 @@ RLS
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 관리자 기능에만 | 〃 |
 | `NEXT_PUBLIC_SITE_URL` | ✕ (선택) | `config/site.ts` 의 확정 도메인을 씁니다. **임시 주소로 배포할 때만** 이 값을 넣으세요 — `site.isProductionDomain` 이 false 가 되어 `robots.txt` 가 전면 차단으로 바뀝니다 |
 | `QUOTE_WEBHOOK_URL` | ✕ (선택) | 견적 알림 웹훅 꺼짐. 접수·저장은 정상 (F16) |
-| `RESEND_API_KEY` · `QUOTE_NOTIFY_EMAIL` | ✕ (선택) | 견적 알림 이메일 꺼짐. 둘 다 있어야 켜집니다 (F16) |
-| `QUOTE_MAIL_FROM` | ✕ (선택) | `onboarding@resend.dev` 로 발송. 도메인 소유확인 후 자기 주소로 바꾸세요 |
+| `RESEND_API_KEY` | ✕ (선택) | 견적 알림 **이메일 꺼짐**. 이 키만 넣으면 `site.email` 로 갑니다 (F16) |
+| `QUOTE_NOTIFY_EMAIL` | ✕ (선택) | `config/site.ts` 의 `site.email` 로 발송. 쉼표로 여러 주소 가능 |
+| `QUOTE_MAIL_FROM` | ✕ (선택) | `onboarding@resend.dev`(시험용)로 발송 — 한메일에서 스팸 위험 |
+
+확인 명령: `npm run notify:test` — 가짜 문의를 만들지 않고 알림만 시험 발송합니다.
 
 **운영(Cloudflare) 환경변수는 들어가 있습니다** — 2026-07-26 확인
 (`/admin/login` 이 "아직 연결 전입니다" 안내문이 아니라 로그인 폼을 그림 = 키가 읽힌다는 뜻).

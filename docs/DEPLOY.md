@@ -184,12 +184,16 @@ Cloudflare 에서 돌리는 데 필요한 설정 파일(`wrangler.jsonc`, `open-
 
 | 이름 | 값 | 종류 |
 |---|---|---|
+| `RESEND_API_KEY` | `re_...` — 넣으면 회사 대표 메일로 알림이 갑니다 | **Secret** |
+| `QUOTE_MAIL_FROM` | `noreply@susannadesign.co.kr` (도메인 등록 후) | Text |
 | `QUOTE_WEBHOOK_URL` | 슬랙·카카오워크 웹훅 주소 | **Secret** |
-| `RESEND_API_KEY` | `re_...` | **Secret** |
-| `QUOTE_NOTIFY_EMAIL` | 문의를 받을 이메일 | Text |
 
 > 이쪽은 브라우저에 노출될 필요가 없으므로 **Secret** 으로 넣습니다
 > (위의 Supabase 키와 달리 서버에서만 씁니다).
+>
+> 넣기 전에 `.env.local` 에 같은 값을 넣고 **`npm run notify:test`** 로 먼저
+> 확인하시길 권합니다. 운영에 바로 넣고 시험하면 실패했을 때 값 문제인지
+> 배포 문제인지 구분이 안 됩니다. 설정 순서는 [`README.md`](../README.md) 참조.
 
 > **빌드 시점에도 필요한 값**이라 Secret 이 아니라 Text(플레인)로 넣습니다.
 > 어차피 브라우저에 노출되는 게 정상인 키이고, 실제 권한은 DB 의 RLS 가 판단합니다.

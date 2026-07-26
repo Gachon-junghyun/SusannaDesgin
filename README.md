@@ -199,25 +199,58 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 문의는 **Supabase `quotes` 테이블에 저장**되고 `/admin/quotes` 에서 보실 수 있습니다.
 저장에 실패하면 손님에게 "접수됐다"고 거짓말하지 않고 전화를 안내합니다.
 
-**알림 기능은 만들어 뒀고, 주소만 넣으면 켜집니다.** 안 넣으면 지금처럼
+**알림 기능은 만들어 뒀고, 열쇠 하나만 넣으면 켜집니다.** 안 넣으면 지금처럼
 `/admin/quotes` 를 직접 봐야 새 문의를 알 수 있습니다.
 
-**가장 쉬운 방법 — 카카오워크/슬랙 웹훅** (5분)
+#### 이메일로 받기 (권장)
 
-받을 채팅방의 웹훅 주소를 Cloudflare **Settings → Variables** 에 넣으면 끝입니다.
+문의가 들어오면 **`sujin4003@hanmail.net` 으로 메일이 갑니다.** 휴대폰에서 열면
+고객 번호가 큰 버튼으로 나오고, **누르면 바로 전화가 걸립니다.**
+
+> ⚠️ 네이버웍스·Gmail 계정을 직접 연결하는 방식(SMTP)은 쓸 수 없습니다.
+> Cloudflare 서버가 그 방식을 지원하지 않아서, 메일 발송 서비스를 하나 거쳐야 합니다.
+> 아래 Resend 는 **하루 100통까지 무료**라 비용은 들지 않습니다.
+
+**1) 열쇠 발급** — [resend.com](https://resend.com) 가입 → **API Keys** → **Create**
+→ `re_` 로 시작하는 값 복사 (가입은 직접 하셔야 합니다)
+
+**2) 먼저 내 컴퓨터에서 시험** — `.env.local` 에 한 줄 추가하고
+
+```
+RESEND_API_KEY=re_xxxxx
+```
+
+```bash
+npm run notify:test
+```
+
+메일이 오는지 봅니다. **안 보이면 스팸함도 꼭 확인하세요.**
+
+**3) 서버에 넣기** — Cloudflare **Settings → Variables** 에 같은 값을
+**Secret** 으로 넣고 재배포하면 끝입니다.
+
+#### 📬 메일이 스팸함으로 가면 (한메일·네이버메일에서 흔합니다)
+
+기본 설정은 Resend 의 시험용 주소로 보내기 때문에 한메일이 스팸으로 거를 수 있습니다.
+**회사 도메인으로 보내면 해결됩니다.**
+
+1. Resend → **Domains** → **Add Domain** → `susannadesign.co.kr`
+2. Resend 가 알려주는 DNS 값 3개를 **Cloudflare DNS 화면에 그대로 추가**
+   (도메인을 이미 Cloudflare 에서 관리하시니 여기서 바로 됩니다)
+3. 초록불이 뜨면 환경변수 하나 더 추가
+
+```
+QUOTE_MAIL_FROM=noreply@susannadesign.co.kr
+```
+
+#### 카카오워크·슬랙으로 받기 (이메일 대신, 또는 함께)
+
+받을 채팅방의 웹훅 주소를 넣으면 됩니다. 둘 다 넣으면 양쪽으로 갑니다.
 
 ```
 QUOTE_WEBHOOK_URL = https://hooks.slack.com/services/...
 ```
 
-**이메일로 받으려면** — [resend.com](https://resend.com) 무료 가입 (하루 100통)
-
-```
-RESEND_API_KEY     = re_xxxxx
-QUOTE_NOTIFY_EMAIL = sujin4003@hanmail.net
-```
-
-넣고 **재배포**하면 문의가 들어올 때마다 이름·연락처·지역·내용이 바로 갑니다.
 알림이 실패해도 접수는 정상 처리되니 문의를 잃지 않습니다.
 
 > ⚠️ **켜시면 개인정보처리방침을 손봐야 합니다.** 고객 이름·연락처가 외부 서비스

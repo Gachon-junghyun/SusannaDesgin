@@ -9,6 +9,7 @@
     "lint": "eslint",
     "supabase:check": "node scripts/check-supabase.mjs",
     "supabase:rls": "node scripts/check-rls.mjs",
+    "notify:test": "node scripts/check-notify.mjs",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && wrangler dev",
     "cf:size": "opennextjs-cloudflare build && wrangler deploy --dry-run"

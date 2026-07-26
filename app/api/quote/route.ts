@@ -5,7 +5,6 @@ import { MAX_FILES, MAX_FILE_BYTES, validateFull, validateQuick } from "@/lib/va
 import { createPublicClient } from "@/lib/supabase/public";
 import { isCmsEnabled } from "@/lib/supabase/env";
 import { notifyNewQuote } from "@/lib/notify";
-import { site } from "@/config/site";
 
 export const runtime = "nodejs";
 
@@ -171,22 +170,19 @@ export async function POST(req: Request) {
      * 환경변수를 안 넣으면 조용히 아무것도 안 합니다(기본 꺼짐).
      */
     try {
-      const sent = await notifyNewQuote(
-        {
-          kind: record.kind,
-          name: record.name,
-          phone: record.phone,
-          email: record.email,
-          region: record.region,
-          signType: record.signType,
-          timing: record.timing,
-          address: [record.address, record.addressDetail].filter(Boolean).join(" "),
-          message: record.message,
-          fileCount: record.files.length,
-          receivedAt: record.receivedAt,
-        },
-        site.url
-      );
+      const sent = await notifyNewQuote({
+        kind: record.kind,
+        name: record.name,
+        phone: record.phone,
+        email: record.email,
+        region: record.region,
+        signType: record.signType,
+        timing: record.timing,
+        address: [record.address, record.addressDetail].filter(Boolean).join(" "),
+        message: record.message,
+        fileCount: record.files.length,
+        receivedAt: record.receivedAt,
+      });
       if (sent.length) console.log("[견적문의] 알림 발송:", sent.join(", "));
     } catch (e) {
       console.error("[견적문의] 알림 처리 중 예외(접수는 정상):", e);
