@@ -151,8 +151,21 @@ export type Work = {
 /**
  * 주요 실적 — 회사소개서 07. 주요 실적 사진 기준.
  * 지역·연도는 확인되는 대로 채우세요. (TODO)
+ *
+ * **순서 규칙: 사진이 있는 실적을 앞에 둡니다.**
+ * 목록 첫 화면이 회색 플레이스홀더로 채워지면 실적이 없는 회사로 보입니다.
+ * 사진이 들어오는 대로 그 항목을 위로 올리세요.
  */
 export const works: Work[] = [
+  // --- 사진 있음 (w16~w21) ---
+  { slug: "w16", title: "빌딩 외벽 사인 고소작업", category: "기업", location: "", tags: ["외부 사인물", "고소작업"], image: "/images/work-16.jpg" },
+  { slug: "w17", title: "태평한우", category: "상업시설", location: "", tags: ["채널 간판", "야간 점등"], image: "/images/work-17.jpg" },
+  { slug: "w18", title: "좋은교회", category: "생활·문화", location: "", tags: ["채널 간판", "십자가 사인"], image: "/images/work-18.jpg" },
+  { slug: "w19", title: "자자고호텔", category: "상업시설", location: "", tags: ["후광 채널 사인", "실내 사인"], image: "/images/work-19.jpg" },
+  { slug: "w20", title: "커뮤니티 시설 사인", category: "생활·문화", location: "", tags: ["실내 사인", "스카시 문자"], image: "/images/work-20.jpg" },
+  { slug: "w21", title: "체육관 실내 사인", category: "생활·문화", location: "", tags: ["실내 사인", "스카시 문자"], image: "/images/work-21.jpg" },
+
+  // --- 사진 대기 (회사소개서 07) ---
   { slug: "w01", title: "삼성화재 사인물", category: "금융", location: "", tags: ["외부 사인물"], image: "/images/work-01.jpg" },
   { slug: "w02", title: "교보생명 옥상 광고탑", category: "금융", location: "", tags: ["옥상 광고탑", "유지보수"], image: "/images/work-02.jpg" },
   { slug: "w03", title: "우리은행 사인물", category: "금융", location: "", tags: ["외부 사인물", "CI"], image: "/images/work-03.jpg" },
@@ -178,6 +191,7 @@ export const workCategories = [
   "상업시설",
   "철구조물",
   "주거",
+  "생활·문화", // 교회·체육관·커뮤니티시설 등. 2026-07 실적 사진 추가하며 신설
 ];
 
 /** 공장 공정 — 구 회사소개서 05. 업무프로세스 (절단→검수) — 800×600 */
