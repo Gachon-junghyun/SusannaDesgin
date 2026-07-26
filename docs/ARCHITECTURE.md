@@ -230,9 +230,12 @@ scripts/check-notify.mjs   npm run notify:test
 ```
 - ⚠️ **SMTP 는 못 씁니다.** Cloudflare Workers 가 TCP 소켓을 못 열어 네이버웍스·Gmail
   계정을 직접 붙이는 방식이 불가능합니다. HTTP API 방식(Resend)이라 이 제약을 피합니다.
-- ⚠️ **발신 도메인**: 기본 `onboarding@resend.dev` 는 시험용입니다. 한메일·네이버메일이
-  남의 도메인 발신을 스팸으로 거르는 일이 잦아, 운영에서는 Resend 에
-  `susannadesign.co.kr` 을 등록하고 `noreply@susannadesign.co.kr` 로 보내야 합니다.
+- ⚠️ **Resend 도메인 등록은 선택이 아니라 필수입니다.** 등록 전에는 **가입 계정 본인
+  메일로만** 발송되고 다른 주소는 403 으로 거부됩니다(실측 확인). 즉 `site.email`
+  (`sujin4003@hanmail.net`)로 받으려면 `susannadesign.co.kr` 을 Resend 에 등록해야
+  합니다. 스팸 필터 통과는 그 부수 효과입니다.
+- **미리보기**: `app/api/dev/mail-preview` (개발 전용, 운영에서는 404) 로 메일 본문을
+  브라우저에서 확인할 수 있습니다. 서식을 고칠 때 실제 모양을 보고 작업하세요.
 - **왜 전화 버튼이 큰가**: 견적은 먼저 연락한 곳이 가져갑니다. 받은 사람이 화면을
   옮겨 다니지 않고 그 자리에서 통화로 넘어갈 수 있어야 합니다.
 - **저장이 확정된 뒤에만** 부릅니다. 알림 실패로 "접수 실패" 를 띄우면 고객이

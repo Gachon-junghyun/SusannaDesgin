@@ -229,19 +229,25 @@ npm run notify:test
 **3) 서버에 넣기** — Cloudflare **Settings → Variables** 에 같은 값을
 **Secret** 으로 넣고 재배포하면 끝입니다.
 
-#### 📬 메일이 스팸함으로 가면 (한메일·네이버메일에서 흔합니다)
+#### 🔴 도메인 등록은 **필수**입니다 — 안 하면 회사 메일로 안 옵니다
 
-기본 설정은 Resend 의 시험용 주소로 보내기 때문에 한메일이 스팸으로 거를 수 있습니다.
-**회사 도메인으로 보내면 해결됩니다.**
+Resend 는 **도메인을 등록하기 전까지 "가입할 때 쓴 본인 메일"로만 보낼 수 있습니다.**
+`sujin4003@hanmail.net` 같은 다른 주소로는 아예 발송이 거부됩니다(403).
+스팸 문제 이전에, 등록을 안 하면 기능 자체가 동작하지 않습니다.
 
 1. Resend → **Domains** → **Add Domain** → `susannadesign.co.kr`
-2. Resend 가 알려주는 DNS 값 3개를 **Cloudflare DNS 화면에 그대로 추가**
-   (도메인을 이미 Cloudflare 에서 관리하시니 여기서 바로 됩니다)
-3. 초록불이 뜨면 환경변수 하나 더 추가
+2. Resend 가 알려주는 DNS 값 3개(SPF·DKIM 등)를 **Cloudflare DNS 화면에 그대로 추가**
+   — 도메인을 이미 Cloudflare 에서 관리하시니 복사·붙여넣기로 됩니다
+3. Resend 화면에 초록불(Verified)이 뜨면 환경변수 추가
 
 ```
 QUOTE_MAIL_FROM=noreply@susannadesign.co.kr
 ```
+
+4. `npm run notify:test` 로 다시 확인
+
+> 덤으로 스팸 문제도 같이 해결됩니다. 회사 도메인으로 나가면 한메일·네이버메일의
+> 스팸 필터를 훨씬 잘 통과하고, 고객이 보기에도 `noreply@susannadesign.co.kr` 이 낫습니다.
 
 #### 카카오워크·슬랙으로 받기 (이메일 대신, 또는 함께)
 

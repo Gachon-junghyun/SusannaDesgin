@@ -30,10 +30,25 @@ for (const l of readFileSync(".env.local", "utf8").split("\n")) {
   if (m) env[m[1]] = m[2].trim();
 }
 
+/**
+ * 받는 주소 기본값은 `config/site.ts` 의 회사 대표 메일입니다(실제 코드와 동일).
+ *
+ * 이 스크립트는 plain JS 라 TS 설정을 import 할 수 없어 파일에서 값만 읽어옵니다.
+ * 주소를 여기 적어 두면 config 와 어긋날 수 있어 그렇게 하지 않습니다. [원칙 A5]
+ */
+function siteEmail() {
+  try {
+    const src = readFileSync("config/site.ts", "utf8");
+    return src.match(/^\s*email:\s*["']([^"']+)["']/m)?.[1] ?? "";
+  } catch {
+    return "";
+  }
+}
+
 const webhook = env.QUOTE_WEBHOOK_URL;
 const key = env.RESEND_API_KEY;
 const from = env.QUOTE_MAIL_FROM || "onboarding@resend.dev";
-const to = env.QUOTE_NOTIFY_EMAIL;
+const to = env.QUOTE_NOTIFY_EMAIL || siteEmail();
 
 console.log("\n\x1b[1m견적 알림 시험 발송\x1b[0m\n");
 
@@ -78,7 +93,9 @@ if (webhook) {
 if (key) {
   if (!to) {
     bad++;
-    console.log(`  ${R("✘ 실패")}  이메일 — 받을 주소(QUOTE_NOTIFY_EMAIL)가 없습니다.`);
+    console.log(`  ${R("✘ 실패")}  이메일 — 받을 주소가 없습니다.`);
+    console.log(D(`           .env.local 에 QUOTE_NOTIFY_EMAIL 을 넣거나,`));
+    console.log(D(`           config/site.ts 의 email 값을 확인하세요.`));
   } else {
     try {
       const res = await fetch("https://api.resend.com/emails", {
@@ -100,10 +117,24 @@ if (key) {
         bad++;
         console.log(`  ${R("✘ 실패")}  이메일  (HTTP ${res.status})`);
         console.log(D(`           ${body.slice(0, 300)}`));
-        if (res.status === 403 || body.includes("domain"))
-          console.log(D(`           → 보내는 주소(${from}) 도메인이 Resend 에 등록됐는지 확인하세요.`));
         if (res.status === 401)
           console.log(D(`           → RESEND_API_KEY 가 맞는지 확인하세요.`));
+        else if (body.includes("your own email address"))
+          console.log(
+            D(`           → Resend 는 도메인 인증 전에는 가입한 본인 메일로만 보낼 수 있습니다.`) +
+              `\n` +
+              D(`             ${to} 로 받으려면 resend.com/domains 에서`) +
+              `\n` +
+              D(`             susannadesign.co.kr 을 등록해야 합니다. (선택이 아니라 필수)`)
+          );
+        else if (res.status === 403 || body.includes("domain"))
+          console.log(
+            D(`           → 보내는 주소(${from}) 의 도메인이 Resend 에 등록/인증되지 않았습니다.`) +
+              `\n` +
+              D(`             resend.com/domains 에서 등록하거나, 등록 전이면`) +
+              `\n` +
+              D(`             .env.local 의 QUOTE_MAIL_FROM 을 지우고 다시 시험하세요.`)
+          );
       }
     } catch (e) {
       bad++;
@@ -116,10 +147,10 @@ if (key) {
 
 if (from === "onboarding@resend.dev" && key) {
   console.log(
-    `\n  ${D("※ 보내는 주소가 시험용(onboarding@resend.dev)입니다.")}` +
-      `\n  ${D("   한메일·네이버메일은 이런 발신을 스팸으로 거르는 일이 잦습니다.")}` +
-      `\n  ${D("   운영에서는 susannadesign.co.kr 을 Resend 에 등록하고")}` +
-      `\n  ${D("   QUOTE_MAIL_FROM=noreply@susannadesign.co.kr 로 바꾸세요.")}`
+    `\n  ${D("※ 보내는 주소가 Resend 시험용(onboarding@resend.dev)입니다.")}` +
+      `\n  ${D("   이 상태로는 Resend 에 가입한 본인 메일로만 발송됩니다.")}` +
+      `\n  ${D("   회사 메일로 받으려면 resend.com/domains 에 susannadesign.co.kr 을")}` +
+      `\n  ${D("   등록하고 QUOTE_MAIL_FROM=noreply@susannadesign.co.kr 로 바꾸세요.")}`
   );
 }
 
@@ -128,4 +159,7 @@ console.log(
     ? R("\n● 실패한 경로가 있습니다. 위 안내를 보고 값을 고친 뒤 다시 실행하세요.\n")
     : G("\n● 발송 완료 — 실제로 도착했는지 확인하세요.\n")
 );
-process.exit(bad ? 1 : 0);
+
+// process.exit() 를 바로 부르면 fetch 의 소켓이 닫히는 중에 종료돼
+// Windows 에서 libuv assertion 경고가 찍힙니다. 코드만 정하고 자연 종료시킵니다.
+process.exitCode = bad ? 1 : 0;

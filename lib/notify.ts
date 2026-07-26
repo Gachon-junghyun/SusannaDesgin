@@ -87,7 +87,7 @@ function esc(s: string): string {
  *
  * 메일 클라이언트는 외부 CSS·스크립트를 지우므로 인라인 스타일만 씁니다.
  */
-function asHtml(q: QuoteNotice): string {
+export function asHtml(q: QuoteNotice): string {
   const row = (label: string, v?: string) =>
     v
       ? `<tr>
@@ -96,7 +96,11 @@ function asHtml(q: QuoteNotice): string {
          </tr>`
       : "";
 
-  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;max-width:520px;margin:0 auto;padding:24px 20px;color:#0F1A19">
+  // ⚠️ <meta charset> 를 빼면 메일 앱에 따라 한글이 전부 깨집니다(실제로 겪었습니다).
+  //    메일은 브라우저와 달리 HTTP 헤더의 charset 이 본문까지 따라가지 않는 경우가 있어,
+  //    본문 안에 직접 선언해 둡니다.
+  return `<meta charset="utf-8">
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;max-width:520px;margin:0 auto;padding:24px 20px;color:#0F1A19">
   <p style="margin:0 0 4px;color:#FF5900;font-size:12px;font-weight:700;letter-spacing:.08em">새 견적 문의</p>
   <h1 style="margin:0 0 20px;font-size:20px;font-weight:700">${esc(q.name)} 님 (${q.kind === "quick" ? "간편" : "전체"} 문의)</h1>
 
