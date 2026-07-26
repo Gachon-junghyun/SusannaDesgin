@@ -179,6 +179,17 @@ Cloudflare 에서 돌리는 데 필요한 설정 파일(`wrangler.jsonc`, `open-
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxxx.supabase.co` | Text |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGci...` (긴 문자열) | Text |
 
+**선택 — 견적 문의 알림** (안 넣으면 알림만 꺼지고 접수는 정상)
+
+| 이름 | 값 | 종류 |
+|---|---|---|
+| `QUOTE_WEBHOOK_URL` | 슬랙·카카오워크 웹훅 주소 | **Secret** |
+| `RESEND_API_KEY` | `re_...` | **Secret** |
+| `QUOTE_NOTIFY_EMAIL` | 문의를 받을 이메일 | Text |
+
+> 이쪽은 브라우저에 노출될 필요가 없으므로 **Secret** 으로 넣습니다
+> (위의 Supabase 키와 달리 서버에서만 씁니다).
+
 > **빌드 시점에도 필요한 값**이라 Secret 이 아니라 Text(플레인)로 넣습니다.
 > 어차피 브라우저에 노출되는 게 정상인 키이고, 실제 권한은 DB 의 RLS 가 판단합니다.
 >

@@ -194,12 +194,37 @@ components/PrivacyConsent.tsx  개인정보보호법 제15조 고지 4요소
 components/Field.tsx           라벨·에러 공통 래퍼
 
 app/api/quote/route.ts
-├── 허니팟 company_website → 조용히 200
+├── 허니팟 company_website → 조용히 200 (저장 안 함)
 ├── IP 레이트리밋 10분 5회 (인메모리)
 ├── 서버 재검증 (클라이언트 우회 시 400)
-└── data/quotes.jsonl append   ⚠️TODO: 이메일·알림톡·시트·슬랙
+├── 저장  1순위 DB quotes  →  2순위 파일 (isCmsEnabled() 가 꺼졌을 때만)
+│        둘 다 실패하면 500 — 접수됐다고 거짓 응답하지 않음
+└── 저장 확정 후 notifyNewQuote()  → F16
+
+lib/notify.ts (server-only)
+└── 웹훅 · 이메일(Resend) — 설정 안 하면 조용히 꺼짐
 ```
 - 회귀 테스트 12건 (`formtest.mjs`)
+- ⚠️ **파일 폴백에 `if (!isCmsEnabled())` 조건이 반드시 있어야 합니다.** 없으면
+  DB 저장이 실패해도 파일 쓰기가 성공하는 순간 `stored = true` 가 되어 고객에게
+  "접수 완료" 가 나갑니다 — 문의를 조용히 삼키는 구조가 됩니다. 실제로 그렇게
+  되어 있던 것을 2026-07-26 에 고쳤습니다.
+- 이 조건 덕분에 **운영에서 `{ok:true}` 는 DB 저장 성공을 뜻합니다.** 파일 경로가
+  운영에서 아예 안 타므로 응답만 보고도 판정할 수 있습니다.
+
+### F16. 견적 문의 실시간 알림
+```
+lib/notify.ts   notifyNewQuote(q, siteUrl) → 보낸 경로 이름[]
+├── QUOTE_WEBHOOK_URL      슬랙·카카오워크·디스코드 ({text}/{content} 동시 전송)
+├── RESEND_API_KEY + QUOTE_NOTIFY_EMAIL   이메일 (QUOTE_MAIL_FROM 기본 onboarding@resend.dev)
+├── 타임아웃 5초 · Promise.allSettled — 하나 실패해도 나머지 발송
+└── 예외를 밖으로 던지지 않음
+```
+- **저장이 확정된 뒤에만** 부릅니다. 알림 실패로 "접수 실패" 를 띄우면 고객이
+  두 번 넣게 되므로, 실패는 로그만 남기고 응답은 정상 처리합니다.
+- 환경변수가 없으면 **조용히 아무것도 안 합니다**(기본 꺼짐). 폼·저장은 그대로 동작 [A1 의 연장]
+- ⚠️ **개인정보 위탁**: 알림에 고객 이름·연락처가 담깁니다. 켜면 개인정보처리방침의
+  위탁 항목에 그 업체를 적어야 합니다(개인정보보호법 제26조). §7 참조.
 
 ### F6. 실적 필터
 ```
@@ -428,6 +453,9 @@ RLS
 | `NEXT_PUBLIC_SUPABASE_URL` | 관리자 기능에만 | CMS 꺼짐 → 폴백 동작, 공개 사이트 정상 |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 관리자 기능에만 | 〃 |
 | `NEXT_PUBLIC_SITE_URL` | ✕ (선택) | `config/site.ts` 의 확정 도메인을 씁니다. **임시 주소로 배포할 때만** 이 값을 넣으세요 — `site.isProductionDomain` 이 false 가 되어 `robots.txt` 가 전면 차단으로 바뀝니다 |
+| `QUOTE_WEBHOOK_URL` | ✕ (선택) | 견적 알림 웹훅 꺼짐. 접수·저장은 정상 (F16) |
+| `RESEND_API_KEY` · `QUOTE_NOTIFY_EMAIL` | ✕ (선택) | 견적 알림 이메일 꺼짐. 둘 다 있어야 켜집니다 (F16) |
+| `QUOTE_MAIL_FROM` | ✕ (선택) | `onboarding@resend.dev` 로 발송. 도메인 소유확인 후 자기 주소로 바꾸세요 |
 
 **운영(Cloudflare) 환경변수는 들어가 있습니다** — 2026-07-26 확인
 (`/admin/login` 이 "아직 연결 전입니다" 안내문이 아니라 로그인 폼을 그림 = 키가 읽힌다는 뜻).
@@ -444,7 +472,10 @@ RLS
 | 구분 | 내용 | 위치 |
 |---|---|---|
 | 일부 검증 | **관리자 CRUD — 저장·사진업로드는 실동작 확인** (2026-07-26): `hero_slides` 1번 레코드의 `image_url` 이 스토리지 URL 이고 운영 사이트가 그 사진을 서비스 중 → 로그인·`requireAdmin()`·업로드·저장·`revalidatePath` 경로가 끝까지 통했다는 뜻. **아직 미확인: 삭제 · 순서변경(`moveSlide`/`moveWork`)** | F9 F10 |
-| TODO | 견적 문의 **실시간 알림**(이메일·알림톡) 미연결 — DB 저장은 되므로 `/admin/quotes` 를 주기적으로 봐야 함 | `app/api/quote/route.ts` |
+| 해소 | ~~견적 문의 실시간 알림 미연결~~ → **코드 완료** (F16). 다만 **환경변수를 넣어야 실제로 켜집니다** — 안 넣으면 지금처럼 `/admin/quotes` 를 봐야 합니다 | `lib/notify.ts` |
+| 해소 | ~~파일 폴백이 DB 실패를 가림~~ → `if (!isCmsEnabled())` 조건 추가 (2026-07-26). 운영에서 `{ok:true}` 가 DB 저장 성공을 뜻하게 됨 | F5 |
+| 해소 | ~~`quotes` 가 RLS 검증 대상에서 빠짐~~ → `check-rls.mjs` 에 추가. **실증 완료**: 익명은 넣기만 되고 방금 넣은 건도 못 읽음(`--write` 로 확인) | `scripts/check-rls.mjs` |
+| ⚠️ 법률 | **알림을 켜면 개인정보 위탁 고지가 필요합니다** — 고객 이름·연락처가 슬랙·Resend 등 외부로 나갑니다. 개인정보처리방침의 위탁 항목에 업체명·위탁업무를 적어야 합니다(개인정보보호법 제26조). 켜기 전에는 해당 없음 | `app/privacy` · F16 |
 | TODO | 레이트리밋이 인메모리 — 서버리스에서 인스턴스마다 따로 세므로 사실상 헐거움 | 〃 |
 | 부채 | **방문마다 SSR + DB 조회** — ISR 을 걷어낸 대가(§2.1 주석). **운영 실측으로 확인**: 홈 응답 헤더가 `private, no-cache, no-store, must-revalidate` 로 HTML 캐시가 없습니다. 다만 홈 TTFB 0.78~1.58s 대 정적 페이지(`/about`) 0.92s 로 **체감 차이는 거의 없어** 급하지 않습니다(Cloudflare 콜드스타트가 더 큰 비중). 트래픽이 커지면 Cache Rules 또는 R2 로 ISR 을 되살리는 게 정석 | `app/page.tsx` `app/works/page.tsx` `next.config.ts` |
 | 해소 | ~~`0002_quotes.sql` 미실행 시 견적 문의 유실~~ → **실행 확인됨** (2026-07-26 `npm run supabase:check`: `quotes` 테이블 존재) | [`DEPLOY.md`](DEPLOY.md) 0단계 |

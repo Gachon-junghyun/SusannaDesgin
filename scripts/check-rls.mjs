@@ -85,6 +85,58 @@ await mustNotWrite("관리자 권한 위조", () =>
   else { bad++; console.log(`  ${R("✘ 뚫림")}  사진 업로드가 됐습니다!`); }
 }
 
+/**
+ * 견적 문의함 — **개인정보(이름·전화·주소)가 담기는 유일한 테이블**입니다.
+ *
+ * 필요한 권한 모양이 다른 표들과 반대라 따로 시험합니다.
+ *   · 넣기(INSERT)  → **되어야** 정상. 안 되면 견적 폼이 죽습니다.
+ *   · 읽기(SELECT)  → **막혀야** 정상. 뚫리면 고객 연락처가 그대로 공개됩니다.
+ *
+ * ⚠️ 읽기 차단은 **표에 행이 하나라도 있어야** 확실히 판정할 수 있습니다.
+ *    비어 있으면 "정책이 막은 것"과 "원래 없는 것"이 똑같이 빈 배열로 보입니다.
+ *    그래서 `--write` 를 주면 시험용 문의를 1건 넣고 판정합니다.
+ *    (익명은 삭제 권한이 없으므로 그 1건은 `/admin/quotes` 에서 지우셔야 합니다.)
+ */
+{
+  const WRITE = process.argv.includes("--write");
+  const stamp = new Date().toISOString();
+
+  // 1) 넣기 — 되어야 정상
+  if (WRITE) {
+    const { error } = await sb.from("quotes").insert({
+      kind: "quick",
+      name: "[검증] 지워주세요",
+      phone: "010-0000-0000",
+      message: `보안 검증용 자동 등록 (${stamp}). /admin/quotes 에서 삭제하세요.`,
+    });
+    if (error) {
+      bad++;
+      console.log(`  ${R("✘ 문제")}  견적 문의 넣기가 거부됨 → 견적 폼이 죽습니다! (${error.message})`);
+    } else {
+      console.log(`  ${G("✔ 정상")}  견적 문의 넣기  \x1b[2m(고객이 폼을 낼 수 있음)\x1b[0m`);
+    }
+  }
+
+  // 2) 읽기 — 막혀야 정상
+  const { data, error } = await sb.from("quotes").select("name,phone,address").limit(5);
+  const rows = data?.length ?? 0;
+
+  if (error) {
+    console.log(`  ${G("✔ 차단")}  견적 문의 읽기  \x1b[2m(거부됨 — 고객 연락처 안전)\x1b[0m`);
+  } else if (rows > 0) {
+    bad++;
+    console.log(`  ${R("✘ 뚫림")}  견적 문의 읽기 → 고객 개인정보 ${rows}건이 그대로 보입니다!`);
+    console.log(`           supabase/migrations/0002_quotes.sql 의 정책을 다시 실행하세요.`);
+  } else if (WRITE) {
+    // 방금 넣었는데도 안 보인다 = 정책이 확실히 막고 있다
+    console.log(`  ${G("✔ 차단")}  견적 문의 읽기  \x1b[2m(방금 넣은 건도 안 보임 — 확실)\x1b[0m`);
+    console.log(`           \x1b[2m※ 시험용 문의 1건이 남았습니다. /admin/quotes 에서 삭제하세요.\x1b[0m`);
+  } else {
+    console.log(`  \x1b[33m… 판정보류\x1b[0m  견적 문의 읽기  \x1b[2m(0건 — 막힌 건지 비어 있는 건지 구분 불가)\x1b[0m`);
+    console.log(`           \x1b[2m확실히 보려면: npm run supabase:rls -- --write\x1b[0m`);
+  }
+}
+
 // 공개 읽기는 되어야 정상 (안 되면 홈페이지가 빈 화면이 됩니다)
 {
   const { error } = await sb.from("works").select("id").limit(1);

@@ -4,6 +4,8 @@ import path from "node:path";
 import { MAX_FILES, MAX_FILE_BYTES, validateFull, validateQuick } from "@/lib/validate";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isCmsEnabled } from "@/lib/supabase/env";
+import { notifyNewQuote } from "@/lib/notify";
+import { site } from "@/config/site";
 
 export const runtime = "nodejs";
 
@@ -122,18 +124,28 @@ export async function POST(req: Request) {
       else stored = true;
     }
 
-    // 2순위: 로컬 파일 (개발 중이거나 Supabase 미설정일 때)
-    try {
-      const dir = path.join(process.cwd(), "data");
-      await fs.mkdir(dir, { recursive: true });
-      await fs.appendFile(
-        path.join(dir, "quotes.jsonl"),
-        JSON.stringify(record) + "\n",
-        "utf8"
-      );
-      stored = true;
-    } catch (e) {
-      if (!isCmsEnabled()) console.warn("[견적문의] 파일 기록 실패:", e);
+    /**
+     * 2순위: 로컬 파일 — **DB 를 안 쓰는 상태(개발·Supabase 미설정)에서만** 씁니다.
+     *
+     * ⚠️ 예전에는 이 블록이 조건 없이 돌면서 성공하면 `stored = true` 로 만들었습니다.
+     *    그러면 **DB 저장이 실패해도 파일 쓰기가 성공하는 순간 "접수 완료"** 가 나갑니다.
+     *    서버리스는 보통 파일 쓰기가 막혀 있어 실제로 터지진 않았지만, 플랫폼이
+     *    임시 디렉터리를 열어주면 조용히 문의를 삼키는 구조였습니다.
+     *    바로 위 주석이 막겠다고 한 상황이라 조건을 붙였습니다.
+     */
+    if (!isCmsEnabled()) {
+      try {
+        const dir = path.join(process.cwd(), "data");
+        await fs.mkdir(dir, { recursive: true });
+        await fs.appendFile(
+          path.join(dir, "quotes.jsonl"),
+          JSON.stringify(record) + "\n",
+          "utf8"
+        );
+        stored = true;
+      } catch (e) {
+        console.warn("[견적문의] 파일 기록 실패:", e);
+      }
     }
 
     if (!stored) {
@@ -149,9 +161,36 @@ export async function POST(req: Request) {
       );
     }
 
-    // TODO(선택): 실시간 알림이 필요하면 아래 중 하나를 추가하세요.
-    //   이메일(Resend) · 알림톡(알리고·솔라피) · 슬랙/카카오워크 웹훅
-    //   지금은 /admin/quotes 에서 확인합니다.
+    /**
+     * 실시간 알림 — **저장이 확정된 뒤에만** 부릅니다.
+     *
+     * 여기서 실패해도 고객에게는 정상 접수로 응답합니다. 문의는 이미 DB 에 있고,
+     * 알림이 안 갔다고 "접수 실패" 를 띄우면 고객이 두 번 넣게 됩니다.
+     * `notifyNewQuote` 자체가 예외를 밖으로 안 던지지만, 만약을 위해 한 겹 더 감쌉니다.
+     *
+     * 환경변수를 안 넣으면 조용히 아무것도 안 합니다(기본 꺼짐).
+     */
+    try {
+      const sent = await notifyNewQuote(
+        {
+          kind: record.kind,
+          name: record.name,
+          phone: record.phone,
+          email: record.email,
+          region: record.region,
+          signType: record.signType,
+          timing: record.timing,
+          address: [record.address, record.addressDetail].filter(Boolean).join(" "),
+          message: record.message,
+          fileCount: record.files.length,
+          receivedAt: record.receivedAt,
+        },
+        site.url
+      );
+      if (sent.length) console.log("[견적문의] 알림 발송:", sent.join(", "));
+    } catch (e) {
+      console.error("[견적문의] 알림 처리 중 예외(접수는 정상):", e);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {
