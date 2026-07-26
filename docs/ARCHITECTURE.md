@@ -8,11 +8,31 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-07-24 (SEO 적용) |
+| 최종 갱신 | 2026-07-26 (운영 배포 실측 반영 + F13~F15 추가) |
+| 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
-| 렌더링 | 공개 페이지 정적(ISR) · 관리자 화면 동적 |
+| 렌더링 | 정적 페이지(DB 안 쓰는 곳) · **DB 를 읽는 페이지는 요청 시 SSR** · 관리자 화면 동적 |
 | 배포 | **Cloudflare Workers 무료** — Vercel Hobby 는 상업적 이용 금지, Netlify 무료는 크레딧 소진 시 사이트 중단 위험 ([DEPLOY.md](DEPLOY.md)) |
+
+### 운영 배포 실측 (2026-07-26)
+
+`curl` 로 실제 서비스 주소를 찔러 확인한 값입니다. 추측이 아닙니다.
+
+| 항목 | 결과 |
+|---|---|
+| `https://susannadesign.co.kr/` | ✅ 200 · HTML 120KB · TTFB 0.78~1.58s |
+| Supabase 연결 (Cloudflare 환경변수) | ✅ 됨 — `/admin/login` 이 안내문 대신 로그인 폼을 그림 |
+| CMS 실동작 | ✅ 첫 슬라이드가 **관리자에서 업로드한 스토리지 사진**을 서비스 중 |
+| `robots.txt` | ✅ 운영 모드 (`isProductionDomain=true`) · `/api/` `/admin` 차단 · sitemap 정상 |
+| `sitemap.xml` | ✅ 전 주소가 `https://susannadesign.co.kr` |
+| 정적 자산 캐시 (`public/_headers`) | ✅ 적용됨 — `logo.svg` `icon.png` = `max-age=86400` |
+| `/rss.xml` 캐시 (`next.config.ts`) | ✅ 적용됨 — `s-maxage=3600` |
+| **공개 HTML 캐시** | ❌ **없음** — `private, no-cache, no-store, must-revalidate` (§7 부채 실증) |
+| **`www` → 비`www` 301** | 실측 당시 ❌ (200 반환) → **F13 으로 해결, 다음 배포에 반영** |
+| 사진 | ⚠️ 플레이스홀더 **홈 38개 · /works 15개** 노출 중 (§7) — 표시 방식은 F14 로 개선 |
+| AI 크롤러 | ⚠️ Cloudflare 관리형 `robots.txt` 가 차단 중. F15 로 덮어쓰기 시도 + **대시보드 조치 필요** (§7) |
+| GitHub Actions 정지방지 | ❓ 확인 못 함 (`gh` CLI 없음) — 대표님이 Actions 탭에서 확인 필요 |
 
 ---
 
@@ -61,17 +81,27 @@ Susanna/
 
 | # | 경로 | 파일 | 렌더링 | 데이터 출처 |
 |---|---|---|---|---|
-| **P1** | `/` | `app/page.tsx` | 정적 + ISR 600s | **CMS** `getSlides()` `getWorks()` + `config/content.ts` |
+| **P1** | `/` | `app/page.tsx` | **요청 시 SSR** (`dynamic="force-dynamic"`) | **CMS** `getSlides()` `getWorks()` + `config/content.ts` |
 | **P2** | `/about` | `app/about/page.tsx` | 정적 | `config/site.ts` `content.ts` |
 | **P3** | `/signs` | `app/signs/page.tsx` | 정적 | `content.signTypes` |
-| **P4** | `/works` | `app/works/page.tsx` | 정적 + ISR 600s | **CMS** `getWorks()` |
+| **P4** | `/works` | `app/works/page.tsx` | **요청 시 SSR** (`dynamic="force-dynamic"`) | **CMS** `getWorks()` |
 | **P5** | `/process` | `app/process/page.tsx` | 정적 | `content.steps` + 페이지 내 `detail` |
 | **P6** | `/support` | `app/support/page.tsx` | 정적 | `config/site.ts` (FAQ·오시는길) |
 | **P7** | `/quote` | `app/quote/page.tsx` | 정적 | `content.ts` 선택지 |
 | **P8** | `/privacy` `/terms` `/no-email-collect` | 각 `page.tsx` | 정적 | 하드코딩 ⚠️법률 검토 필요 |
 | — | `/robots.txt` `/sitemap.xml` | `app/robots.ts` `sitemap.ts` | 정적 | `config/site.ts` |
-| — | `/rss.xml` | `app/rss.xml/route.ts` | ISR 600s | **CMS** `getWorks()` — 네이버 서치어드바이저 제출용 |
+| — | `/rss.xml` | `app/rss.xml/route.ts` | 요청 시 생성 + **CDN 캐시 1h** | **CMS** `getWorks()` — 네이버 서치어드바이저 제출용 |
 | — | 404 | `app/not-found.tsx` | 정적 | — |
+
+> **왜 ISR 을 쓰지 않나** (2026-07-24 변경, 커밋 `d8342d7`)
+> Cloudflare 배포에서 ISR 은 별도 캐시 저장소(R2 등)가 있어야 하는데, 없으면 요청마다
+> 재생성을 시도하다 **타임아웃**이 납니다. 그래서 DB 를 읽는 세 곳(`/` `/works` `/rss.xml`)을
+> `force-dynamic` 으로 바꿨습니다. 부작용은 §7 의 "방문마다 SSR" 항목 참조.
+>
+> ⚠️ **`next.config.ts` 의 `headers()` 는 동적 페이지에 안 먹습니다.** Next 가
+> `no-cache, must-revalidate` 를 직접 붙이고 그게 우선합니다(실측 확인). HTML 은
+> 캐시되지 않고, `public/_headers` 의 규칙은 **정적 자산에만** 적용됩니다.
+> 라우트 핸들러(`/rss.xml`)는 예외로 정상 적용됩니다.
 
 ```
 / (P1)
@@ -186,9 +216,11 @@ lib/cms.ts (server-only)
 lib/supabase/public.ts
 └── createPublicClient()  쿠키 미사용 (persistSession:false)  [원칙 A3]
 ```
-**왜 쿠키를 안 쓰나**: 서버 컴포넌트에서 `cookies()` 를 부르면 그 페이지는
-요청마다 새로 그려집니다. 공개 콘텐츠는 로그인과 무관하므로 익명으로 읽고
-정적 유지 → 관리자가 저장할 때 `revalidatePath` 로 갱신하는 편이 훨씬 빠릅니다.
+**왜 쿠키를 안 쓰나**: 공개 콘텐츠는 로그인과 무관하므로 익명으로 읽습니다.
+쿠키를 붙이면 방문자별 응답이 되어 **나중에 CDN 캐시를 얹을 길이 막힙니다**
+(§7 의 SSR 부채를 R2/Cache Rules 로 해소하려면 응답이 방문자와 무관해야 함).
+지금은 `force-dynamic` 이라 어차피 요청마다 그려지지만, 원칙 A3 을 지켜 두면
+캐시 전략을 되살릴 때 코드를 고칠 필요가 없습니다.
 
 ### F8. 인증 · 권한
 ```
@@ -263,10 +295,10 @@ components/JsonLd.tsx           구조화 데이터 삽입 공통
 components/Section.tsx PageHero  path prop → BreadcrumbList 자동 생성
 app/support/page.tsx            FAQPage (화면의 faqs 배열 그대로)
 
-app/robots.ts    disallow: /api/ · /admin
+app/robots.ts    disallow: /api/ · /admin · AI 크롤러 명시 허용(F15)
 app/sitemap.ts   /admin 제외
 app/rss.xml/     RSS — 네이버 서치어드바이저 제출용 (시공사례 자동 반영)
-app/icon.png · apple-icon.png
+public/icon.png · public/apple-icon.png   ← 정적 자산 (캐시 헤더 적용 대상)
 ```
 실행 지침과 운영자 할 일은 [`SEO.md`](SEO.md) 참조.
 
@@ -274,23 +306,76 @@ app/icon.png · apple-icon.png
 스킵 링크 · `aria-current` · `aria-invalid` + `role="alert"` · label 연결 ·
 `prefers-reduced-motion` 전면 대응 · 필터 `role="tablist"` · `aria-live` 건수 안내
 
+### F13. www → 비www 301 (호스팅 독립)
+```
+config/site.ts   export const CANONICAL_URL   ★ 도메인 원본 (A5)
+      ↓ import
+next.config.ts   redirects()
+└── source "/:path*"  +  has: [{ type:"host", value:"www.<도메인>" }]
+    → destination `${CANONICAL_URL}/:path*`   statusCode 301
+```
+- **왜 코드에 두나**: Cloudflare Redirect Rules 로도 되지만 그러면 설정이 대시보드에만
+  남아 저장소만 봐서는 알 수 없고, 배포처를 옮기면 사라집니다. 이 프로젝트는
+  `proxy.ts` 를 없애면서까지 호스팅 종속성을 걷어냈으므로 도메인 규칙도 코드에 둡니다.
+- **왜 `statusCode: 301` 인가**: `permanent: true` 는 **308** 을 냅니다. 308 도 검색엔진은
+  301 과 같이 취급하지만, 문서·SEO 자료가 전부 301 기준이라 굳이 다르게 둘 이유가 없습니다.
+- 도메인을 바꿀 때는 `CANONICAL_URL` 한 줄만 고치면 리다이렉트까지 따라옵니다.
+- 검증: `curl -H "Host: www.susannadesign.co.kr" localhost:3000/works` → `301` +
+  `location: https://susannadesign.co.kr/works` (경로 보존 확인)
+
+### F14. 플레이스홀더 — 개발/운영 분리
+```
+components/Placeholder.tsx
+├── 개발  파일명 + 필요 픽셀(work-01.jpg / 1200×900)  ← 무엇을 넣어야 하는지 알려주는 게 목적
+└── 운영  설명 + "사진 준비 중" 만. 점선 테두리도 없앰
+```
+- **왜**: 사이트가 이미 고객에게 열린 뒤로는 `work-01.jpg 1200×900` 같은 개발자용
+  정보가 화면에 찍히는 게 미완성으로 보입니다. A6(파일명 규칙 자동 교체)은 그대로 유지 —
+  **표시만 가릴 뿐 동작은 같습니다.**
+- 파일명 문자열은 클라이언트 컴포넌트(`WorksGrid`)로 넘어가는 props 직렬화 데이터에는
+  여전히 남습니다(모든 Next 앱이 그렇습니다). **화면에 보이지 않는다**가 이 기능의 범위입니다.
+
+### F15. AI 답변 엔진 크롤러 허용
+```
+app/robots.ts
+├── AI_CRAWLERS[]  GPTBot · OAI-SearchBot · ClaudeBot · PerplexityBot ·
+│                  Google-Extended · Applebot-Extended · CCBot · … 14종
+└── POLICY         allow "/" + disallow ["/api/","/admin"]   ← 두 그룹이 공유
+    ├── User-agent: *          + POLICY
+    └── User-agent: <AI 14종>  + POLICY
+```
+- **왜 이름을 하나하나 적나**: Cloudflare 가 우리 `robots.txt` **앞에** 관리형 블록을
+  끼워 넣어 이 봇들을 `Disallow: /` 로 막습니다(신규 도메인 기본값). robots.txt 는
+  **같은 User-agent 그룹끼리 합쳐지고, 동일하게 구체적인 Allow/Disallow 충돌 시 Allow 가
+  이깁니다**(RFC 9309 · 구글 문서). 그래서 이름을 지목해 `Allow` 를 선언하면 대개 뒤집힙니다.
+- ⚠️ **AI 그룹에도 `/api/` `/admin` 차단을 반드시 같이 넣습니다.** 크롤러는 자기 이름의
+  그룹이 있으면 `*` 그룹을 아예 보지 않으므로, 빼먹으면 **이 봇들에게만 관리자 화면이 열립니다.**
+- ⚠️ 이건 **보조 장치**입니다. 확실한 해제는 Cloudflare 대시보드(§7). 크롤러마다
+  규칙 해석이 조금씩 달라 100% 보장은 아닙니다.
+
 ---
 
 ## 4. 데이터 흐름
 
 ```
 [공개 방문자]
-  브라우저 → 정적 HTML (ISR 600s)
-              └ 빌드/재생성 시 lib/cms.ts
+  DB 안 쓰는 페이지 (/about /signs /process /support /quote …)
+    브라우저 → 빌드 시 만든 정적 HTML                        ← 캐시됨
+
+  DB 읽는 페이지 (/ /works /rss.xml)
+    브라우저 → 요청마다 서버 렌더링 → lib/cms.ts
                    ├─ Supabase 연결됨 → hero_slides · works  (RLS: published=true)
                    └─ 실패/미설정      → config/content.ts    [A1 폴백]
+                 ※ 방문 1회 = SSR 1회 + DB 조회 1~2회 (§7 부채)
 
 [관리자]
-  브라우저 → proxy.ts (세션 갱신·차단)
-           → /admin/* page.tsx → requireAdmin()
+  브라우저 → /admin/* page.tsx → requireAdmin()
+           ↑ SessionKeeper.tsx 가 브라우저에서 토큰 갱신 → 쿠키 기록 (구 proxy.ts 역할)
            → 서버액션 → requireAdmin() 재확인 → Supabase (RLS 재검증)
                       → revalidatePath("/", "/works")
-                      → 공개 페이지 즉시 재생성
+                      → 공개 페이지는 force-dynamic 이라 애초에 매번 새로 그려짐.
+                        이 호출은 클라이언트 라우터 캐시를 비우는 역할만 남았고,
+                        나중에 캐시를 되살릴 때를 위해 남겨 둡니다.
 
 [사진 업로드]
   브라우저 → Supabase Storage 직접 (서버 경유 안 함)
@@ -335,6 +420,10 @@ RLS
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | 관리자 기능에만 | CMS 꺼짐 → 폴백 동작, 공개 사이트 정상 |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 관리자 기능에만 | 〃 |
+| `NEXT_PUBLIC_SITE_URL` | ✕ (선택) | `config/site.ts` 의 확정 도메인을 씁니다. **임시 주소로 배포할 때만** 이 값을 넣으세요 — `site.isProductionDomain` 이 false 가 되어 `robots.txt` 가 전면 차단으로 바뀝니다 |
+
+**운영(Cloudflare) 환경변수는 들어가 있습니다** — 2026-07-26 확인
+(`/admin/login` 이 "아직 연결 전입니다" 안내문이 아니라 로그인 폼을 그림 = 키가 읽힌다는 뜻).
 
 `SUPABASE_SERVICE_ROLE_KEY` 는 **의도적으로 사용하지 않습니다.**
 
@@ -347,19 +436,22 @@ RLS
 
 | 구분 | 내용 | 위치 |
 |---|---|---|
-| ⚠️ 미검증 | **로그인 후 CRUD(저장·삭제·순서변경·사진업로드) 미확인.** 아래는 실DB 검증 완료(2026-07-24): 접속·공개읽기(DB에서 읽는 것 확인)·RLS 8종 차단·스토리지 공개읽기·`next/image` 호스트 허용. 남은 건 관리자 세션이 필요한 경로뿐 | F9 |
+| 일부 검증 | **관리자 CRUD — 저장·사진업로드는 실동작 확인** (2026-07-26): `hero_slides` 1번 레코드의 `image_url` 이 스토리지 URL 이고 운영 사이트가 그 사진을 서비스 중 → 로그인·`requireAdmin()`·업로드·저장·`revalidatePath` 경로가 끝까지 통했다는 뜻. **아직 미확인: 삭제 · 순서변경(`moveSlide`/`moveWork`)** | F9 F10 |
 | TODO | 견적 문의 **실시간 알림**(이메일·알림톡) 미연결 — DB 저장은 되므로 `/admin/quotes` 를 주기적으로 봐야 함 | `app/api/quote/route.ts` |
 | TODO | 레이트리밋이 인메모리 — 서버리스에서 인스턴스마다 따로 세므로 사실상 헐거움 | 〃 |
-| ⚠️ 배포 | `0002_quotes.sql` 미실행 시 **견적 문의 유실**. 배포 전 필수 | [`DEPLOY.md`](DEPLOY.md) 0단계 |
+| 부채 | **방문마다 SSR + DB 조회** — ISR 을 걷어낸 대가(§2.1 주석). **운영 실측으로 확인**: 홈 응답 헤더가 `private, no-cache, no-store, must-revalidate` 로 HTML 캐시가 없습니다. 다만 홈 TTFB 0.78~1.58s 대 정적 페이지(`/about`) 0.92s 로 **체감 차이는 거의 없어** 급하지 않습니다(Cloudflare 콜드스타트가 더 큰 비중). 트래픽이 커지면 Cache Rules 또는 R2 로 ISR 을 되살리는 게 정석 | `app/page.tsx` `app/works/page.tsx` `next.config.ts` |
+| 해소 | ~~`0002_quotes.sql` 미실행 시 견적 문의 유실~~ → **실행 확인됨** (2026-07-26 `npm run supabase:check`: `quotes` 테이블 존재) | [`DEPLOY.md`](DEPLOY.md) 0단계 |
 | ⚠️ 배포 | **Vercel Hobby 사용 금지** — 상업적 이용 위반, 사전 통보 없이 중단 가능 | 〃 |
 | 해소 | ~~proxy.ts 로 인한 배포처 제약~~ → 제거 완료. 어느 호스팅에서든 동작 | F8 |
 | 해소 | ~~Supabase 7일 자동 정지~~ → GitHub Actions 로 3일마다 자동 깨우기 (시크릿 등록 필요) | `.github/workflows/keep-supabase-awake.yml` |
 | TODO | 사업자등록번호 · 옥외광고사업 등록번호 · 도메인 · 우편번호 · 운영시간 · 누적건수 | `config/site.ts` |
-| ⚠️ 배포 | 도메인은 `https://susannadesign.co.kr` (**www 없음**) 확정. 배포 시 **www → 비www 301 리다이렉트 필수** — 안 하면 중복 콘텐츠로 평가가 쪼개짐 | 호스팅 설정 |
+| 해소 | ~~`www` → 비`www` 301 미설정~~ → **코드로 처리** (2026-07-26). `next.config.ts` 의 `redirects()` 가 `has: host` 로 잡아 301 을 냅니다. 대시보드가 아니라 코드에 둔 이유는 F13 참조. **배포 후 실제 `www` 주소로 재확인 필요** | F13 |
+| ⚠️ 남음 | **사진이 없습니다** — 홈 38자리 · `/works` 15자리가 플레이스홀더. `works` 15건 전부 `/images/work-NN.jpg` 를 가리키는데 `public/images/` 에는 `og.jpg` 뿐입니다. **운영 중 노출되는 개발자용 정보(파일명·픽셀수)는 F14 로 가렸으나, 사진 자체는 대표님이 넣어야 합니다** | `public/images/` |
+| ⚠️ 대시보드 몫 | **Cloudflare 관리형 `robots.txt` 가 AI 크롤러를 차단 중** — 우리 응답 **앞에** Cloudflare 가 자기 블록을 끼워 넣습니다. 코드로는 지울 수 없어 `app/robots.ts` 에서 **명시적 `Allow` 로 덮어쓰기를 시도**(F15)했지만, 확실히 풀려면 **Cloudflare 대시보드 → AI Crawl Control 에서 관리형 robots.txt 를 꺼야 합니다.** 실측: AI 봇 UA 로 접근하면 **200** 이 떨어지므로 WAF 실차단은 아니고 robots.txt 권고만 걸린 상태 | Cloudflare 대시보드 · F15 |
 | ⚠️ SEO | `site.geo` 좌표가 대전 서구 근사값 — 로컬팩 "거리" 요인에 영향 | `config/site.ts` |
 | TODO | 네이버·구글 사이트 소유확인 코드 미입력 (슬롯만 준비됨) | 〃 |
 | 미도입 | **시공사례 개별 페이지 미구현** — 로컬 SEO 최대 자산이나, 현재 데이터로 만들면 "얇은 콘텐츠" 페널티. 사례별 상세 내용 확보가 선행 | [`SEO.md`](SEO.md) B-1 |
-| TODO | 사진 약 30장 미투입 (플레이스홀더 표시 중) | `public/images/` |
+| — | ~~사진 약 30장 미투입~~ → 위 "운영 사이트에 플레이스홀더 노출" 항목으로 통합 (실측 53자리) | 〃 |
 | ⚠️ 법률 | 개인정보처리방침 · 이용약관 초안 상태 | `app/privacy` `app/terms` |
 | 부채 | 로고 SVG 가 저해상도 래스터 트레이싱본. 대형 출력엔 원본 AI/EPS 필요 | `public/logo.svg` |
 | 부채 | 관리자에서 사진 교체 시 **이전 파일이 스토리지에 남음** (고아 파일) | F10 |

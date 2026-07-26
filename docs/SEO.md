@@ -204,9 +204,56 @@ E-E-A-T의 "경험" 축을 채우는 항목이라 업계 일반론 복사는 역
 | 3 | 사진 30여 장 투입 + 지역·업종 담긴 alt | 사진 |
 | 4 | 소유확인 코드 2개 → `site.naverVerification` / `googleVerification` | C3·C4 완료 |
 | 5 | 우편번호·운영시간 확정 | 확인 |
-| ~~완료~~ | ~~도메인 확정~~ | **`https://susannadesign.co.kr` 확정 (2026-07-24)** |
+| ~~완료~~ | ~~도메인 확정~~ | **`https://susannadesign.co.kr` 확정 (2026-07-24) → 연결·운영 중 (2026-07-26)** |
 
-### 도메인 — 배포 시 반드시 할 것
+### 배포 후 실측 — 기술 SEO 상태 (2026-07-26)
+
+| 항목 | 결과 |
+|---|---|
+| `robots.txt` 검색 허용 | ✅ (`isProductionDomain=true`, `/api/` `/admin` 만 차단) |
+| `sitemap.xml` | ✅ 전 주소가 비`www` 확정 도메인 |
+| `canonical` · `og:url` | ✅ `www` 로 접속해도 비`www` 를 가리킴 |
+| `www` → 비`www` **301** | ✅ **코드로 처리** (`next.config.ts`) — 배포 후 재확인 필요 |
+| 사진 `alt` 자산 | ⚠️ 사진 자체가 없어 플레이스홀더 53자리 — E 표 3번이 실질적 최우선 |
+| 소유확인 코드 | ❌ 미입력 → **네이버·구글에 아직 사이트 등록 자체가 안 된 상태** (C 섹션) |
+
+### AI 답변 엔진에 인용되게 하기 — ⚠️ 대시보드에서 한 번 눌러 주셔야 합니다
+
+**목표**: "대전 간판업체 추천해줘" 같은 질문에 ChatGPT·Perplexity·구글 AI 개요가
+이 사이트를 인용하게 하는 것. 지금은 막혀 있습니다.
+
+**원인**: 실제 `robots.txt` 를 받아 보면 우리 `app/robots.ts` 결과 **앞에** Cloudflare
+관리형 블록이 붙어 있고, 거기서 `GPTBot` `ClaudeBot` `Google-Extended` `CCBot`
+`Bytespider` 등을 `Disallow: /` 로 막습니다. **신규 도메인 기본값**이라 대표님이
+켠 게 아닙니다.
+
+| | |
+|---|---|
+| 일반 검색(네이버·구글) | ✅ 영향 없음 — `search=yes`, `Allow: /` |
+| `/admin` `/api/` 차단 | ✅ 그대로 유효 |
+| AI 답변 인용 | ❌ 막힘 |
+| WAF 실차단인가 | ❌ 아님 — AI 봇 UA 로 접근하면 **200** 이 떨어집니다. `robots.txt` 권고만 걸린 상태 |
+
+**코드로 한 조치 (F15)**: `app/robots.ts` 에서 AI 크롤러 14종을 **이름으로 지목해
+`Allow: /`** 를 선언했습니다. robots.txt 는 같은 User-agent 그룹끼리 합쳐지고 동일하게
+구체적인 Allow/Disallow 충돌 시 Allow 가 이기므로(RFC 9309·구글 문서), 이것만으로
+뒤집히는 크롤러도 있습니다. **하지만 크롤러마다 해석이 달라 보장은 못 합니다.**
+
+**확실하게 하려면 — Cloudflare 대시보드에서 (2분)**
+
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → `susannadesign.co.kr` 선택
+2. 왼쪽 메뉴 **AI Crawl Control** (예전 이름: Bots → Managed robots.txt)
+3. **관리형 `robots.txt` / AI 크롤러 차단**을 **끕니다**
+4. 확인: `curl https://susannadesign.co.kr/robots.txt` 했을 때
+   `# BEGIN Cloudflare Managed content` 블록이 사라져 있으면 완료
+
+> **트레이드오프를 알고 결정하세요.** 이걸 풀면 AI 답변에 인용될 길이 열리는 대신,
+> 같은 봇들이 **콘텐츠를 AI 학습에도 씁니다**(`GPTBot` `Google-Extended`
+> `Applebot-Extended` 등이 학습용). 이 사이트 콘텐츠는 회사 소개·시공실적이라
+> 학습에 쓰여도 잃을 게 거의 없고 인용 유입이 더 큰 이득이라 **여는 쪽을 권합니다.**
+> 시공 사진을 학습에 주고 싶지 않다면 지금 상태를 유지하는 것도 합리적입니다.
+
+### 도메인 — `www` 301 이 아직 안 걸려 있습니다
 
 `site.url = https://susannadesign.co.kr` (**www 없음**)으로 확정했습니다.
 sitemap · RSS · 구조화 데이터 · canonical · OG 가 전부 이 값에서 나옵니다.
@@ -217,6 +264,7 @@ sitemap · RSS · 구조화 데이터 · canonical · OG 가 전부 이 값에�
 
 | 배포처 | 방법 |
 |---|---|
+| **Cloudflare** (현재 배포처) | Rules → Redirect Rules 에 301 규칙 추가. 화면 그대로 따라가는 절차는 [`DEPLOY.md`](DEPLOY.md) **5-3** 에 있습니다 |
 | Vercel | Domains 에 둘 다 등록 → `susannadesign.co.kr` 을 Primary 로 지정하면 www 가 자동 301 |
 | 그 외 | 웹서버(nginx 등)에서 `www.` → 비 www 301 규칙 추가 |
 

@@ -2,6 +2,10 @@
 
 간판 제작·시공 기업 홈페이지. Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4.
 
+> ### 🌐 https://susannadesign.co.kr — **운영 중**
+> Cloudflare Workers 배포 완료, Supabase 연결됨, 관리자 화면(`/admin`) 동작 확인.
+> **남은 급한 일 2가지는 아래 [지금 해야 할 일](#지금-해야-할-일)** 참조.
+
 ## 실행
 
 ```bash
@@ -121,9 +125,50 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 
 ---
 
-## 지금 해야 할 일 3가지
+## 지금 해야 할 일
 
-### 1. 남은 회사 정보 채우기 → `config/site.ts`
+사이트는 이미 인터넷에 올라가 **고객이 볼 수 있는 상태**입니다. 그래서 순서를 바꿨습니다 —
+아래 1·2번은 지금 방문하는 고객에게 그대로 보이는 문제라 가장 급합니다.
+
+### 🔴 1. 사진 넣기 → `public/images/` ★ 가장 급합니다
+
+**운영 사이트에 "사진 준비 중" 박스가 홈 38자리 · 시공사례 15자리 떠 있습니다.**
+간판업체 홈페이지에서 시공사진이 없는 건 사실상 빈 사이트입니다.
+
+> 박스에 `work-01.jpg` `1200×900` 같은 개발자용 정보가 찍혀 나오던 문제는 고쳤습니다 —
+> 이제 운영 화면에서는 실적 이름과 "사진 준비 중" 만 조용히 보입니다. 보기에 덜
+> 어색해진 것뿐이고, **사진 자체는 여전히 필요합니다.**
+
+**파일명만 맞춰서 넣으면 코드 수정 없이 자동 교체됩니다.**
+필요한 목록과 크기는 [`public/images/README.md`](public/images/README.md) — 총 30장 내외입니다.
+
+> 급하면 관리 화면(`/admin`)에서 올리는 방법도 있습니다. 첫 화면 사진 1장은 이미
+> 그렇게 올려 두셨고 정상 서비스되고 있습니다. 다만 시공사례 15건은 `public/images/`
+> 쪽이 한 번에 넣기 편합니다.
+
+### 🔴 2. AI 답변에 인용되게 하기 → Cloudflare 대시보드 (2분)
+
+"대전 간판업체 추천해줘" 라고 ChatGPT·Perplexity 에 물었을 때 이 사이트가 인용되는
+길이 지금 **막혀 있습니다.** Cloudflare 가 새 도메인에 기본으로 걸어 둔 설정 때문이고,
+대표님이 켠 게 아닙니다. 일반 검색(네이버·구글)에는 영향 없습니다.
+
+코드에서 할 수 있는 조치는 이미 넣었지만(AI 크롤러 14종 명시 허용) **확실하게 풀려면
+대시보드에서 한 번 꺼 주셔야 합니다.**
+
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → `susannadesign.co.kr`
+2. 왼쪽 메뉴 **AI Crawl Control**
+3. 관리형 `robots.txt` / AI 크롤러 차단을 **끄기**
+
+자세한 설명과 트레이드오프(콘텐츠가 AI 학습에도 쓰입니다)는
+[`docs/SEO.md`](docs/SEO.md) 의 "AI 답변 엔진에 인용되게 하기" 절에 있습니다.
+
+### ✅ `www` 주소 — 해결했습니다
+
+`www.susannadesign.co.kr` 로 들어와도 비www 로 넘어가게 코드에 넣었습니다
+(`next.config.ts`, 301). 대시보드 설정이 아니라 코드라 배포처를 옮겨도 따라옵니다.
+**배포된 뒤 `www` 주소로 한 번 들어가 보세요** — 주소창이 비www 로 바뀌면 정상입니다.
+
+### 3. 남은 회사 정보 채우기 → `config/site.ts`
 
 회사소개서에서 옮길 수 있는 값은 이미 채워 넣었습니다 (상호·대표이사·연락처·주소·설립연도·자본금·임직원·인증 6종).
 남은 `// TODO` 는 아래뿐입니다.
@@ -132,7 +177,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 |---|---|---|
 | 사업자등록번호 | `bizNo` | **현재 비어 있어 화면에 안 나옵니다.** 값을 넣으면 푸터에 자동 표기 |
 | 옥외광고사업자 등록번호 | `outdoorAdNo` | 채우면 푸터·회사개요에 자동 노출 |
-| ~~도메인~~ | ~~`url`~~ | ✅ `https://susannadesign.co.kr` 확정. **배포 시 www → 비www 301 설정 필요** |
+| ~~도메인~~ | ~~`url`~~ | ✅ `https://susannadesign.co.kr` 연결 완료·운영 중 (`www` 301 은 위 2번) |
 | 우편번호 | `zip` | 35374 로 추정 입력해 둠, 확인 필요 |
 | 운영시간 | `hours` | 평일 09:00~18:00 으로 가정 |
 | 누적 시공 건수 | `config/content.ts` 의 `stats` | 현재 `0,000건` |
@@ -144,16 +189,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 `officePhone`(042-541-0171)은 회사개요·오시는길·푸터 법정표기 줄에만 병기됩니다.
 유선만 노출하고 싶으시면 `config/site.ts` 에서 둘을 맞바꾸면 됩니다.
 
-### 2. 사진 넣기 → `public/images/`
+### 4. 견적 문의 **알림** 연결 → `app/api/quote/route.ts`
 
-**파일명만 맞춰서 넣으면 코드 수정 없이 자동 교체됩니다.**
-파일이 없으면 화면에 "어떤 파일을, 몇 픽셀로" 넣어야 하는지 적힌 회색 박스가 뜹니다.
+문의는 **Supabase `quotes` 테이블에 저장**되고 `/admin/quotes` 에서 보실 수 있습니다.
+(DB 저장이 실패하면 `data/quotes.jsonl` 파일에 남고, 둘 다 실패하면 손님에게
+"접수됐다"고 거짓말하지 않고 오류를 냅니다.)
 
-필요한 사진 목록과 크기는 [`public/images/README.md`](public/images/README.md) 참고. 총 30장 내외입니다.
-
-### 3. 견적 문의 받을 곳 연결 → `app/api/quote/route.ts`
-
-지금은 **콘솔 로그 + `data/quotes.jsonl` 파일**에만 쌓입니다. 실제 운영 전에 아래 중 하나를 붙이세요.
+**아직 없는 건 실시간 알림입니다.** 지금은 `/admin/quotes` 를 직접 들여다봐야
+새 문의를 압니다. 문의를 놓치지 않으려면 아래 중 하나를 붙이세요.
 
 - 이메일 발송 (Resend, SendGrid, 네이버웍스 SMTP)
 - 알림톡·문자 (알리고, 솔라피)
@@ -181,13 +224,14 @@ app/
   admin/actions.ts      저장·삭제·순서변경 서버 액션 (권한 재확인 + 캐시 갱신)
   sitemap.ts robots.ts not-found.tsx
 
-proxy.ts                /admin 세션 갱신·접근 차단 (구 middleware.ts)
 supabase/migrations/    DB 스키마·권한정책·초기데이터 SQL
+public/_headers         정적 자산(사진·로고·스크립트) 캐시 규칙 — Cloudflare 용
 
 components/
   admin/                관리 화면 전용 (업로드 · 폼 · 셸)
   Header / Footer / FloatingBar        공통 레이아웃
   SiteChrome                           /admin 에서 공개 헤더·푸터 숨김
+  admin/SessionKeeper                  관리자 로그인 유지 (브라우저에서 토큰 갱신)
   HeroSlider                           히어로 슬라이더 (막대 인디케이터)
   QuickQuoteForm                       히어로 인라인 3필드 폼
   QuoteForm                            전체 견적 폼

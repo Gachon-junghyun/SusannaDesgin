@@ -6,8 +6,11 @@
 
 /**
  * 최종 확정 도메인. 이 주소 위에서 돌 때만 검색엔진에 노출됩니다.
+ *
+ * `next.config.ts` 도 이 값을 읽어 `www.` → 비`www` 301 리다이렉트를 만듭니다.
+ * 도메인을 바꾸면 여기 한 줄만 고치면 리다이렉트까지 따라옵니다.  [원칙 A5]
  */
-const CANONICAL_URL = "https://susannadesign.co.kr";
+export const CANONICAL_URL = "https://susannadesign.co.kr";
 
 /**
  * 지금 이 사이트가 서비스되는 주소.

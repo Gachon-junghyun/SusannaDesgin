@@ -14,8 +14,13 @@ import { imageExists } from "@/lib/images";
  *
  * ISR(`revalidate`)을 쓰지 않는 이유: Cloudflare 배포에서 ISR 은 별도 캐시 저장소가
  * 있어야 하는데, 없으면 요청마다 재생성을 시도하다 타임아웃이 납니다.
- * 대신 `next.config.ts` 의 CDN 캐시 헤더가 같은 역할을 하고,
- * 관리자가 사진을 바꾸면 10분 기다릴 필요 없이 곧바로 반영됩니다.
+ * 덕분에 관리자가 사진을 바꾸면 10분 기다릴 필요 없이 곧바로 반영됩니다.
+ *
+ * ⚠️ 대신 **HTML 캐시가 없습니다.** `next.config.ts` 의 `headers()` 는 동적 페이지에
+ *    적용되지 않고(Next 가 `no-cache` 를 직접 붙임), `public/_headers` 는 정적 자산
+ *    전용입니다. 즉 방문 1회 = SSR 1회 + DB 조회 1~2회.
+ *    지역 업체 트래픽에선 무료 한도에 한참 못 미치지만, 커지면 Cloudflare Cache Rules
+ *    또는 R2 를 붙여 ISR 을 되살리는 게 정석입니다. (docs/ARCHITECTURE.md §7)
  */
 export const dynamic = "force-dynamic";
 
