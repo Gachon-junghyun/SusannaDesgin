@@ -3,14 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/gen-image-manifest.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/gen-image-manifest.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "images:manifest": "node scripts/gen-image-manifest.mjs",
     "supabase:check": "node scripts/check-supabase.mjs",
     "supabase:rls": "node scripts/check-rls.mjs",
     "notify:test": "node scripts/check-notify.mjs",
-    "cf:build": "opennextjs-cloudflare build",
+    "cf:build": "node scripts/gen-image-manifest.mjs && opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && wrangler dev",
     "cf:size": "opennextjs-cloudflare build && wrangler deploy --dry-run"
   },
