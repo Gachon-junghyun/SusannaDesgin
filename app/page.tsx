@@ -2,6 +2,7 @@
 import HeroSlider from "@/components/HeroSlider";
 import QuickQuoteForm from "@/components/QuickQuoteForm";
 import Img from "@/components/Img";
+import JsonLd from "@/components/JsonLd";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
 import { equipment, signTypes, stats, steps } from "@/config/content";
@@ -24,12 +25,33 @@ import { imageExists } from "@/lib/images";
  */
 export const dynamic = "force-dynamic";
 
+/**
+ * 검색 결과에 뜨는 **사이트 이름**을 정합니다.
+ *
+ * 이게 없으면 구글이 도메인(`susannadesign.co.kr`)을 그대로 씁니다. 실제로
+ * 2026-07-27 검색 결과가 그랬습니다. `og:site_name` 도 이미 "수산나디자인" 인데
+ * 구글 문서상 **`WebSite` 구조화 데이터가 가장 우선하는 신호**라 따로 넣습니다.
+ * (신호 우선순위: WebSite 구조화 데이터 → og:site_name → title → 제목 태그)
+ *
+ * ⚠️ **홈에만 넣습니다.** 구글은 도메인 최상위 홈페이지의 `WebSite` 만 인정하고
+ *    하위 경로(`/works` 등)의 것은 무시합니다. 그래서 `app/layout.tsx` 의
+ *    LocalBusiness 와 달리 이 파일에 둡니다. 한 도메인에 사이트 이름은 하나뿐입니다.
+ */
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: site.name,
+  alternateName: [site.legalName, site.nameEn],
+  url: site.url,
+};
+
 export default async function Home() {
   const [slides, works] = await Promise.all([getSlides(), getWorks()]);
   const heroSlides = slides.map((s) => ({ ...s, available: imageExists(s.image) }));
 
   return (
     <>
+      <JsonLd data={websiteJsonLd} />
       <HeroSlider slides={heroSlides} />
 
       {/* 모바일에서는 히어로 아래에 간편 상담 폼 */}

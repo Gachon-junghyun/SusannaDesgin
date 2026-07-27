@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-07-27 (IndexNow F17 · `http`→`https` 301 해결 · `sameAs` 인스타그램 연결) |
+| 최종 갱신 | 2026-07-27 (IndexNow F17 · `http`→`https` 301 · `sameAs` · `taxID` · `WebSite` 사이트이름) |
 | 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
@@ -43,6 +43,8 @@
 | 크롤러 실접근 | ✅ Googlebot·GPTBot·OAI-SearchBot·ChatGPT-User·PerplexityBot·ClaudeBot·Yeti·bingbot **전부 200** (2026-07-27 UA 실측, 차단 0건) |
 | 색인 통보 (IndexNow) | ✅ **첫 제출 완료** (2026-07-27) — 전체중계 202 · Bing 202 · **네이버 403**(서치어드바이저 미등록, C3 후 재실행) |
 | 사업자등록번호 | ✅ 입력 (2026-07-27) — 푸터 법정표기 + 구조화 데이터 `taxID` 양쪽 확인 |
+| 검색결과 사이트 이름 | ⏳ 구글이 도메인(`susannadesign.co.kr`)을 표기 중 → `WebSite` 스키마 투입 (F11), 재크롤링 대기 |
+| 파비콘 | ⏳ 기본 지구본 표기 중. **코드는 이미 요건 충족**(512x512 정사각 + link 태그) — 구글 재크롤링 대기(공식 문서: 며칠~몇 주) |
 | GitHub Actions 정지방지 | ❓ 확인 못 함 (`gh` CLI 없음) — 대표님이 Actions 탭에서 확인 필요 |
 
 > ⚠️ **검색 노출을 확인할 때는 반드시 `hl=ko&gl=kr` 로 보세요.**
@@ -359,6 +361,13 @@ app/layout.tsx
 │           ⚠️ site.hours 와 반드시 일치 (NAP 일관성)
 │           ⚠️ AggregateRating/Review 금지 — 자사 게시 리뷰에만 허용
 └── Noto Sans KR (next/font, display:swap)
+
+app/page.tsx → WebSite JSON-LD  ★ 검색 결과에 뜨는 **사이트 이름**을 정합니다
+├── 없으면 구글이 도메인(susannadesign.co.kr)을 그대로 씀 — 2026-07-27 실제로 그랬음
+├── 신호 우선순위: WebSite 구조화 데이터 > og:site_name > title > 제목 태그
+└── ⚠️ **홈에만** 넣습니다. 구글은 도메인 최상위 홈의 WebSite 만 인정하고
+    하위 경로(/works 등)의 것은 무시합니다. 한 도메인에 사이트 이름은 하나뿐.
+    그래서 layout.tsx(전 페이지)가 아니라 page.tsx 에 있습니다.
 
 components/JsonLd.tsx           구조화 데이터 삽입 공통
 components/Section.tsx PageHero  path prop → BreadcrumbList 자동 생성
