@@ -15,7 +15,7 @@
 | 렌더링 | 정적 페이지(DB 안 쓰는 곳) · **DB 를 읽는 페이지는 요청 시 SSR** · 관리자 화면 동적 |
 | 배포 | **Cloudflare Workers 무료** — Vercel Hobby 는 상업적 이용 금지, Netlify 무료는 크레딧 소진 시 사이트 중단 위험 ([DEPLOY.md](DEPLOY.md)) |
 
-### 운영 배포 실측 (2026-07-26)
+### 운영 배포 실측 (2026-07-26 · 검색 관련 항목은 07-27 갱신)
 
 `curl` 로 실제 서비스 주소를 찔러 확인한 값입니다. 추측이 아닙니다.
 
@@ -42,11 +42,12 @@
 | AI 인용 | ⚠️ 구글 AI 개요가 여전히 **잡코리아·RnDcircle·비즈노**를 인용 — 반영에 수 주 걸립니다 (§7) |
 | 크롤러 실접근 | ✅ Googlebot·GPTBot·OAI-SearchBot·ChatGPT-User·PerplexityBot·ClaudeBot·Yeti·bingbot **전부 200** (2026-07-27 UA 실측, 차단 0건) |
 | 색인 통보 (IndexNow) | ✅ **첫 제출 완료** (2026-07-27) — 전체중계 202 · Bing 202 · **네이버 403**(서치어드바이저 미등록, C3 후 재실행) |
+| 사업자등록번호 | ✅ 입력 (2026-07-27) — 푸터 법정표기 + 구조화 데이터 `taxID` 양쪽 확인 |
+| GitHub Actions 정지방지 | ❓ 확인 못 함 (`gh` CLI 없음) — 대표님이 Actions 탭에서 확인 필요 |
 
 > ⚠️ **검색 노출을 확인할 때는 반드시 `hl=ko&gl=kr` 로 보세요.**
 > 미국 기준 검색 도구로 확인하면 이 사이트가 **하나도 안 잡혀** "미색인" 으로
 > 잘못 판정합니다. 2026-07-27 에 실제로 그렇게 오판했습니다.
-| GitHub Actions 정지방지 | ❓ 확인 못 함 (`gh` CLI 없음) — 대표님이 Actions 탭에서 확인 필요 |
 
 ---
 
@@ -573,7 +574,7 @@ RLS
 | ⚠️ 배포 | **Vercel Hobby 사용 금지** — 상업적 이용 위반, 사전 통보 없이 중단 가능 | 〃 |
 | 해소 | ~~proxy.ts 로 인한 배포처 제약~~ → 제거 완료. 어느 호스팅에서든 동작 | F8 |
 | 해소 | ~~Supabase 7일 자동 정지~~ → GitHub Actions 로 3일마다 자동 깨우기 (시크릿 등록 필요) | `.github/workflows/keep-supabase-awake.yml` |
-| TODO | 사업자등록번호 · 옥외광고사업 등록번호 · 도메인 · 우편번호 · 운영시간 · 누적건수 | `config/site.ts` |
+| TODO | 옥외광고사업 등록번호 · 우편번호 · 운영시간 · 누적건수 (사업자등록번호·도메인은 완료) | `config/site.ts` |
 | 해소 | ~~`www` → 비`www` 301 미설정~~ → **코드로 처리** (2026-07-26). `next.config.ts` 의 `redirects()` 가 `has: host` 로 잡아 301 을 냅니다. 대시보드가 아니라 코드에 둔 이유는 F13 참조. **배포 후 실제 `www` 주소로 재확인 필요** | F13 |
 | 해소 | **A6 가 운영에서 깨져 있었음** (2026-07-27 발견·수정) — `imageExists()` 가 `fs.existsSync()` 를 써서 Cloudflare Workers 에서는 항상 false. 사진을 넣어도 운영 사이트는 회색 상자였습니다. 빌드 시점 목록(`lib/image-manifest.ts`)으로 교체. **workerd 로컬 실행으로 실동작 확인** | F4 |
 | 일부 해소 | **사진 6장 투입** (2026-07-27) — 사업영역 3칸(`biz-outdoor`·`biz-sign`·`biz-indoor`) + 실적 신규 6건(`work-16`~`21`). 실적은 회사명이 이미 붙어 있는 `work-01`~`15` 자리를 쓰지 않고 **새 번호로 추가**했습니다. 그 자리에 다른 현장 사진을 넣으면 "삼성화재 사인물" 설명이 그대로 붙기 때문입니다 | `public/images/` · `0003` |
@@ -583,7 +584,7 @@ RLS
 | ⚠️ SEO | `site.geo` 좌표가 대전 서구 근사값 — 로컬팩 "거리" 요인에 영향 | `config/site.ts` |
 | 해소 | ~~`http://` 가 `https://` 로 301 되지 않음~~ → **Cloudflare `Always Use HTTPS` 로 해결** (2026-07-27). 발견 당시 `curl -sI http://…/` 가 **200** 이었고 구글이 `http://` 주소를 색인한 상태였습니다(canonical 은 `https://` 라 어긋남). ⚠️ **이건 코드로 하지 않습니다** — `x-forwarded-proto` 를 믿어야 하는데 값이 어긋나면 **무한 리다이렉트로 사이트가 죽습니다.** TLS 종단 계층의 일이라 대시보드가 맞습니다(F13 과 다른 판단인 이유). 실측: 루트·하위경로·`www` 겹침 전부 301, `http://www…/works` → 2홉 → 정식 주소 200 | [`SEO.md`](SEO.md) 문제 1 |
 | 일부 해소 | ~~`sameAs` 가 빈 배열~~ → **인스타그램 연결** (2026-07-27). `app/layout.tsx:120` 이 `[blogUrl, instagramUrl, kakaoChannelUrl].filter(Boolean)` 인데 셋 다 공란이라 구글·AI 가 홈페이지와 `@susanna_design541` 을 남남으로 봤습니다. 남은 공란: `blogUrl`(C6 블로그 개설 시) · `kakaoChannelUrl` | `config/site.ts` |
-| 🔴 TODO | **`site.bizNo` (사업자등록번호) 가 비어 있습니다** — 비즈노·머니핀 같은 디렉터리가 AI 인용을 가져가는 이유 중 하나입니다. 그쪽은 이 정형 사실을 갖고 있고 우리 홈은 없습니다. 값을 넣으면 푸터에 자동 표기됩니다 | `config/site.ts` |
+| 해소 | ~~`site.bizNo` 미입력~~ → **`314-86-35284` 입력** (2026-07-27, 국세청 체크섬 검증 통과). 푸터 법정표기 + 구조화 데이터 `taxID` 양쪽에 나갑니다. 비즈노·머니핀 같은 디렉터리만 갖고 있던 정형 사실을 이제 자사 홈이 1차 출처로 제공합니다 | `config/site.ts` · `app/layout.tsx` |
 | ⚠️ TODO | **색인이 홈 1페이지에 그침** — 사이트맵 10개 중 1개. Search Console 에서 사이트맵 제출 + `/works` `/about` 색인 요청 필요 | [`SEO.md`](SEO.md) 문제 2 |
 | TODO | 네이버 소유확인 코드 미입력 (구글은 07-26 등록 완료). 구글을 도메인(DNS TXT) 방식으로 확인했다면 `googleVerification` 은 비워 둬도 됩니다 | `config/site.ts` · [`SEO.md`](SEO.md) C3 |
 | 일부 해소 | **IndexNow 색인 통보 추가** (2026-07-27, F17) — 계정 없이 Bing·네이버 등에 즉시 통보. **구글은 참여사가 아니라 이걸로 안 풀립니다.** 배포 후 `npm run indexnow` 를 한 번 실행해야 실제 통보가 나갑니다(POST 경로는 키 파일 배포 전이라 아직 미검증) | F17 |

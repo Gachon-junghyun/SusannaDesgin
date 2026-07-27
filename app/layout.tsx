@@ -118,6 +118,9 @@ const jsonLd = {
     },
   ],
   sameAs: [site.blogUrl, site.instagramUrl, site.kakaoChannelUrl].filter(Boolean),
+  // 사업자등록번호. 검색엔진·AI 가 "이 홈페이지 = 그 사업자" 를 잇는 근거가 됩니다.
+  // 비어 있으면 키 자체를 빼야 합니다 — 빈 문자열을 내보내면 잘못된 값으로 읽힙니다.
+  ...(site.bizNo ? { taxID: site.bizNo } : {}),
   priceRange: "₩₩",
   // ⚠️ AggregateRating·Review 스키마는 넣지 않았습니다.
   //    자사 사이트에 실제로 게시된 리뷰에만 쓸 수 있고, 플레이스·GBP 리뷰를
