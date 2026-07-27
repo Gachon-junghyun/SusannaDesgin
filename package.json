@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "eslint",
     "images:manifest": "node scripts/gen-image-manifest.mjs",
+    "cms": "node scripts/cms.mjs",
     "supabase:check": "node scripts/check-supabase.mjs",
     "supabase:rls": "node scripts/check-rls.mjs",
     "notify:test": "node scripts/check-notify.mjs",

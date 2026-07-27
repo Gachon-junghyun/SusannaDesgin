@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-07-27 (IndexNow F17 · `http`→`https` 301 · `sameAs` · `taxID` · `WebSite` 사이트이름) |
+| 최종 갱신 | 2026-07-27 (**실적 사진 12장 투입** · **F18 CMS 명령줄 도구** · IndexNow F17 · `http`→`https` 301 · `sameAs` · `taxID` · `WebSite` 사이트이름) |
 | 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
@@ -31,7 +31,7 @@
 | **공개 HTML 캐시** | ❌ **없음** — `private, no-cache, no-store, must-revalidate` (§7 부채 실증) |
 | **`www` → 비`www` 301** | ✅ **배포 확인** — 루트·다단경로·쿼리스트링 전부 301 + 주소 보존 (F13) |
 | AI 크롤러 | ✅ **열렸습니다** — Cloudflare 관리형 블록 사라짐, `robots.txt` 가 우리 정책 24줄만 (F15) |
-| 사진 | ⚠️ 실사진 **6장 투입**(사업영역 3 · 실적 6). 남은 플레이스홀더 **홈 35개 · /works 15개** (§7) |
+| 사진 | ⚠️ 실사진 **19장**(실적 17 · 사업영역 4 · 공정 1, 일부 공용). 2026-07-27 회사소개서에서 12장 추가 — **배포해야 운영에 반영됩니다**. 남은 자리는 §7 |
 | **견적 문의 접수** | ✅ **끝까지 확인** — 운영 API 에 실제 접수 → `{ok:true}`. 폴백 수정 후라 이 응답은 **DB 저장 성공**을 뜻합니다 |
 | 견적 API 방어 | ✅ 허니팟 200(저장 안 함) · 빈 값 400 · 잘못된 번호 400 |
 | 고객 개인정보 | ✅ 익명은 `quotes` 를 **넣기만 되고 못 읽음** — 방금 넣은 행도 안 보이는 것까지 확인 |
@@ -79,6 +79,7 @@ Susanna/
 ├── docs/                   ← ARCHITECTURE.md(이 문서) · SEO.md · SUPABASE-SETUP.md
 ├── scripts/                ← check-supabase.mjs(연결 진단) · check-rls.mjs(권한 검증)
 │                             submit-indexnow.mjs(색인 통보) · gen-image-manifest.mjs(빌드 시 사진 목록)
+│                             cms.mjs(명령줄 콘텐츠 관리 — F18)
 ├── reference/              ← 레퍼런스 조사 자료 (SPEC.md + 캡처)
 │
 ├── next.config.ts          ← 이미지 원격 호스트 허용
@@ -490,6 +491,40 @@ scripts/submit-indexnow.mjs   npm run indexnow
 - 스크립트는 `process.exit()` 를 쓰지 않습니다 — fetch 소켓이 닫히는 중에 종료되면
   Windows 에서 libuv assertion 이 찍힙니다(`check-notify.mjs` 와 같은 이유).
 
+### F18. CMS 명령줄 도구 — 브라우저 없이 콘텐츠 관리
+```
+scripts/cms.mjs        npm run cms -- <명령>
+├── 로그인   signInWithPassword(SUPABASE_ADMIN_EMAIL, SUPABASE_ADMIN_PASSWORD)
+│           → profiles.role === "admin" 확인 후에만 진행
+├── list    hero · works (미공개 포함) · quotes(건수만)
+├── upload  로컬 파일 → media 버킷 → 공개 URL   (F10 과 같은 규칙)
+├── hero    add · set · move · rm · renumber
+└── works   add · set · move · rm · renumber · batch <계획.json>
+             batch = 사진 여러 장을 한 번에 업로드 + 등록
+```
+- **왜 만들었나**: 사진 여러 장을 실적으로 넣는 일이 화면에서는 장당 여러 번 클릭입니다.
+  또한 AI 에이전트(Claude Code)가 사진을 보고 제목·분류·태그를 채워 넣을 수 있게 됩니다 —
+  브라우저 로그인이 필요한 화면으로는 못 하던 일입니다.
+- **권한은 관리자 화면과 완전히 같은 경로**입니다. anon 키 + 관리자 계정 로그인 →
+  RLS 가 최종 판단 [원칙 A2]. **`service_role` 키는 쓰지 않습니다.**
+  viewer 계정이면 시작 단계에서 막습니다 — RLS 는 권한이 없을 때 오류가 아니라
+  **조용히 0건**을 돌려주므로, "지웠는데 그대로" 같은 모양으로 나타나 원인 찾기가 어렵습니다.
+- **배포가 필요 없습니다.** DB 를 바꾸면 `/` `/works` 가 `force-dynamic` 이라 다음 방문부터
+  반영됩니다. `revalidatePath` 도 필요 없습니다(§4 의 관리자 흐름 주석과 같은 이유).
+- ⚠️ **분류(`category`)는 `config/content.ts` 의 `workCategories` 에서 읽어 검사합니다** [A5].
+  거기 없는 값을 넣으면 `/works` 의 필터 탭에 안 떠서 **그 실적이 아무 탭에도 안 보입니다.**
+  그래서 저장 전에 막고, 새 분류는 config 를 먼저 고치라고 안내합니다.
+- ⚠️ **`quotes` 는 건수만 출력합니다.** 행에 고객 이름·연락처가 있어서 터미널에 찍으면
+  셸 기록과 작업 로그에 개인정보가 남습니다. 내용은 `/admin/quotes` 에서 봅니다.
+- ⚠️ **`rm` 은 `--yes` 없이는 대상만 보여주고 아무것도 하지 않습니다.** 삭제는 되돌릴 수 없습니다.
+- **`renumber`** 는 `sort_order` 가 겹쳐 순서 변경이 안 되는 상태(§7)를 10 단위로 다시 매겨
+  풉니다. `move` 는 값이 겹친 것을 발견하면 맞바꾸지 않고 이걸 먼저 돌리라고 안내합니다 —
+  겹친 값을 맞바꾸면 아무 일도 안 일어나는데 성공처럼 보입니다.
+- **`batch` 는 넣기 전에 전부 검사합니다.** 4번째에서 분류가 틀려 멈추면 3건만 들어간
+  상태가 되므로, 제목·사진 존재·분류를 먼저 다 확인하고 나서 업로드를 시작합니다.
+- 비밀번호가 `.env.local` 에 평문으로 남습니다(§7). `NEXT_PUBLIC_` 접두어가 없어
+  **브라우저·서버 코드로는 나가지 않습니다** — 이 스크립트만 읽습니다.
+
 ---
 
 ## 4. 데이터 흐름
@@ -517,6 +552,13 @@ scripts/submit-indexnow.mjs   npm run indexnow
 [사진 업로드]
   브라우저 → Supabase Storage 직접 (서버 경유 안 함)
            → 공개 URL → 폼 → DB image_url
+
+[명령줄 관리자 — F18]
+  npm run cms → signInWithPassword(관리자 계정) → role==="admin" 확인
+              → Supabase (RLS 재검증, service_role 아님)
+              → 사진은 media 버킷에 직접 업로드 → 공개 URL → DB image_url
+              ※ 웹서버를 거치지 않습니다. 배포도 필요 없습니다 —
+                공개 페이지가 force-dynamic 이라 다음 방문에 새로 읽습니다.
 ```
 
 ---
@@ -530,6 +572,7 @@ scripts/submit-indexnow.mjs   npm run indexnow
 | `0001_init.sql` | 스키마 · RLS · 초기 데이터 |
 | `0002_quotes.sql` | 견적 문의 테이블 |
 | `0003_works_photos.sql` | 실적 6건 추가 (사진 있는 현장, `sort_order` 1~6) |
+| `0004_works_brochure.sql` | 실적 2건 추가(`sort_order` 7~8) + **사진 없는 4건을 맨 뒤(200~230)로** |
 
 > ⚠️ **`config/content.ts` 만 고치면 운영 사이트는 안 바뀝니다.**
 > `getWorks()`/`getSlides()` 는 DB 에 published 행이 하나라도 있으면 그쪽을 씁니다
@@ -573,8 +616,14 @@ RLS
 | `RESEND_API_KEY` | ✕ (선택) | 견적 알림 **이메일 꺼짐**. 이 키만 넣으면 `site.email` 로 갑니다 (F16) |
 | `QUOTE_NOTIFY_EMAIL` | ✕ (선택) | `config/site.ts` 의 `site.email` 로 발송. 쉼표로 여러 주소 가능 |
 | `QUOTE_MAIL_FROM` | ✕ (선택) | `onboarding@resend.dev`(시험용)로 발송 — 한메일에서 스팸 위험 |
+| `SUPABASE_ADMIN_EMAIL` | ✕ (선택) | `npm run cms` 만 안 됩니다 (F18). 화면·홈페이지는 정상 |
+| `SUPABASE_ADMIN_PASSWORD` | ✕ (선택) | 〃 — 관리자 화면에 쓰는 그 계정의 비밀번호 |
+
+`SUPABASE_ADMIN_*` 에는 `NEXT_PUBLIC_` 접두어가 **없습니다.** 그래서 브라우저로 나가지 않고,
+앱 코드도 읽지 않습니다 — `scripts/cms.mjs` 전용입니다.
 
 확인 명령: `npm run notify:test` — 가짜 문의를 만들지 않고 알림만 시험 발송합니다.
+콘텐츠 관리 명령: `npm run cms -- help` (F18).
 
 **운영(Cloudflare) 환경변수는 들어가 있습니다** — 2026-07-26 확인
 (`/admin/login` 이 "아직 연결 전입니다" 안내문이 아니라 로그인 폼을 그림 = 키가 읽힌다는 뜻).
@@ -598,11 +647,13 @@ RLS
 
 | 구분 | 내용 | 위치 |
 |---|---|---|
-| 🔴 사진 | **홈 35자리 · `work-01`~`15` 15자리가 플레이스홀더.** 간판업체 사이트에서 가장 큰 구멍입니다. 급한 순서: ① 히어로 2·3 (**1920×1080 이상** — 화면을 꽉 채워 잘라 쓰므로 1200폭은 부족) ② 사업영역 철구조물(캐노피·파사드) ③ 공장 공정 6칸 ④ 사옥 전경 | `public/images/README.md` |
+| 🔴 사진 | **남은 자리: 실적 4자리 + 히어로 2 + 공정 5 + 사옥 전경 1.** 회사소개서에서 12장을 뽑아 넣어 실적 15자리 중 11자리·사업영역 4자리 전부가 채워졌습니다(2026-07-27). 급한 순서: ① **히어로 2·3 — 현장 촬영이 유일한 길입니다.** 네 개 PDF 를 전수 확인했고 1920px 이상은 스톡/합성 그래픽뿐, 자사 실사진 최대치는 1400×1050 ② 공장 공정 5칸(회사소개서엔 채널문자 제작 1장뿐) ③ 사옥·공장 전경 ④ 남은 실적 4건(교보생명·우리은행·KT탄방타워는 회사소개서에 4장이 한 띠로 합쳐져 435×276 밖에 안 나오고, 뉴코아는 사진 자체가 없음) | `public/images/README.md` |
+| 🔴 개인정보 | **회사소개서 5·6페이지는 사업자등록증·여성기업확인서·옥외광고사업등록증·공장등록증명서 스캔입니다.** 사진을 더 뽑을 때 섞여 들어가지 않게 하세요 — 사업자등록번호·대표자 정보가 읽힙니다. 웹 게시 금지 | `public/images/README.md` |
 | 🔴 등록 | **네이버 스마트플레이스·서치어드바이저 미등록.** 대전 지역 유입의 8할이 네이버입니다. 서치어드바이저를 하면 IndexNow 네이버 403 도 함께 풀립니다 | [`SEO.md`](SEO.md) C1·C3 |
 | 🔴 등록 | **구글 비즈니스 프로필 미등록.** 검색 우측 지식 패널(로고·사진·영업시간 카드)은 홈페이지가 아니라 여기서 만들어집니다 | [`SEO.md`](SEO.md) C2 |
 | ⚠️ 색인 | **구글 색인이 홈 1페이지뿐** (사이트맵 10개 중 1개). Search Console 에서 사이트맵 제출 + `/works` `/about` 색인 요청 | [`SEO.md`](SEO.md) C4 |
-| ⚠️ 확인 | **`0003_works_photos.sql` 실행 여부** — 안 돌리면 `/works` 는 그대로 15건입니다. DB 가 config 를 덮어쓰므로(§5 경고) SQL Editor 에서 직접 실행해야 합니다 | §5 |
+| 🔴 실행 | **`0004_works_brochure.sql` 미실행** — 돌리기 전에는 새 실적 2건(청주 아이파크·홈센터)이 안 보이고, 사진 없는 4건이 목록 중간에 회색 상자로 남습니다. 사진 파일은 이미 배포에 들어 있습니다. SQL Editor 에서 실행하세요 | §5 |
+| ✅ 확인 | `0003_works_photos.sql` 은 **실행됐습니다** — 운영 홈이 `work-16`~`21` 을 앞에 그리는 것으로 확인(2026-07-27) | §5 |
 | ⚠️ 확인 | **Supabase 깨우기 Actions 시크릿 등록 여부** — 저장소 Actions 탭에 초록 체크가 있는지. 7일 무요청이면 DB 가 멈추고 견적 문의 저장이 죽습니다 | `.github/workflows/keep-supabase-awake.yml` |
 | ⚠️ 정리 | 운영 `/admin/quotes` 에 검증용 테스트 문의 2건(`[검증] 지워주세요`) 남아 있음 | [`DEPLOY.md`](DEPLOY.md) 3단계 |
 | TODO | 견적 알림이 **꺼져 있습니다** — `RESEND_API_KEY` 를 넣어야 켜집니다. 안 넣으면 `/admin/quotes` 를 직접 봐야 새 문의를 압니다 | F16 · §6 |
@@ -619,10 +670,12 @@ RLS
 | 구분 | 내용 | 위치 |
 |---|---|---|
 | 미검증 | 관리자 CRUD 중 **삭제 · 순서변경(`moveSlide`/`moveWork`) 이 실동작 미확인**. 저장·사진업로드는 운영에서 끝까지 통하는 것을 확인했습니다 | F9 F10 |
+| 미검증 | **F18 CLI 의 DB 작업이 실계정 미검증** — 로그인 실패 경로(잘못된 비밀번호 → 안내문)와 인자 파싱·분류 검사만 확인했습니다. `SUPABASE_ADMIN_*` 를 채운 뒤 `list` → `works add --draft` → `rm --yes` 순으로 한 바퀴 돌려 봐야 합니다 | F18 |
+| 부채 | **관리자 비밀번호가 `.env.local` 에 평문** — F18 이 브라우저 없이 로그인하려면 필요합니다. git 제외지만 이 PC 를 쓰는 사람은 볼 수 있습니다. 화면 공유·녹화 시 주의 | F18 · §6 |
 | 부채 | **방문마다 SSR + DB 조회** — ISR 을 걷어낸 대가(§2.1 주석). 홈 HTML 에 캐시가 없습니다(`no-store` 실측). 다만 홈 TTFB 0.78~1.58s 대 정적 `/about` 0.92s 로 체감 차이가 거의 없어 급하지 않습니다. 트래픽이 커지면 Cache Rules 또는 R2 로 ISR 을 되살리는 게 정석 | `app/page.tsx` `app/works/page.tsx` |
 | 부채 | 견적 폼 레이트리밋이 **인메모리** — 서버리스라 인스턴스마다 따로 세므로 사실상 헐거움 | F5 |
 | 부채 | 관리자에서 사진 교체 시 **이전 파일이 스토리지에 남음** (고아 파일) | F10 |
-| 부채 | `sort_order` 가 같으면 순서 변경이 동작하지 않음 | F9 |
+| 부채 | `sort_order` 가 같으면 순서 변경이 동작하지 않음. **관리자 화면은 여전히 그렇습니다** — 걸리면 `npm run cms -- works renumber` 로 풉니다 (F18) | F9 |
 | 부채 | 로고 SVG 가 저해상도 래스터 트레이싱본. 대형 출력엔 원본 AI/EPS 필요 | `public/logo.svg` |
 | 미도입 | **시공사례 개별 페이지** — 로컬 SEO 최대 자산이나, 지금 데이터로 만들면 "얇은 콘텐츠" 페널티. 사례별 상세(위치·간판종류·기간·자재·현장 메모) 확보가 선행 | [`SEO.md`](SEO.md) B-1 |
 | 미도입 | 사업영역·공정·장비·회사정보는 아직 CMS 미연결 (코드 수정 필요) | `config/content.ts` |

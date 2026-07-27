@@ -165,22 +165,28 @@ export const works: Work[] = [
   { slug: "w20", title: "커뮤니티 시설 사인", category: "생활·문화", location: "", tags: ["실내 사인", "스카시 문자"], image: "/images/work-20.jpg" },
   { slug: "w21", title: "체육관 실내 사인", category: "생활·문화", location: "", tags: ["실내 사인", "스카시 문자"], image: "/images/work-21.jpg" },
 
-  // --- 사진 대기 (회사소개서 07) ---
+  // --- 사진 있음 (회사소개서에서 추출, 2026-07-27) ---
+  { slug: "w22", title: "청주 가경 아이파크 2단지 사인물", category: "주거", location: "청주", tags: ["단지 사인", "고소작업"], image: "/images/work-22.jpg" },
+  { slug: "w23", title: "홈센터 실내 사인물", category: "상업시설", location: "", tags: ["실내 사인", "채널 간판"], image: "/images/work-23.jpg" },
   { slug: "w01", title: "삼성화재 사인물", category: "금융", location: "", tags: ["외부 사인물"], image: "/images/work-01.jpg" },
-  { slug: "w02", title: "교보생명 옥상 광고탑", category: "금융", location: "", tags: ["옥상 광고탑", "유지보수"], image: "/images/work-02.jpg" },
-  { slug: "w03", title: "우리은행 사인물", category: "금융", location: "", tags: ["외부 사인물", "CI"], image: "/images/work-03.jpg" },
   { slug: "w04", title: "KAIST 사인물", category: "관공서·공공", location: "대전", tags: ["옥내외 사인"], image: "/images/work-04.jpg" },
   { slug: "w05", title: "K-water 기술 사인물", category: "관공서·공공", location: "대전", tags: ["외부 사인물"], image: "/images/work-05.jpg" },
   { slug: "w06", title: "대전무역회관 사옥 사인물", category: "관공서·공공", location: "대전", tags: ["외부 사인물"], image: "/images/work-06.jpg" },
   { slug: "w07", title: "대전무역회관 주차장 캐노피", category: "철구조물", location: "대전", tags: ["캐노피", "철구조물"], image: "/images/work-07.jpg" },
-  { slug: "w08", title: "KT 탄방타워 사인물", category: "기업", location: "대전", tags: ["외부 사인물"], image: "/images/work-08.jpg" },
   { slug: "w09", title: "KT 매장 뉴 CI 간판 교체", category: "기업", location: "", tags: ["CI 교체", "다점포"], image: "/images/work-09.jpg" },
   { slug: "w10", title: "금성백조 본사 사옥 옥외간판", category: "기업", location: "대전", tags: ["옥외간판"], image: "/images/work-10.jpg" },
   { slug: "w11", title: "롯데하이마트 사인물", category: "상업시설", location: "", tags: ["외부 사인물"], image: "/images/work-11.jpg" },
-  { slug: "w12", title: "뉴코아 아울렛 사인물", category: "상업시설", location: "", tags: ["외부 사인물"], image: "/images/work-12.jpg" },
   { slug: "w13", title: "힐스테이트 오피스텔 사인물", category: "주거", location: "", tags: ["단지 사인"], image: "/images/work-13.jpg" },
   { slug: "w14", title: "칼릭스빌딩 사인 작업", category: "기업", location: "", tags: ["외부 사인물"], image: "/images/work-14.jpg" },
   { slug: "w15", title: "기아 서비스 사인물", category: "기업", location: "", tags: ["외부 사인물"], image: "/images/work-15.jpg" },
+
+  // --- 사진 대기 ---
+  // 앞의 셋은 회사소개서 원본이 4장 합쳐진 띠 이미지라 잘라도 435×276 밖에 안 나옵니다.
+  // 뉴코아는 회사소개서에 사진 자체가 없습니다. 원본 촬영본이 나오면 위로 올리세요.
+  { slug: "w02", title: "교보생명 옥상 광고탑", category: "금융", location: "", tags: ["옥상 광고탑", "유지보수"], image: "/images/work-02.jpg" },
+  { slug: "w03", title: "우리은행 사인물", category: "금융", location: "", tags: ["외부 사인물", "CI"], image: "/images/work-03.jpg" },
+  { slug: "w08", title: "KT 탄방타워 사인물", category: "기업", location: "대전", tags: ["외부 사인물"], image: "/images/work-08.jpg" },
+  { slug: "w12", title: "뉴코아 아울렛 사인물", category: "상업시설", location: "", tags: ["외부 사인물"], image: "/images/work-12.jpg" },
 ];
 
 export const workCategories = [
