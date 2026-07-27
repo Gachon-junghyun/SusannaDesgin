@@ -80,10 +80,18 @@ export const site = {
   employees: "5명",
   factory: "795평",
 
-  // 외부 채널
+  /**
+   * 외부 채널 — 여기 값이 구조화 데이터의 `sameAs` 로 나갑니다.
+   *
+   * ★ `sameAs` 는 "이 홈페이지와 저 계정이 **같은 회사**" 라고 검색엔진에
+   *   알려주는 유일한 신호입니다. 비워 두면 빈 배열이 나가고, 구글·AI 는
+   *   홈페이지와 인스타그램을 **남남으로 봅니다.**
+   *   실제로 2026-07-27 구글 AI 개요가 인스타그램·잡코리아는 인용하면서
+   *   자사 홈페이지는 인용하지 않았고, 그 원인 중 하나가 이것이었습니다.
+   */
   kakaoChannelUrl: "", // TODO — 있으면 채우면 톡상담 버튼이 켜집니다
-  instagramUrl: "",
-  blogUrl: "",
+  instagramUrl: "https://www.instagram.com/susanna_design541/",
+  blogUrl: "", // TODO — 네이버 블로그를 열면 여기 넣으세요 (SEO.md C6)
 
   // 지도 (오시는길)
   mapUrl: "", // TODO — 카카오맵/네이버지도 공유 URL

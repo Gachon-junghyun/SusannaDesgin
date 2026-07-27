@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-07-27 (IndexNow F17 추가 · **`http`→`https` 미리다이렉트 발견** — §7) |
+| 최종 갱신 | 2026-07-27 (IndexNow F17 · `http`→`https` 301 해결 · `sameAs` 인스타그램 연결) |
 | 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
@@ -37,8 +37,9 @@
 | 고객 개인정보 | ✅ 익명은 `quotes` 를 **넣기만 되고 못 읽음** — 방금 넣은 행도 안 보이는 것까지 확인 |
 | 검색 노출 | ✅ **"수산나디자인" 구글 1위** (2026-07-27 `hl=ko&gl=kr` 실측) — 대표님이 07-26 에 등록하셨습니다 |
 | 색인 범위 | ⚠️ **홈 1페이지뿐** — `site:` 결과 1건. 사이트맵 10개 중 나머지 9개 미색인 |
-| 색인된 프로토콜 | 🔴 **`http://`** — `http` 가 301 없이 200 을 냅니다 (§7) |
-| AI 인용 | 🔴 구글 AI 개요가 **잡코리아·RnDcircle·비즈노·인스타그램**만 인용, 자사 홈페이지 없음 (§7) |
+| `http` → `https` 301 | ✅ **해결** (2026-07-27 Cloudflare `Always Use HTTPS`) — 루트·하위경로·`www` 겹침까지 실측. `http://www…/works` 는 2홉으로 정식 주소 도착 |
+| 엔티티 연결 (`sameAs`) | ✅ 인스타그램 연결됨 (2026-07-27). `blogUrl`·`kakaoChannelUrl` 은 아직 공란 |
+| AI 인용 | ⚠️ 구글 AI 개요가 여전히 **잡코리아·RnDcircle·비즈노**를 인용 — 반영에 수 주 걸립니다 (§7) |
 | 크롤러 실접근 | ✅ Googlebot·GPTBot·OAI-SearchBot·ChatGPT-User·PerplexityBot·ClaudeBot·Yeti·bingbot **전부 200** (2026-07-27 UA 실측, 차단 0건) |
 | 색인 통보 (IndexNow) | ✅ **첫 제출 완료** (2026-07-27) — 전체중계 202 · Bing 202 · **네이버 403**(서치어드바이저 미등록, C3 후 재실행) |
 
@@ -580,8 +581,9 @@ RLS
 | ⚠️ 확인 | **`0003_works_photos.sql` 미실행 시 `/works` 는 그대로 15건**입니다. DB 가 config 를 덮어쓰므로(§5 경고) 대표님이 SQL Editor 에서 실행해야 반영됩니다 | §5 |
 | 해소 | ~~Cloudflare 관리형 `robots.txt` 가 AI 크롤러 차단~~ → **끝났습니다** (2026-07-26). Cloudflare 관리형 블록이 사라져 운영 `robots.txt` 가 **우리 정책만 24줄**로 나옵니다. AI 봇에 걸린 `Disallow: /` 가 하나도 없습니다. AI 답변 엔진 인용 경로가 열렸습니다 | F15 |
 | ⚠️ SEO | `site.geo` 좌표가 대전 서구 근사값 — 로컬팩 "거리" 요인에 영향 | `config/site.ts` |
-| 🔴 발견 | **`http://` 가 `https://` 로 301 되지 않습니다** (2026-07-27 발견). `curl -sI http://susannadesign.co.kr/` → **200**. `www` 는 F13 으로 막았는데 `http` 는 뚫려 있어, **구글이 `http://` 주소를 색인했습니다**(페이지의 canonical 은 `https://` 라 서로 어긋남). 고치는 법은 Cloudflare **SSL/TLS → Edge Certificates → Always Use HTTPS** 토글 — **코드로 하면 `x-forwarded-proto` 를 믿어야 하고 값이 어긋나면 무한 리다이렉트로 사이트가 죽습니다.** 운영 사이트에 걸 위험이 아니라 대시보드에 둡니다 | [`SEO.md`](SEO.md) 문제 1 |
-| 🔴 부채 | **`sameAs` 가 빈 배열로 나갑니다** — `app/layout.tsx:120` 이 `[blogUrl, instagramUrl, kakaoChannelUrl].filter(Boolean)` 인데 셋 다 공란. 구글·AI 가 **홈페이지와 인스타그램(@susanna_design541)을 같은 회사로 잇지 못합니다.** 실제로 AI 개요가 인스타그램은 인용하면서 홈페이지는 인용하지 않습니다 | `config/site.ts` |
+| 해소 | ~~`http://` 가 `https://` 로 301 되지 않음~~ → **Cloudflare `Always Use HTTPS` 로 해결** (2026-07-27). 발견 당시 `curl -sI http://…/` 가 **200** 이었고 구글이 `http://` 주소를 색인한 상태였습니다(canonical 은 `https://` 라 어긋남). ⚠️ **이건 코드로 하지 않습니다** — `x-forwarded-proto` 를 믿어야 하는데 값이 어긋나면 **무한 리다이렉트로 사이트가 죽습니다.** TLS 종단 계층의 일이라 대시보드가 맞습니다(F13 과 다른 판단인 이유). 실측: 루트·하위경로·`www` 겹침 전부 301, `http://www…/works` → 2홉 → 정식 주소 200 | [`SEO.md`](SEO.md) 문제 1 |
+| 일부 해소 | ~~`sameAs` 가 빈 배열~~ → **인스타그램 연결** (2026-07-27). `app/layout.tsx:120` 이 `[blogUrl, instagramUrl, kakaoChannelUrl].filter(Boolean)` 인데 셋 다 공란이라 구글·AI 가 홈페이지와 `@susanna_design541` 을 남남으로 봤습니다. 남은 공란: `blogUrl`(C6 블로그 개설 시) · `kakaoChannelUrl` | `config/site.ts` |
+| 🔴 TODO | **`site.bizNo` (사업자등록번호) 가 비어 있습니다** — 비즈노·머니핀 같은 디렉터리가 AI 인용을 가져가는 이유 중 하나입니다. 그쪽은 이 정형 사실을 갖고 있고 우리 홈은 없습니다. 값을 넣으면 푸터에 자동 표기됩니다 | `config/site.ts` |
 | ⚠️ TODO | **색인이 홈 1페이지에 그침** — 사이트맵 10개 중 1개. Search Console 에서 사이트맵 제출 + `/works` `/about` 색인 요청 필요 | [`SEO.md`](SEO.md) 문제 2 |
 | TODO | 네이버 소유확인 코드 미입력 (구글은 07-26 등록 완료). 구글을 도메인(DNS TXT) 방식으로 확인했다면 `googleVerification` 은 비워 둬도 됩니다 | `config/site.ts` · [`SEO.md`](SEO.md) C3 |
 | 일부 해소 | **IndexNow 색인 통보 추가** (2026-07-27, F17) — 계정 없이 Bing·네이버 등에 즉시 통보. **구글은 참여사가 아니라 이걸로 안 풀립니다.** 배포 후 `npm run indexnow` 를 한 번 실행해야 실제 통보가 나갑니다(POST 경로는 키 파일 배포 전이라 아직 미검증) | F17 |

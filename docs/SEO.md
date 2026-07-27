@@ -21,36 +21,34 @@
 
 색인 자체는 **됐습니다**(2026-07-26 등록). 남은 문제는 세 가지로 좁혀졌습니다.
 
-### 🔴 문제 1 — `http://` 가 `https://` 로 안 넘어갑니다
+### ✅ 문제 1 — `http://` 미리다이렉트 (2026-07-27 해결)
 
-```
-$ curl -sI http://susannadesign.co.kr/     →  HTTP/1.1 200 OK   (301 이 아님)
-```
+발견 당시 `curl -sI http://susannadesign.co.kr/` 이 **301 이 아니라 200** 이었습니다.
+`www` 는 F13 으로 막았는데 `http` 가 빠져 있어, 구글이 `http://susannadesign.co.kr`
+을 색인한 상태였습니다(페이지의 canonical 은 `https://` 라 어긋남).
 
-`www` 는 F13 으로 막았는데 **`http` 는 안 막혀 있습니다.** 그래서 구글이
-`http://susannadesign.co.kr` 을 색인했습니다. 페이지가 내보내는 canonical 은
-`https://` 라 서로 어긋나고, 같은 사이트가 두 주소로 갈려 평가가 쪼개집니다.
-**홈 1페이지만 색인된 것도 이것과 무관하지 않습니다.**
+**Cloudflare → SSL/TLS → Edge Certificates → `Always Use HTTPS`** 로 해결했습니다.
 
-**고치는 법 — Cloudflare 토글 하나, 배포 불필요**
+배포 후 실측:
 
-1. [dash.cloudflare.com](https://dash.cloudflare.com) → `susannadesign.co.kr`
-2. **SSL/TLS** → **Edge Certificates**
-3. **Always Use HTTPS** 를 **켭니다**
+| 요청 | 결과 |
+|---|---|
+| `http://susannadesign.co.kr/` | 301 → `https://susannadesign.co.kr/` |
+| `http://susannadesign.co.kr/works` | 301 → 경로 보존 |
+| `http://www.susannadesign.co.kr/about` | 301 → https (이어서 F13 이 www 제거) |
+| `http://www.susannadesign.co.kr/works` 끝까지 | **2홉 → `https://susannadesign.co.kr/works` 200** |
 
-> **왜 코드가 아니라 대시보드인가**: F13(`www` 301)은 배포처를 옮겨도 따라오게
-> 코드에 뒀습니다. 하지만 http→https 는 **TLS 종단 계층의 일**이고, 어느 호스팅이든
-> 기본 제공합니다(Vercel·Netlify 는 켜져 있는 게 기본). 코드로 하려면
-> `x-forwarded-proto` 헤더를 믿어야 하는데, 그 값이 기대와 다르면
+> ⚠️ **이건 코드로 하지 마세요.** F13(`www` 301)은 배포처 이동에 따라오게 코드에
+> 뒀지만, http→https 는 **TLS 종단 계층의 일**이라 성격이 다릅니다. 코드로 하려면
+> `x-forwarded-proto` 헤더를 믿어야 하는데 그 값이 기대와 어긋나면
 > **무한 리다이렉트로 사이트가 죽습니다.** 운영 중인 회사 홈페이지에 걸 위험이 아닙니다.
+> 어느 호스팅이든 기본 제공하는 기능입니다.
 
-켠 뒤 확인:
+재확인 명령:
 
 ```bash
-curl -sI http://susannadesign.co.kr/
+curl -s -L -o /dev/null -w "%{url_effective} (%{num_redirects}홉)\n" http://www.susannadesign.co.kr/works
 ```
-
-`301` 과 `location: https://susannadesign.co.kr/` 가 나와야 합니다.
 
 ### ⚠️ 문제 2 — 홈 말고는 색인이 안 됐습니다
 
@@ -66,8 +64,8 @@ curl -sI http://susannadesign.co.kr/
 | 원인 | 설명 | 해결 |
 |---|---|---|
 | **색인이 하루밖에 안 됐다** | AI 개요의 근거 자료는 색인보다 몇 주 늦게 갱신됩니다 | 시간 |
-| **엔티티 연결이 끊겨 있다** | `sameAs` 가 **비어 있어** 구글이 "이 홈페이지 = 그 인스타그램 = 그 사업자" 를 못 잇습니다. 그래서 각각 남남으로 취급됩니다 | 아래 E 표 |
-| **저쪽이 더 사실을 갖고 있다** | 설립연도·대표자·직원수·사업자번호처럼 **AI 가 인용하기 좋은 정형 사실**을 디렉터리는 갖고 있는데 우리 홈은 홍보 문구 위주입니다. 게다가 사진 50자리가 비어 있습니다 | 사진 · `bizNo` |
+| **엔티티 연결이 끊겨 있었다** | `sameAs` 가 비어 있어 구글이 "이 홈페이지 = 그 인스타그램" 을 못 이었습니다 | ✅ **인스타그램 연결 (2026-07-27)** — `@susanna_design541` |
+| **저쪽이 더 사실을 갖고 있다** | 설립연도·대표자·직원수·사업자번호처럼 **AI 가 인용하기 좋은 정형 사실**을 디렉터리는 갖고 있는데 우리 홈은 홍보 문구 위주입니다. 게다가 사진 50자리가 비어 있습니다 | 🔴 `bizNo` 미입력 · 사진 |
 
 **AI 인용은 "차단을 푸는 문제"가 아니라 "인용할 사실을 주는 문제"입니다.**
 F15 로 크롤러는 이미 다 열려 있습니다(8종 200 실측). 이제 필요한 건 콘텐츠입니다.
@@ -339,9 +337,10 @@ https://susannadesign.co.kr/
 
 | 우선순위 | 항목 | 막고 있는 것 |
 |---|---|---|
-| **0** | **`http` → `https` 301** — Cloudflare **Always Use HTTPS** 토글 (코드 아님) | 대시보드 접속 |
-| **1** | **`sameAs` 채우기** → `site.instagramUrl` 에 인스타그램 주소. AI·구글이 홈페이지와 인스타그램을 **같은 회사로 잇는** 유일한 신호입니다 | 계정 주소 확인 |
-| **2** | **`site.bizNo`** (사업자등록번호) — 비즈노·머니핀이 이걸로 잡히는데 우리 홈엔 없습니다. 넣으면 푸터 + 구조화 데이터에 반영 | 값 |
+| ~~완료~~ | ~~`http` → `https` 301~~ | ✅ **Cloudflare Always Use HTTPS (2026-07-27)** |
+| ~~완료~~ | ~~`sameAs` 채우기~~ | ✅ **인스타그램 연결 (2026-07-27)** |
+| **1** | **`site.bizNo`** (사업자등록번호) — 비즈노·머니핀이 이걸로 잡히는데 우리 홈엔 없습니다. 넣으면 푸터에 자동 표기 | 값 |
+| **2** | `site.blogUrl` — 네이버 블로그(C6)를 열면 `sameAs` 에 한 겹 더 붙습니다 | 블로그 개설 |
 | 3 | 시공사례 개별 페이지 (B-1) | 사례별 상세 내용 |
 | 4 | 사진 투입 + 지역·업종 담긴 alt (홈 35자리 · `work-01`~`15`) | 사진 |
 | 5 | 정확한 좌표 → `site.geo` | 현재 대전 서구 근사값 |
@@ -385,9 +384,10 @@ npm run indexnow
 | 크롤러 실접근 | ✅ Googlebot 등 **8종 전부 200** (UA 실측, 차단 0건) |
 | `<meta name="robots">` | ✅ `index, follow` |
 | 사진 `alt` 자산 | ⚠️ 플레이스홀더 **홈 35자리 · `/works` 15자리** (사진 6장 투입 후) — E 표 3번 |
-| 구글 색인 | ⚠️ **홈 1페이지만**, 그것도 `http://` 로. 문서 맨 위 "현재 색인 상태" 참조 |
-| `http` → `https` 301 | 🔴 **안 걸려 있음** — Cloudflare **Always Use HTTPS** 토글 필요 |
-| `sameAs` (엔티티 연결) | 🔴 **비어 있음** — `instagramUrl`·`blogUrl`·`kakaoChannelUrl` 이 전부 공란이라 배열이 `[]` 로 나갑니다 |
+| 구글 색인 | ⚠️ **홈 1페이지만** — 사이트맵 10개 중 1개. 문서 맨 위 "현재 색인 상태" 참조 |
+| `http` → `https` 301 | ✅ **해결** (Cloudflare Always Use HTTPS) |
+| `sameAs` (엔티티 연결) | ✅ 인스타그램 연결. `blogUrl`·`kakaoChannelUrl` 은 공란 |
+| `site.bizNo` | 🔴 **비어 있음** — 디렉터리가 AI 인용을 가져가는 이유 중 하나 |
 
 ### AI 답변 엔진 인용 — ✅ 열렸습니다 (2026-07-26)
 
