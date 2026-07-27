@@ -364,8 +364,8 @@ npm run indexnow
 
 | 검색엔진 | 참여 | 비고 |
 |---|---|---|
-| **Bing** | ✅ | **ChatGPT·Perplexity·Copilot 이 읽는 인덱스** — 등록 없이 접수됨 |
-| **네이버** | ✅ | 엔드포인트가 `searchadvisor.naver.com` — **C3 등록이 선행돼야** 실효 |
+| **Bing** | ✅ | **ChatGPT·Perplexity·Copilot 이 읽는 인덱스** — 등록 없이 접수 확인(202) |
+| **네이버** | ⚠️ | **C3 등록 전에는 403.** 실측: 같은 키로 Bing 은 202 인데 네이버만 403 — 키 문제가 아니라 서치어드바이저에 사이트가 없어서입니다. C3 후 재실행하세요 |
 | Yandex · Seznam · Yep · Internet Archive · Amazonbot | ✅ | |
 | **구글** | ❌ **미참여** | Search Console(C4) 외에 길이 없습니다 |
 

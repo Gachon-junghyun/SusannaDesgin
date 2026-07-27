@@ -40,7 +40,7 @@
 | 색인된 프로토콜 | 🔴 **`http://`** — `http` 가 301 없이 200 을 냅니다 (§7) |
 | AI 인용 | 🔴 구글 AI 개요가 **잡코리아·RnDcircle·비즈노·인스타그램**만 인용, 자사 홈페이지 없음 (§7) |
 | 크롤러 실접근 | ✅ Googlebot·GPTBot·OAI-SearchBot·ChatGPT-User·PerplexityBot·ClaudeBot·Yeti·bingbot **전부 200** (2026-07-27 UA 실측, 차단 0건) |
-| 색인 통보 (IndexNow) | ⏳ 코드 완료 (F17) — **배포 후 `npm run indexnow` 1회 실행 필요** |
+| 색인 통보 (IndexNow) | ✅ **첫 제출 완료** (2026-07-27) — 전체중계 202 · Bing 202 · **네이버 403**(서치어드바이저 미등록, C3 후 재실행) |
 
 > ⚠️ **검색 노출을 확인할 때는 반드시 `hl=ko&gl=kr` 로 보세요.**
 > 미국 기준 검색 도구로 확인하면 이 사이트가 **하나도 안 잡혀** "미색인" 으로
@@ -447,8 +447,10 @@ scripts/submit-indexnow.mjs   npm run indexnow
   Seznam · Yep · Internet Archive · Amazonbot 입니다
   (`https://www.indexnow.org/searchengines.json` 로 실측 확인). 구글은 Search Console
   등록 외에 길이 없고, 그건 코드로 할 수 없습니다 — [`SEO.md`](SEO.md) C 섹션.
-- ⚠️ **네이버는 서치어드바이저 등록이 선행돼야** 실효가 있을 가능성이 큽니다
-  (엔드포인트가 `searchadvisor.naver.com` 입니다). Bing 은 등록 없이도 받습니다.
+- ⚠️ **네이버는 서치어드바이저 등록이 선행돼야 합니다 — 실측 확인** (2026-07-27
+  첫 실행): 같은 `keyLocation` 으로 **Bing 202 · 전체중계 202 · 네이버만 403**.
+  키 문제가 아니라 사이트가 서치어드바이저에 없어서입니다. 등록 후 재실행하면 됩니다.
+  Bing 은 등록 없이도 받습니다.
 - **왜 표준 `/<키>.txt` 가 아니라 `/indexnow.txt` 인가**: 표준 경로를 쓰면 키 값이
   **파일 이름과 `config/site.ts` 양쪽**에 생겨, 키를 바꿀 때 한쪽만 고치면 조용히
   깨집니다. IndexNow 규격이 통보에 `keyLocation` 을 실어 임의 주소를 지정하도록

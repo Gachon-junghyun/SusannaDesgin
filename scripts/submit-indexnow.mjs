@@ -125,7 +125,19 @@ async function main() {
       bad++;
       const body = (await res.text()).slice(0, 200);
       console.log(`  ${R("✘")} ${name.padEnd(9)} HTTP ${res.status}  ${D(body)}`);
-      if (res.status === 403)
+      // 403 은 보통 "키 파일을 못 읽었다" 지만, 위 1단계에서 키 파일을 이미
+      // 확인했으므로 여기서는 그 원인이 아닙니다. 네이버는 **서치어드바이저에
+      // 사이트가 등록돼 있지 않으면** 키와 무관하게 403 을 냅니다 (2026-07-27 실측:
+      // 같은 keyLocation 으로 Bing 은 202, 네이버만 403).
+      if (res.status === 403 && name === "네이버")
+        console.log(
+          D(`     → 키 문제가 아닙니다(Bing 은 같은 키로 접수됨).`) +
+            `\n` +
+            D(`       searchadvisor.naver.com 에 사이트 등록 + 소유확인을 먼저 해야 합니다.`) +
+            `\n` +
+            D(`       등록 후 다시 실행하면 접수됩니다. docs/SEO.md C3 상세 참조.`)
+        );
+      else if (res.status === 403)
         console.log(D(`     → 키 파일을 못 읽었다는 뜻입니다. ${keyLocation} 를 브라우저로 열어 보세요.`));
       else if (res.status === 422)
         console.log(D(`     → 주소가 ${host} 소속이 아니거나 키가 안 맞습니다.`));
