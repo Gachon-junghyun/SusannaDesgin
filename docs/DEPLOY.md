@@ -5,11 +5,19 @@
 > 0~3단계와 5단계(도메인 연결)까지 끝났습니다. **이 문서는 이제 기록 + 남은 일 안내용**입니다.
 >
 > **남은 일**
-> 1. **검색엔진 등록** — 네이버 스마트플레이스·서치어드바이저·Google Search Console.
->    안 하면 검색에 아예 안 나옵니다. [`SEO.md`](SEO.md) C 섹션
-> 2. **테스트 문의 2건 삭제** — `/admin/quotes` 의 `[검증] 지워주세요` (아래 3단계)
-> 3. **(선택) 견적 알림 켜기** — 환경변수 한 줄. 안 켜면 `/admin/quotes` 를 봐야 합니다 (2-2)
-> 4. **4단계 Supabase 정지 방지** — GitHub Actions 시크릿 등록 여부를 확인하지 못했습니다.
+> 1. 🔴 **Cloudflare `Always Use HTTPS` 켜기** ★ 가장 급함 — `http://` 가 301 없이
+>    200 을 내고 있어 **구글이 `http://` 주소를 색인했습니다**(canonical 은 https).
+>    **SSL/TLS → Edge Certificates → Always Use HTTPS**. 배포 불필요, 즉시 적용.
+>    코드로 하면 무한 리다이렉트 위험이 있어 대시보드가 맞습니다. [`SEO.md`](SEO.md) 문제 1
+> 2. **네이버 등록** — 스마트플레이스·서치어드바이저. 구글은 07-26 등록 완료돼
+>    "수산나디자인" 1위로 나옵니다. 네이버가 지역 유입의 8할입니다. [`SEO.md`](SEO.md) C3
+> 3. **구글 색인 확대** — 홈 1페이지만 색인됨. Search Console 에서 사이트맵 제출 +
+>    `/works` `/about` 색인 요청. [`SEO.md`](SEO.md) C4 상세
+> 4. **배포 직후 `npm run indexnow` 1회** — Bing·네이버에 색인 즉시 통보
+>    (계정 불필요, 구글은 미참여). [`ARCHITECTURE.md`](ARCHITECTURE.md) F17
+> 5. **테스트 문의 2건 삭제** — `/admin/quotes` 의 `[검증] 지워주세요` (아래 3단계)
+> 6. **(선택) 견적 알림 켜기** — 환경변수 한 줄. 안 켜면 `/admin/quotes` 를 봐야 합니다 (2-2)
+> 7. **4단계 Supabase 정지 방지** — GitHub Actions 시크릿 등록 여부를 확인하지 못했습니다.
 >    저장소 **Actions** 탭에 "Supabase 깨어 있게 유지" 실행 기록이 초록색인지 봐 주세요
 >
 > **해결됨**: `www` → 비`www` 301 (코드, 배포 확인) · AI 크롤러 허용 (Cloudflare 기본

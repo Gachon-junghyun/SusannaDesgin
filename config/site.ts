@@ -98,6 +98,19 @@ export const site = {
   googleVerification: "", // TODO
 
   /**
+   * IndexNow 키 — 새 글·새 실적을 검색엔진에 **즉시 통보**할 때 쓰는 열쇠입니다.
+   *
+   * 비밀값이 아닙니다. `/indexnow.txt` 로 공개돼야 검색엔진이 "이 사이트 주인이
+   * 맞다"고 확인합니다(그게 이 값의 용도입니다). 그래서 저장소에 그대로 둡니다.
+   *
+   * 참여 검색엔진: Bing · 네이버 · Yandex · Seznam · Yep · Internet Archive · Amazonbot
+   * **구글은 참여하지 않습니다.** 구글은 Search Console 로만 됩니다.
+   *
+   * 값을 바꾸면 `/indexnow.txt` 도 따라 바뀌므로, 바꾼 뒤에는 반드시 배포 → 재제출.
+   */
+  indexNowKey: "8508a1affcfb005abffe61b26a804eca",
+
+  /**
    * 사업장 좌표 — 구조화 데이터(LocalBusiness.geo)에 쓰입니다.
    * 구글 지도에서 주소를 찍고 우클릭하면 위도, 경도 순으로 나옵니다.
    * 로컬 검색은 "거리"가 순위 요인이라 정확할수록 좋습니다.

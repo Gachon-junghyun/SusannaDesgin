@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-07-27 (실적 사진 6장 투입 · `works` 21건으로 확장) |
+| 최종 갱신 | 2026-07-27 (IndexNow F17 추가 · **`http`→`https` 미리다이렉트 발견** — §7) |
 | 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
@@ -35,7 +35,16 @@
 | **견적 문의 접수** | ✅ **끝까지 확인** — 운영 API 에 실제 접수 → `{ok:true}`. 폴백 수정 후라 이 응답은 **DB 저장 성공**을 뜻합니다 |
 | 견적 API 방어 | ✅ 허니팟 200(저장 안 함) · 빈 값 400 · 잘못된 번호 400 |
 | 고객 개인정보 | ✅ 익명은 `quotes` 를 **넣기만 되고 못 읽음** — 방금 넣은 행도 안 보이는 것까지 확인 |
-| 검색 노출 | ❌ **구글·네이버에 미등록** — 소유확인 코드가 비어 있고 백링크가 없어 아직 발견되지 않음. [`SEO.md`](SEO.md) C3·C4 |
+| 검색 노출 | ✅ **"수산나디자인" 구글 1위** (2026-07-27 `hl=ko&gl=kr` 실측) — 대표님이 07-26 에 등록하셨습니다 |
+| 색인 범위 | ⚠️ **홈 1페이지뿐** — `site:` 결과 1건. 사이트맵 10개 중 나머지 9개 미색인 |
+| 색인된 프로토콜 | 🔴 **`http://`** — `http` 가 301 없이 200 을 냅니다 (§7) |
+| AI 인용 | 🔴 구글 AI 개요가 **잡코리아·RnDcircle·비즈노·인스타그램**만 인용, 자사 홈페이지 없음 (§7) |
+| 크롤러 실접근 | ✅ Googlebot·GPTBot·OAI-SearchBot·ChatGPT-User·PerplexityBot·ClaudeBot·Yeti·bingbot **전부 200** (2026-07-27 UA 실측, 차단 0건) |
+| 색인 통보 (IndexNow) | ⏳ 코드 완료 (F17) — **배포 후 `npm run indexnow` 1회 실행 필요** |
+
+> ⚠️ **검색 노출을 확인할 때는 반드시 `hl=ko&gl=kr` 로 보세요.**
+> 미국 기준 검색 도구로 확인하면 이 사이트가 **하나도 안 잡혀** "미색인" 으로
+> 잘못 판정합니다. 2026-07-27 에 실제로 그렇게 오판했습니다.
 | GitHub Actions 정지방지 | ❓ 확인 못 함 (`gh` CLI 없음) — 대표님이 Actions 탭에서 확인 필요 |
 
 ---
@@ -66,6 +75,7 @@ Susanna/
 ├── supabase/migrations/    ← DB 스키마 SQL
 ├── docs/                   ← ARCHITECTURE.md(이 문서) · SEO.md · SUPABASE-SETUP.md
 ├── scripts/                ← check-supabase.mjs(연결 진단) · check-rls.mjs(권한 검증)
+│                             submit-indexnow.mjs(색인 통보) · gen-image-manifest.mjs(빌드 시 사진 목록)
 ├── reference/              ← 레퍼런스 조사 자료 (SPEC.md + 캡처)
 │
 ├── next.config.ts          ← 이미지 원격 호스트 허용
@@ -95,6 +105,7 @@ Susanna/
 | **P8** | `/privacy` `/terms` `/no-email-collect` | 각 `page.tsx` | 정적 | 하드코딩 ⚠️법률 검토 필요 |
 | — | `/robots.txt` `/sitemap.xml` | `app/robots.ts` `sitemap.ts` | 정적 | `config/site.ts` |
 | — | `/rss.xml` | `app/rss.xml/route.ts` | 요청 시 생성 + **CDN 캐시 1h** | **CMS** `getWorks()` — 네이버 서치어드바이저 제출용 |
+| — | `/indexnow.txt` | `app/indexnow.txt/route.ts` | 정적 | `site.indexNowKey` — 색인 통보 소유확인 키 (F17) |
 | — | 404 | `app/not-found.tsx` | 정적 | — |
 
 > **왜 ISR 을 쓰지 않나** (2026-07-24 변경, 커밋 `d8342d7`)
@@ -415,6 +426,39 @@ app/robots.ts
 - ⚠️ 이건 **보조 장치**입니다. 확실한 해제는 Cloudflare 대시보드(§7). 크롤러마다
   규칙 해석이 조금씩 달라 100% 보장은 아닙니다.
 
+### F17. IndexNow — 검색엔진 색인 즉시 통보
+```
+config/site.ts   site.indexNowKey   ★ 키 원본 (A5)
+      ↓ import
+app/indexnow.txt/route.ts   force-static · 본문은 키 한 줄뿐
+      ↑ keyLocation 으로 지목
+scripts/submit-indexnow.mjs   npm run indexnow
+├── 1  /indexnow.txt 가 뜨고 키가 일치하는지 먼저 확인 (아니면 전부 403)
+├── 2  운영 sitemap.xml 의 <loc> 를 그대로 목록으로 사용
+└── 3  POST {host, key, keyLocation, urlList}
+        ├── https://api.indexnow.org/indexnow    참여사 전체 중계
+        ├── https://www.bing.com/indexnow        직접
+        └── https://searchadvisor.naver.com/indexnow  직접
+```
+- **왜 필요한가**: 새 도메인은 백링크가 없으면 검색엔진이 **존재 자체를 모릅니다.**
+  사이트맵은 "찾아온 뒤에" 읽는 것이라 발견 문제를 못 풉니다. IndexNow 는 순서를
+  뒤집어 우리가 먼저 통보합니다. 계정·로그인이 필요 없는 유일한 경로입니다.
+- ⚠️ **구글은 IndexNow 에 참여하지 않습니다.** 참여사는 Bing · 네이버 · Yandex ·
+  Seznam · Yep · Internet Archive · Amazonbot 입니다
+  (`https://www.indexnow.org/searchengines.json` 로 실측 확인). 구글은 Search Console
+  등록 외에 길이 없고, 그건 코드로 할 수 없습니다 — [`SEO.md`](SEO.md) C 섹션.
+- ⚠️ **네이버는 서치어드바이저 등록이 선행돼야** 실효가 있을 가능성이 큽니다
+  (엔드포인트가 `searchadvisor.naver.com` 입니다). Bing 은 등록 없이도 받습니다.
+- **왜 표준 `/<키>.txt` 가 아니라 `/indexnow.txt` 인가**: 표준 경로를 쓰면 키 값이
+  **파일 이름과 `config/site.ts` 양쪽**에 생겨, 키를 바꿀 때 한쪽만 고치면 조용히
+  깨집니다. IndexNow 규격이 통보에 `keyLocation` 을 실어 임의 주소를 지정하도록
+  허용하므로 키의 출처를 config 한 곳으로 모았습니다 [원칙 A5].
+- ⚠️ **키 파일 본문은 키 한 줄뿐이어야 합니다.** 공백·줄바꿈·BOM 이 섞이면 403.
+  빌드 산출물(`.next/server/app/indexnow.txt.body`)이 정확히 32바이트인지로 확인합니다.
+- **키는 비밀이 아닙니다.** 공개돼야 소유확인이 되는 값이라 저장소에 그대로 둡니다.
+- 스크립트는 `process.exit()` 를 쓰지 않습니다 — fetch 소켓이 닫히는 중에 종료되면
+  Windows 에서 libuv assertion 이 찍힙니다(`check-notify.mjs` 와 같은 이유).
+
 ---
 
 ## 4. 데이터 흐름
@@ -534,7 +578,11 @@ RLS
 | ⚠️ 확인 | **`0003_works_photos.sql` 미실행 시 `/works` 는 그대로 15건**입니다. DB 가 config 를 덮어쓰므로(§5 경고) 대표님이 SQL Editor 에서 실행해야 반영됩니다 | §5 |
 | 해소 | ~~Cloudflare 관리형 `robots.txt` 가 AI 크롤러 차단~~ → **끝났습니다** (2026-07-26). Cloudflare 관리형 블록이 사라져 운영 `robots.txt` 가 **우리 정책만 24줄**로 나옵니다. AI 봇에 걸린 `Disallow: /` 가 하나도 없습니다. AI 답변 엔진 인용 경로가 열렸습니다 | F15 |
 | ⚠️ SEO | `site.geo` 좌표가 대전 서구 근사값 — 로컬팩 "거리" 요인에 영향 | `config/site.ts` |
-| TODO | 네이버·구글 사이트 소유확인 코드 미입력 (슬롯만 준비됨) | 〃 |
+| 🔴 발견 | **`http://` 가 `https://` 로 301 되지 않습니다** (2026-07-27 발견). `curl -sI http://susannadesign.co.kr/` → **200**. `www` 는 F13 으로 막았는데 `http` 는 뚫려 있어, **구글이 `http://` 주소를 색인했습니다**(페이지의 canonical 은 `https://` 라 서로 어긋남). 고치는 법은 Cloudflare **SSL/TLS → Edge Certificates → Always Use HTTPS** 토글 — **코드로 하면 `x-forwarded-proto` 를 믿어야 하고 값이 어긋나면 무한 리다이렉트로 사이트가 죽습니다.** 운영 사이트에 걸 위험이 아니라 대시보드에 둡니다 | [`SEO.md`](SEO.md) 문제 1 |
+| 🔴 부채 | **`sameAs` 가 빈 배열로 나갑니다** — `app/layout.tsx:120` 이 `[blogUrl, instagramUrl, kakaoChannelUrl].filter(Boolean)` 인데 셋 다 공란. 구글·AI 가 **홈페이지와 인스타그램(@susanna_design541)을 같은 회사로 잇지 못합니다.** 실제로 AI 개요가 인스타그램은 인용하면서 홈페이지는 인용하지 않습니다 | `config/site.ts` |
+| ⚠️ TODO | **색인이 홈 1페이지에 그침** — 사이트맵 10개 중 1개. Search Console 에서 사이트맵 제출 + `/works` `/about` 색인 요청 필요 | [`SEO.md`](SEO.md) 문제 2 |
+| TODO | 네이버 소유확인 코드 미입력 (구글은 07-26 등록 완료). 구글을 도메인(DNS TXT) 방식으로 확인했다면 `googleVerification` 은 비워 둬도 됩니다 | `config/site.ts` · [`SEO.md`](SEO.md) C3 |
+| 일부 해소 | **IndexNow 색인 통보 추가** (2026-07-27, F17) — 계정 없이 Bing·네이버 등에 즉시 통보. **구글은 참여사가 아니라 이걸로 안 풀립니다.** 배포 후 `npm run indexnow` 를 한 번 실행해야 실제 통보가 나갑니다(POST 경로는 키 파일 배포 전이라 아직 미검증) | F17 |
 | 미도입 | **시공사례 개별 페이지 미구현** — 로컬 SEO 최대 자산이나, 현재 데이터로 만들면 "얇은 콘텐츠" 페널티. 사례별 상세 내용 확보가 선행 | [`SEO.md`](SEO.md) B-1 |
 | — | ~~사진 약 30장 미투입~~ → 위 "운영 사이트에 플레이스홀더 노출" 항목으로 통합 (실측 53자리) | 〃 |
 | ⚠️ 법률 | 개인정보처리방침 · 이용약관 초안 상태 | `app/privacy` `app/terms` |
