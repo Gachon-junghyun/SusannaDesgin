@@ -7,7 +7,7 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "susanna-design",
+  "name": "susannadesgin",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-07-01",
   // Next.js 는 Node.js API 를 씁니다. 이 플래그가 없으면 빌드가 통과해도 실행이 깨집니다.
