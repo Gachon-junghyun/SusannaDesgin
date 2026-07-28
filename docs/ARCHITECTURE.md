@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-07-27 (**실적 사진 12장 투입** · **F18 CMS 명령줄 도구** · IndexNow F17 · `http`→`https` 301 · `sameAs` · `taxID` · `WebSite` 사이트이름) |
+| 최종 갱신 | 2026-07-28 (**네이버 소유확인 코드 입력** · 실적 사진 12장 투입 · F18 CMS 명령줄 도구 · IndexNow F17 · `http`→`https` 301 · `sameAs` · `taxID` · `WebSite` 사이트이름) |
 | 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
@@ -658,7 +658,7 @@ RLS
 | ⚠️ 정리 | 운영 `/admin/quotes` 에 검증용 테스트 문의 2건(`[검증] 지워주세요`) 남아 있음 | [`DEPLOY.md`](DEPLOY.md) 3단계 |
 | TODO | 견적 알림이 **꺼져 있습니다** — `RESEND_API_KEY` 를 넣어야 켜집니다. 안 넣으면 `/admin/quotes` 를 직접 봐야 새 문의를 압니다 | F16 · §6 |
 | TODO | `config/site.ts` 남은 값: 옥외광고사업 등록번호 · 우편번호 · 운영시간 · 누적건수 · 카카오채널 · 지도 URL | `config/site.ts` |
-| TODO | 네이버 소유확인 코드 미입력. (구글은 도메인 DNS TXT 방식으로 확인돼 `googleVerification` 은 비워 둬도 됩니다) | `config/site.ts` |
+| ⚠️ 대기 | **네이버 소유확인 코드는 넣었으나 아직 배포 전** (2026-07-28, HTML 태그 방식). **배포한 뒤에** 서치어드바이저에서 `확인` 을 눌러야 통과합니다 — 배포 전에 누르면 태그가 없어 실패합니다. (구글은 도메인 DNS TXT 방식이라 `googleVerification` 은 공란 유지) | `config/site.ts` · [`SEO.md`](SEO.md) C3 |
 | TODO | `sameAs` 에 `blogUrl`·`kakaoChannelUrl` 이 비어 있음 — 채널이 생기면 넣으세요. 엔티티 연결이 한 겹 더 두꺼워집니다 | `config/site.ts` |
 | ⚠️ SEO | `site.geo` 좌표가 대전 서구 근사값 — 로컬 검색의 "거리" 요인에 영향 | `config/site.ts` |
 | ⚠️ 법률 | 개인정보처리방침 · 이용약관이 **초안 상태** | `app/privacy` `app/terms` |

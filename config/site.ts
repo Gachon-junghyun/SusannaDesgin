@@ -109,7 +109,7 @@ export const site = {
    *  - naver: 네이버 서치어드바이저 → 사이트 등록 → HTML 태그의 content 값만
    *  - google: Google Search Console → HTML 태그 방식의 content 값만
    */
-  naverVerification: "", // TODO
+  naverVerification: "4f67d8e7b2e7e235e88452cd5a22876d060bae1f", // 서치어드바이저 HTML 태그 (2026-07-28)
   googleVerification: "", // TODO
 
   /**
