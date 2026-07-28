@@ -190,8 +190,8 @@ E-E-A-T의 "경험" 축을 채우는 항목이라 업계 일반론 복사는 역
 |---|---|---|---|
 | C1 | **네이버 스마트플레이스** 등록 | 심사 2시간~5일 | smartplace.naver.com |
 | C2 | **구글 비즈니스 프로필** 등록·인증 | 인증 방식은 구글이 지정 | business.google.com |
-| C3 | **네이버 서치어드바이저** 등록 → 소유확인 → 사이트맵·RSS 제출 | 색인 14~16일 | searchadvisor.naver.com |
-| C4 | **Google Search Console** 등록 | 즉시 | search.google.com/search-console |
+| C3 | ✅ **소유확인 완료** (2026-07-28, HTML 태그) — 사이트맵·RSS 제출이 남았습니다 | 색인 14~16일 | searchadvisor.naver.com |
+| C4 | ✅ **소유확인 완료** (2026-07-28, 도메인 DNS TXT — 실측 확인) — 사이트맵 제출·색인 요청이 남았습니다 | 즉시 | search.google.com/search-console |
 | C5 | 카카오맵 · 당근비즈니스 등록 | | |
 
 > C3·C4의 소유확인 코드는 저에게 주시면 `config/site.ts` 에 넣어 드립니다.
