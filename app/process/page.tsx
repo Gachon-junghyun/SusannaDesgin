@@ -1,15 +1,10 @@
-﻿import type { Metadata } from "next";
-import Link from "next/link";
+﻿import Link from "next/link";
 import Img from "@/components/Img";
 import { PageHero } from "@/components/Section";
 import { steps } from "@/config/content";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "간판 제작·시공 업무프로세스",
-  description:
-    "대전 간판제작 진행 절차입니다. 현장 상담·접수 → 디자인 기획 → 시안 확정 → 795평 자체 공장 제작 → 시공 및 A/S까지, 현장 확인과 시안 제작은 무료로 진행합니다.",
-  alternates: { canonical: "/process" },
-};
+export const metadata = pageMetadata("/process");
 
 const detail: Record<string, string[]> = {
   "01": [

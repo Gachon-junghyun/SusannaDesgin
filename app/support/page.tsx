@@ -1,15 +1,10 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { PageHero, Section, SectionHeading } from "@/components/Section";
 import { site } from "@/config/site";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "고객지원 · 자주 묻는 질문",
-  description:
-    "대전 간판 제작·시공에 대해 자주 묻는 질문을 모았습니다. 견적 비용, 제작 기간, 철거 여부, 옥외광고물 허가 대행, 시공 가능 지역과 오시는길을 안내합니다.",
-  alternates: { canonical: "/support" },
-};
+export const metadata = pageMetadata("/support");
 
 const faqs = [
   {

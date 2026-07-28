@@ -1,17 +1,12 @@
-﻿import type { Metadata } from "next";
-import Link from "next/link";
+﻿import Link from "next/link";
 import WorksGrid from "@/components/WorksGrid";
 import { PageHero } from "@/components/Section";
 import { workCategories } from "@/config/content";
 import { getWorks } from "@/lib/cms";
 import { imageExists } from "@/lib/images";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "대전 간판 시공사례",
-  description:
-    "대전 간판업체 수산나디자인의 시공사례입니다. 삼성화재, KAIST, 교보생명, 우리은행, 롯데하이마트, 금성백조, 대전무역회관 등 관공서·금융·기업·상업시설 실적을 업종별로 보실 수 있습니다.",
-  alternates: { canonical: "/works" },
-};
+export const metadata = pageMetadata("/works");
 
 /** 요청 시 렌더링 — 이유는 `app/page.tsx` 의 같은 설정 주석 참고. */
 export const dynamic = "force-dynamic";

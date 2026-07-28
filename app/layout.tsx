@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import FloatingBar from "@/components/FloatingBar";
 import SiteChrome from "@/components/SiteChrome";
 import { seo, site } from "@/config/site";
+import { ogImage } from "@/lib/seo";
 
 const notoKr = Noto_Sans_KR({
   variable: "--font-noto-kr",
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
     siteName: site.name,
     title: seo.homeTitle,
     description: seo.homeDescription,
-    images: [{ url: "/images/og.jpg", width: 1200, height: 630, alt: site.name }],
+    images: [ogImage],
   },
   // 최종 도메인이 아니면(임시 주소·미리보기) 검색 노출을 막습니다.
   robots: site.isProductionDomain

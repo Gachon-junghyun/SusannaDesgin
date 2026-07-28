@@ -1,15 +1,10 @@
-﻿import type { Metadata } from "next";
-import Link from "next/link";
+﻿import Link from "next/link";
 import Img from "@/components/Img";
 import { PageHero } from "@/components/Section";
 import { signTypes } from "@/config/content";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "대전 간판·옥외광고물 사업영역",
-  description:
-    "대전 간판제작 전문 수산나디자인의 사업 영역입니다. 옥외광고물(옥상 광고탑·외벽 사인), 간판디자인(채널·돌출), 철구조물(캐노피·파사드), 옥내광고물을 직접 제작하고 시공합니다.",
-  alternates: { canonical: "/signs" },
-};
+export const metadata = pageMetadata("/signs");
 
 export default function SignsPage() {
   return (

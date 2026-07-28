@@ -1,14 +1,9 @@
-﻿import type { Metadata } from "next";
-import QuoteForm from "@/components/QuoteForm";
+﻿import QuoteForm from "@/components/QuoteForm";
 import { PageHero } from "@/components/Section";
 import { site } from "@/config/site";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "대전 간판 무료 견적 문의",
-  description:
-    "대전 간판·옥외광고물·철구조물 무료 견적 문의. 현장 확인과 디자인 시안까지 비용 없이 진행합니다. 건물 형태와 용도를 알려주시면 유사 시공 사례와 예상 견적을 함께 보내드립니다.",
-  alternates: { canonical: "/quote" },
-};
+export const metadata = pageMetadata("/quote");
 
 export default function QuotePage() {
   return (

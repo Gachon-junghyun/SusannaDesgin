@@ -1,12 +1,8 @@
-import type { Metadata } from "next";
 import { PageHero } from "@/components/Section";
 import { site } from "@/config/site";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "이메일주소 무단수집 거부",
-  alternates: { canonical: "/no-email-collect" },
-  robots: { index: false, follow: true },
-};
+export const metadata = pageMetadata("/no-email-collect");
 
 export default function NoEmailCollectPage() {
   return (

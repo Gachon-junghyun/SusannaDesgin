@@ -1,15 +1,11 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import Img from "@/components/Img";
 import { PageHero, Section, SectionHeading } from "@/components/Section";
 import { equipment, history, stats, vision } from "@/config/content";
 import { certifications, site } from "@/config/site";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "대전 간판업체 회사소개",
-  description: `${site.legalName}은 2012년부터 대전에서 옥외광고물·간판·철구조물을 디자인, 제작, 시공해 온 전문 기업입니다. 795평 자체 공장과 인증·등록 6종을 보유하고 있습니다.`,
-  alternates: { canonical: "/about" },
-};
+export const metadata = pageMetadata("/about");
 
 export default function AboutPage() {
   return (

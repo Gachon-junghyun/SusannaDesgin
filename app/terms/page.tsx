@@ -1,12 +1,8 @@
-import type { Metadata } from "next";
 import { PageHero } from "@/components/Section";
 import { site } from "@/config/site";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "이용약관",
-  alternates: { canonical: "/terms" },
-  robots: { index: false, follow: true },
-};
+export const metadata = pageMetadata("/terms");
 
 const articles = [
   {

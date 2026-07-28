@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-07-28 (**네이버 소유확인 코드 입력** · 실적 사진 12장 투입 · F18 CMS 명령줄 도구 · IndexNow F17 · `http`→`https` 301 · `sameAs` · `taxID` · `WebSite` 사이트이름) |
+| 최종 갱신 | 2026-07-28 (**네이버 소유확인 완료** · **URL 검사 느낌표 5건 해소** — 설명 80자↓·페이지별 og·사이트맵 정리 · 실적 사진 12장 투입 · F18 CMS 명령줄 도구 · IndexNow F17) |
 | 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
@@ -354,9 +354,23 @@ next.config.ts → remotePatterns 에 Supabase 호스트 자동 등록
 config/site.ts → seo{}          지역×서비스×의도 키워드 · 홈 타이틀/설명 · 소유확인코드
 config/site.ts → site.geo       좌표 (로컬팩 "거리" 요인)
 
+config/site.ts → seo.pages     하위 9개 페이지의 타이틀·설명 [A5]
+config/site.ts → noindexPaths  검색 노출 제외 목록 ★ 사이트맵과 robots 의 단일 출처
+
+lib/seo.ts → pageMetadata(path)   하위 페이지 metadata 생성 — 아래 두 함정을 함께 막습니다
+├── ⚠️ Next.js 는 메타데이터를 **얕게 병합**합니다. 페이지가 openGraph 를 한 필드라도
+│   적으면 layout 의 openGraph 가 통째로 교체돼 **og:image 가 조용히 사라집니다.**
+│   그래서 이 함수가 매번 openGraph 전체를 다시 채웁니다.
+│   페이지에서 직접 openGraph 를 적지 마세요.
+├── ⚠️ 색인 대상 페이지에는 robots 를 **넣지 않습니다.** 넣으면 layout 을 덮어써서
+│   임시 주소·미리보기 배포까지 index:true 가 됩니다 (layout 은 isProductionDomain 판단).
+└── 이전 문제: 각 page.tsx 가 description 만 적어 **10개 페이지가 홈 설명을 공유**했습니다
+
 app/layout.tsx
-├── metadata   타이틀에 지역 키워드 앞배치 (60자↓) · 설명 90~110자
+├── metadata   타이틀에 지역 키워드 앞배치 (60자↓) · 설명 **80자↓**
+│              ⚠️ 네이버 URL 검사가 한글 80자 초과에 경고를 냅니다 (2026-07-28 실측)
 │              verification 슬롯 (값 없으면 태그 미출력)
+│              openGraph 이미지는 lib/seo.ts 의 ogImage 하나를 공유
 ├── JSON-LD LocalBusiness   geo · areaServed · openingHoursSpecification
 │           ⚠️ site.hours 와 반드시 일치 (NAP 일관성)
 │           ⚠️ AggregateRating/Review 금지 — 자사 게시 리뷰에만 허용
@@ -374,7 +388,10 @@ components/Section.tsx PageHero  path prop → BreadcrumbList 자동 생성
 app/support/page.tsx            FAQPage (화면의 faqs 배열 그대로)
 
 app/robots.ts    disallow: /api/ · /admin · AI 크롤러 명시 허용(F15)
-app/sitemap.ts   /admin 제외
+app/sitemap.ts   /admin 제외 + noindexPaths 자동 제외
+                 ⚠️ noindex 페이지를 사이트맵에 넣으면 "색인해라 + 하지 마라" 모순
+                    신호입니다. 실제로 제출 10건 중 3건이 영구 실패로 남아 있었습니다.
+                    목록을 두 곳에서 따로 관리하면 반드시 어긋나므로 noindexPaths 하나만 봅니다.
 app/rss.xml/     RSS — 네이버 서치어드바이저 제출용 (시공사례 자동 반영)
 public/icon.png · public/apple-icon.png   ← 정적 자산 (캐시 헤더 적용 대상)
 ```
@@ -658,7 +675,8 @@ RLS
 | ⚠️ 정리 | 운영 `/admin/quotes` 에 검증용 테스트 문의 2건(`[검증] 지워주세요`) 남아 있음 | [`DEPLOY.md`](DEPLOY.md) 3단계 |
 | TODO | 견적 알림이 **꺼져 있습니다** — `RESEND_API_KEY` 를 넣어야 켜집니다. 안 넣으면 `/admin/quotes` 를 직접 봐야 새 문의를 압니다 | F16 · §6 |
 | TODO | `config/site.ts` 남은 값: 옥외광고사업 등록번호 · 우편번호 · 운영시간 · 누적건수 · 카카오채널 · 지도 URL | `config/site.ts` |
-| ⚠️ 대기 | **네이버 소유확인 코드는 넣었으나 아직 배포 전** (2026-07-28, HTML 태그 방식). **배포한 뒤에** 서치어드바이저에서 `확인` 을 눌러야 통과합니다 — 배포 전에 누르면 태그가 없어 실패합니다. (구글은 도메인 DNS TXT 방식이라 `googleVerification` 은 공란 유지) | `config/site.ts` · [`SEO.md`](SEO.md) C3 |
+| ⚠️ 확인 | **네이버 URL 검사 재실행 필요** — `robots.txt 없음` 경고가 남아 있는지. Yeti UA 실측은 `200 / text/plain / 500B` 로 정상이라 오탐으로 보고 있습니다. 배포 후에도 뜨면 다시 파야 합니다 | [`SEO.md`](SEO.md) 느낌표 표 3번 |
+| 🔴 등록 | **서치어드바이저에 사이트맵·RSS 미제출** — 소유확인은 끝났습니다(2026-07-28). `요청 → 사이트맵 제출`에 `sitemap.xml`, `요청 → RSS 제출`에 `rss.xml`. **둘 다** 내야 합니다 | [`SEO.md`](SEO.md) C3 |
 | TODO | `sameAs` 에 `blogUrl`·`kakaoChannelUrl` 이 비어 있음 — 채널이 생기면 넣으세요. 엔티티 연결이 한 겹 더 두꺼워집니다 | `config/site.ts` |
 | ⚠️ SEO | `site.geo` 좌표가 대전 서구 근사값 — 로컬 검색의 "거리" 요인에 영향 | `config/site.ts` |
 | ⚠️ 법률 | 개인정보처리방침 · 이용약관이 **초안 상태** | `app/privacy` `app/terms` |

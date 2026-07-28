@@ -1,13 +1,8 @@
-import type { Metadata } from "next";
 import { PageHero } from "@/components/Section";
 import { privacyConsent, site } from "@/config/site";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "개인정보처리방침",
-  description: `${site.name} 개인정보처리방침`,
-  alternates: { canonical: "/privacy" },
-  robots: { index: false, follow: true },
-};
+export const metadata = pageMetadata("/privacy");
 
 export default function PrivacyPage() {
   return (
