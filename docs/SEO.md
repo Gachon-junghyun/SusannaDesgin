@@ -398,7 +398,9 @@ npm run indexnow
 | `canonical` · `og:url` | ✅ `www` 로 접속해도 비`www` 를 가리킴 |
 | `www` → 비`www` **301** | ✅ **배포 확인 완료** — 루트·다단경로·쿼리스트링 전부 301 (F13) |
 | 크롤러 실접근 | ✅ Googlebot 등 **8종 전부 200** (UA 실측, 차단 0건) |
-| `<meta name="robots">` | ✅ `index, follow` |
+| `<meta name="robots">` | ✅ `index, follow` (`noindex` 3개는 의도대로 `noindex, follow`) |
+| 설명문 길이 · 페이지별 OG | ✅ **운영 10페이지 실측 (2026-07-28)** — 전부 43~62자, `description`=`og:description` 일치, `og:image` 유지 |
+| `sitemap.xml` 건수 | ✅ **7건** — `noindex` 3개 빠진 것 확인 |
 | 사진 `alt` 자산 | ⚠️ 플레이스홀더 **홈 35자리 · `/works` 15자리** (사진 6장 투입 후) — E 표 3번 |
 | 구글 색인 | ⚠️ **홈 1페이지만** — 사이트맵 10개 중 1개. 문서 맨 위 "현재 색인 상태" 참조 |
 | `http` → `https` 301 | ✅ **해결** (Cloudflare Always Use HTTPS) |
