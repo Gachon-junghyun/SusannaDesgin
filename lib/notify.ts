@@ -395,9 +395,27 @@ export async function notifyNewQuote(
 ): Promise<string[]> {
   const webhook = process.env.QUOTE_WEBHOOK_URL?.trim();
   const resendKey = process.env.RESEND_API_KEY?.trim();
-  // 받는 주소를 따로 안 정하면 회사 대표 메일로 보냅니다 [A5 — 값은 config 에서]
-  const mailTo = process.env.QUOTE_NOTIFY_EMAIL?.trim() || site.email;
   const mailFrom = process.env.QUOTE_MAIL_FROM?.trim() || "onboarding@resend.dev";
+
+  /**
+   * 받는 주소. 따로 안 정하면 회사 대표 메일로 보냅니다 [A5 — 값은 config 에서].
+   *
+   * 🔴 **폴백이 조용하면 안 됩니다.** 2026-08-06 에 배포가 `QUOTE_NOTIFY_EMAIL`
+   *    (Plaintext) 을 지웠는데, 폴백이 동작해 회사 대표 메일로는 계속 갔습니다.
+   *    메일이 오긴 오니까 **아무도 두 사람이 빠진 걸 몰랐습니다.** Resend 발송
+   *    로그의 수신자를 세어 보고서야 찾았습니다.
+   *
+   *    "완전히 죽는 고장" 보다 "조용히 반만 되는 고장" 이 훨씬 늦게 발견됩니다.
+   *    그래서 폴백을 탈 때마다 로그를 남깁니다.
+   */
+  const notifyEnv = process.env.QUOTE_NOTIFY_EMAIL?.trim();
+  const mailTo = notifyEnv || site.email;
+  if (resendKey && !notifyEnv) {
+    console.warn(
+      `[견적문의] QUOTE_NOTIFY_EMAIL 이 비어 있어 회사 대표 메일(${site.email}) 로만 보냅니다. ` +
+        `배포가 Plaintext 변수를 지웠을 수 있습니다 — Cloudflare 에 **Secret** 으로 다시 넣으세요.`
+    );
+  }
 
   /**
    * 웹훅(슬랙 등)에는 파일을 못 붙입니다. 거기까지 "이 메일에 첨부" 라고 적으면

@@ -58,10 +58,20 @@ export default async function AdminQuotesPage() {
    * 값은 배포 환경의 환경변수를 그대로 읽으므로, 운영 화면에서 보면
    * Cloudflare 에 값이 들어갔는지까지 확인됩니다.
    */
-  const notifyEmail = process.env.QUOTE_NOTIFY_EMAIL?.trim() || site.email;
+  const notifyEnv = process.env.QUOTE_NOTIFY_EMAIL?.trim();
+  const notifyEmail = notifyEnv || site.email;
   const notifyOn =
     Boolean(process.env.RESEND_API_KEY?.trim()) ||
     Boolean(process.env.QUOTE_WEBHOOK_URL?.trim());
+
+  /**
+   * 🔴 **받는 주소가 폴백으로 떨어졌는지**도 보여 줍니다.
+   *
+   * 2026-08-06 에 배포가 `QUOTE_NOTIFY_EMAIL`(Plaintext)을 지웠는데, 폴백 덕분에
+   * 회사 대표 메일로는 계속 갔습니다. **메일이 오긴 오니까 두 사람이 빠진 걸
+   * 아무도 몰랐습니다.** 완전히 죽는 고장보다 조용히 반만 되는 고장이 늦게 발견됩니다.
+   */
+  const notifyFellBack = notifyOn && !notifyEnv;
 
   return (
     <AdminShell
@@ -86,6 +96,16 @@ export default async function AdminQuotesPage() {
           <>
             새 문의가 들어오면 <b className="text-ink">{notifyEmail}</b> 로 메일이 갑니다.
             받은편지함에 없으면 스팸함도 확인해 보세요.
+            {notifyFellBack && (
+              <>
+                <br />
+                <b className="text-accent">
+                  ⚠️ 받는 주소 설정(QUOTE_NOTIFY_EMAIL)이 비어 있어 이 한 곳으로만 갑니다.
+                </b>{" "}
+                배포할 때 지워졌을 수 있습니다 — Cloudflare 에 <b>Secret</b> 타입으로 다시
+                넣으세요. (Plaintext 로 넣으면 다음 배포에 또 지워집니다)
+              </>
+            )}
           </>
         ) : (
           <>
