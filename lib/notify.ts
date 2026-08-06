@@ -35,7 +35,7 @@ const TIMEOUT_MS = 5000;
  * 게다가 base64 로 부풀어 실제 요청은 1.37배가 됩니다. 넉넉히 낮게 잡고, 넘으면
  * 붙이지 않고 관리자 화면으로 안내합니다 — 메일이 통째로 실패하는 것보다 낫습니다.
  */
-const MAX_ATTACH_TOTAL = 12 * 1024 * 1024;
+export const MAX_MAIL_ATTACH_BYTES = 12 * 1024 * 1024;
 
 export type QuoteNotice = {
   kind: string;
@@ -47,10 +47,16 @@ export type QuoteNotice = {
   timing?: string;
   address?: string;
   message?: string;
-  /** 첨부 목록. `stored` 는 스토리지에 들어가 관리자 화면에서 받을 수 있다는 뜻입니다. */
-  files: { name: string; stored: boolean }[];
-  /** 그 파일들이 **이 메일에 직접 붙어 있는가** (용량이 크면 false) */
-  attached?: boolean;
+  /**
+   * 첨부 목록.
+   *   `stored`   스토리지에 들어감 → 관리자 화면에서 받을 수 있다
+   *   `attached` **이 메일에 직접 붙어 있다** (용량이 크면 false)
+   *
+   * ⚠️ 파일마다 따로 씁니다. 예전에는 메일 전체에 플래그 하나였는데, 큰 원본과 작은
+   *    사양서가 같이 오면 **한 장만 붙었는데 본문은 "첨부되어 있습니다" 라고 적혀**
+   *    받는 사람이 나머지를 찾아 헤매게 됐습니다.
+   */
+  files: { name: string; stored: boolean; attached: boolean }[];
   receivedAt: string;
 };
 
@@ -90,7 +96,7 @@ function toBase64(bytes: Uint8Array): string {
  */
 export function toMailAttachments(uploads: QuoteUpload[]): MailAttachment[] {
   const total = uploads.reduce((n, f) => n + f.bytes.length, 0);
-  if (total > MAX_ATTACH_TOTAL) {
+  if (total > MAX_MAIL_ATTACH_BYTES) {
     console.warn(
       `[견적문의] 첨부 ${Math.round(total / 1024 / 1024)}MB 는 메일에 붙이기엔 큽니다. ` +
         `관리자 화면에서 내려받도록 안내만 넣습니다.`
@@ -126,15 +132,16 @@ function receivedAtKST(iso: string): string {
 }
 
 /**
- * 첨부를 어디서 볼 수 있는지 한 줄로.
+ * 파일 **한 개**가 지금 어디에 있는지.
  *
- * 예전에는 무조건 "관리자 화면에서 확인" 이라고 적었는데, 그때는 **파일을 아예
- * 저장하지 않던 시절**이라 관리자 화면에 가도 이름만 있었습니다. 받는 사람을
- * 헛걸음시키는 문구였습니다. 이제 세 경우를 구분해서 적습니다.
+ * 예전에는 메일 전체에 문구 하나를 붙였는데, 그때는 파일을 아예 저장하지 않던 시절
+ * (무조건 "관리자 화면에서 확인" — 가도 이름밖에 없었습니다)과 큰 파일이 섞였을 때
+ * (한 장만 붙었는데 "첨부되어 있습니다") 모두 받는 사람을 헛걸음시켰습니다.
+ * 이제 파일마다 정확히 적습니다.
  */
-function attachmentHint(q: QuoteNotice): string {
-  if (q.attached) return "이 메일에 첨부되어 있습니다";
-  if (q.files.some((f) => f.stored)) return "용량이 커서 관리자 화면에서 내려받으세요";
+function fileHint(f: QuoteNotice["files"][number]): string {
+  if (f.attached) return "이 메일에 첨부";
+  if (f.stored) return "용량이 커서 관리자 화면에서 내려받기";
   return "파일을 받지 못했습니다 — 고객께 다시 요청하세요";
 }
 
@@ -152,8 +159,8 @@ function asText(q: QuoteNotice): string {
     line("희망 시기", q.timing) +
     line("주소", q.address) +
     (q.files.length
-      ? `첨부: ${q.files.length}개 (${attachmentHint(q)})\n` +
-        q.files.map((f) => `  · ${f.name}\n`).join("")
+      ? `첨부: ${q.files.length}개\n` +
+        q.files.map((f) => `  · ${f.name}  (${fileHint(f)})\n`).join("")
       : "") +
     (q.message ? `\n내용:\n${q.message}\n` : "") +
     `\n접수: ${receivedAtKST(q.receivedAt)}\n` +
@@ -187,12 +194,18 @@ export function asHtml(q: QuoteNotice): string {
 
   const row = (label: string, v?: string) => (v ? rowHtml(label, esc(v)) : "");
 
-  /** 첨부는 파일명을 다 적습니다 — 메일만 보고도 무엇이 왔는지 알 수 있게 */
+  /** 첨부는 파일명과 **그 파일이 지금 어디 있는지**를 한 줄씩 적습니다 */
   const fileRow = q.files.length
     ? rowHtml(
         "첨부",
-        q.files.map((f) => esc(f.name)).join("<br>") +
-          `<br><span style="color:#6b7280;font-size:13px">${esc(attachmentHint(q))}</span>`
+        q.files
+          .map(
+            (f) =>
+              `${esc(f.name)}<br>` +
+              `<span style="color:${f.attached || f.stored ? "#6b7280" : "#FF5900"};font-size:13px">` +
+              `${esc(fileHint(f))}</span>`
+          )
+          .join('<div style="height:8px"></div>')
       )
     : "";
 
@@ -387,13 +400,15 @@ export async function notifyNewQuote(
   const mailFrom = process.env.QUOTE_MAIL_FROM?.trim() || "onboarding@resend.dev";
 
   /**
-   * `attached` 는 **메일에만** 참일 수 있습니다. 웹훅(슬랙 등)에는 파일을 못 붙이니,
-   * 거기까지 "이 메일에 첨부되어 있습니다" 라고 적으면 거짓말이 됩니다.
-   * 그래서 경로별로 다른 안내문을 쓰도록 알림 객체를 갈라 둡니다.
+   * 웹훅(슬랙 등)에는 파일을 못 붙입니다. 거기까지 "이 메일에 첨부" 라고 적으면
+   * 거짓말이 되므로, 웹훅용 사본은 `attached` 를 전부 내려 둡니다.
    */
-  const mail = { ...q, attached: attachments.length > 0 };
+  const webhookNotice: QuoteNotice = {
+    ...q,
+    files: q.files.map((f) => ({ ...f, attached: false })),
+  };
 
-  const text = asText(q);
+  const text = asText(webhookNotice);
   const jobs: Array<[string, Promise<void>]> = [];
 
   if (webhook) jobs.push(["웹훅", sendWebhook(webhook, text)]);
@@ -405,8 +420,8 @@ export async function notifyNewQuote(
         mailFrom,
         mailTo,
         `[견적문의] ${q.name} / ${q.phone}`,
-        asHtml(mail),
-        asText(mail),
+        asHtml(q),
+        asText(q),
         attachments
       ),
     ]);

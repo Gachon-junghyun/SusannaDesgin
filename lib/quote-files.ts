@@ -51,60 +51,86 @@ function objectKey(quoteId: string, index: number, name: string): string {
  *    그 바이트를 나눠 씁니다. 아래 함수들이 `File` 이 아니라 이 타입을 받는 이유입니다.
  */
 export type QuoteUpload = {
+  /** 원래 첨부 목록에서 몇 번째였나 — 메일 본문에서 "이건 붙었고 저건 아니다" 를 가릅니다 */
+  index: number;
   name: string;
   type: string;
   size: number;
   bytes: Uint8Array;
 };
 
-/** 폼으로 들어온 `File` 을 한 번에 읽어 둡니다. 이후로는 아무도 `File` 을 만지지 않습니다. */
-export async function readQuoteFiles(files: File[]): Promise<QuoteUpload[]> {
-  return Promise.all(
-    files.map(async (f) => ({
-      name: f.name,
-      type: f.type,
-      size: f.size,
-      bytes: new Uint8Array(await f.arrayBuffer()),
-    }))
-  );
-}
-
 /**
- * 첨부파일을 버킷에 올리고, DB 에 적을 메타데이터를 돌려줍니다.
+ * 첨부파일을 **한 개씩** 버킷에 올리고, 메일에 붙일 바이트만 따로 남깁니다.
+ *
+ * **왜 순차인가 — 메모리 때문입니다.**
+ * 워커 메모리는 128MB 이고 `formData()` 가 이미 본문 전체를 들고 있습니다.
+ * 여기서 전부를 한꺼번에 `arrayBuffer()` 로 복사하면 같은 데이터가 두 벌이 되어
+ * 50MB 파일 두 개만으로도 한도에 닿습니다. 한 개씩 읽어 올리고 바로 놓아주면
+ * 최대 사용량이 "본문 + 파일 하나" 로 묶입니다.
+ *
+ * **메일용 바이트는 예산 안에서만 들고 있습니다.** 어차피 총 12MB 를 넘으면 메일에
+ * 안 붙이므로(F16), 그보다 큰 건 복사본을 남길 이유가 없습니다.
  *
  * **한 장이 실패해도 나머지는 올립니다.** 그리고 예외를 밖으로 던지지 않습니다 —
  * 업로드가 안 됐다고 접수 자체를 실패시키면 문의를 통째로 잃습니다. 실패한
  * 항목은 `path` 없이 이름·크기만 돌아가고, 관리자 화면이 "받지 못함"으로 표시합니다.
  */
 export async function uploadQuoteFiles(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   quoteId: string,
-  uploads: QuoteUpload[]
-): Promise<QuoteFile[]> {
-  return Promise.all(
-    uploads.map(async (file, i): Promise<QuoteFile> => {
-      const meta = { name: file.name, size: file.size, type: file.type };
-      const path = objectKey(quoteId, i, file.name);
+  files: File[],
+  mailBudgetBytes: number
+): Promise<{ stored: QuoteFile[]; mail: QuoteUpload[] }> {
+  const stored: QuoteFile[] = [];
+  const mail: QuoteUpload[] = [];
+  let mailUsed = 0;
 
-      try {
-        // 바이트를 넘깁니다 — File 을 넘기면 스트림이 소비돼 메일 첨부가 비어 버립니다
-        const { error } = await supabase.storage.from(QUOTE_BUCKET).upload(path, file.bytes, {
-          contentType: file.type || "application/octet-stream",
-          upsert: false,
-        });
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const meta = { name: file.name, size: file.size, type: file.type };
 
-        if (error) {
-          console.error(`[견적문의] 첨부 업로드 실패 (${file.name}):`, error.message);
-          return meta; // path 없음 = 파일을 못 받았다는 뜻
-        }
-      } catch (e) {
-        console.error(`[견적문의] 첨부 업로드 예외 (${file.name}):`, e);
-        return meta;
+    let bytes: Uint8Array;
+    try {
+      // 🔴 이 파일에서 바이트를 읽는 곳은 여기 한 곳뿐입니다. 위 QuoteUpload 주석 참고.
+      bytes = new Uint8Array(await file.arrayBuffer());
+    } catch (e) {
+      console.error(`[견적문의] 첨부를 읽지 못했습니다 (${file.name}):`, e);
+      stored.push(meta);
+      continue;
+    }
+
+    // 메일 예산 안에 들면 복사본을 남깁니다 (넘으면 안 들고 있습니다 — 메모리)
+    if (mailUsed + bytes.length <= mailBudgetBytes) {
+      mail.push({ ...meta, index: i, bytes });
+      mailUsed += bytes.length;
+    }
+
+    if (!supabase) {
+      stored.push(meta); // CMS 미설정(개발) — 저장 없이 메타데이터만
+      continue;
+    }
+
+    const path = objectKey(quoteId, i, file.name);
+    try {
+      const { error } = await supabase.storage.from(QUOTE_BUCKET).upload(path, bytes, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
+      if (error) {
+        console.error(`[견적문의] 첨부 업로드 실패 (${file.name}):`, error.message);
+        stored.push(meta); // path 없음 = 파일을 못 받았다는 뜻
+        continue;
       }
+    } catch (e) {
+      console.error(`[견적문의] 첨부 업로드 예외 (${file.name}):`, e);
+      stored.push(meta);
+      continue;
+    }
 
-      return { ...meta, path };
-    })
-  );
+    stored.push({ ...meta, path });
+  }
+
+  return { stored, mail };
 }
 
 /**

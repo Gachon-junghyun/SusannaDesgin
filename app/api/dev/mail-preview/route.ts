@@ -26,11 +26,12 @@ const SAMPLE = {
   address: "대전광역시 서구 둔산로 100 3층",
   message:
     "1층 상가 전면에 LED 채널간판 설치하려고 합니다.\n간판 크기는 가로 6m 정도이고, 야간 조명도 함께 보고 있습니다.\n현장 실측 가능한 날짜 알려주시면 감사하겠습니다.",
+  // 세 경우를 한 화면에서 보려고 일부러 섞어 둡니다
   files: [
-    { name: "매장 전면 사진.jpg", stored: true },
-    { name: "간판 시안.pdf", stored: true },
+    { name: "매장 전면 사진.jpg", stored: true, attached: true },
+    { name: "간판 시안 원본.ai", stored: true, attached: false }, // 커서 화면에서 받는 경우
+    { name: "도면.dwg", stored: false, attached: false }, // 업로드가 실패한 경우
   ],
-  attached: true, // 실제 메일에는 이 파일들이 그대로 붙어서 갑니다
   receivedAt: new Date().toISOString(),
 };
 

@@ -6,9 +6,11 @@ import PrivacyConsent from "./PrivacyConsent";
 import { floorOptions, signTypeOptions, timingOptions } from "@/config/content";
 import { site } from "@/config/site";
 import {
+  ACCEPTED_FILE_LABEL,
   ACCEPTED_FILE_TYPES,
   MAX_FILES,
   MAX_FILE_BYTES,
+  isAcceptedFile,
   formatPhone,
   validateFull,
   type Errors,
@@ -104,7 +106,16 @@ export default function QuoteForm() {
     }
     const tooBig = picked.find((f) => f.size > MAX_FILE_BYTES);
     if (tooBig) {
-      setFileError(`'${tooBig.name}' 은(는) 10MB를 넘습니다.`);
+      // 상한을 문구에 박아 두면 값을 올릴 때 반드시 어긋납니다 — 계산해서 씁니다
+      setFileError(
+        `'${tooBig.name}' 은(는) ${Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB를 넘습니다.`
+      );
+      return;
+    }
+    // 서버도 같은 규칙으로 다시 검사합니다 (lib/validate.ts 의 isAcceptedFile)
+    const badType = picked.find((f) => !isAcceptedFile(f.name));
+    if (badType) {
+      setFileError(`'${badType.name}' 은(는) 받을 수 없는 형식입니다.`);
       return;
     }
     setFiles((prev) => [...prev, ...picked]);
@@ -373,8 +384,11 @@ export default function QuoteForm() {
             className="sr-only"
           />
         </label>
-        <p className="mt-1 text-[12px] text-ink-500">
-          현장 사진, 로고 파일을 올려주시면 견적이 정확해집니다. 최대 {MAX_FILES}개 · 개당 10MB
+        <p className="mt-1 text-[12px] leading-relaxed text-ink-500">
+          현장 사진, 도면, 로고 파일을 올려주시면 견적이 정확해집니다.
+          <br />
+          {ACCEPTED_FILE_LABEL} · 최대 {MAX_FILES}개 · 개당{" "}
+          {Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB
         </p>
 
         {files.length > 0 && (

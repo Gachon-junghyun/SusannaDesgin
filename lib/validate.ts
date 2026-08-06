@@ -72,5 +72,78 @@ export function validateFull(d: Partial<QuoteInput>): Errors {
 }
 
 export const MAX_FILES = 5;
-export const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
-export const ACCEPTED_FILE_TYPES = "image/*,.pdf,.ai,.psd,.zip";
+
+/**
+ * 파일 하나당 상한.
+ *
+ * ⚠️ **여기만 고치면 안 됩니다.** `quote-files` 버킷에도 같은 상한이 걸려 있어서
+ *    (`supabase/migrations/0007_quote_files_limits.sql`) 한쪽만 올리면 폼은 통과시키고
+ *    업로드가 조용히 실패합니다. 두 값은 항상 같이 움직여야 합니다.
+ *
+ * 🔴 **순서가 있습니다 — DB 먼저, 코드 나중.**
+ *    버킷보다 여기를 먼저 올리면 폼은 통과시키고 버킷이 거부해서 **고객 파일이
+ *    사라집니다**(고객 화면에는 접수 완료가 뜹니다). 반대 순서는 무해합니다.
+ *
+ *    `0007_quote_files_limits.sql` 을 실행해 버킷을 50MB 로 올린 **뒤에**
+ *    이 값을 `50 * 1024 * 1024` 로 바꾸세요. 지금은 버킷이 아직 10MB 라
+ *    여기도 10MB 로 맞춰 둡니다.
+ */
+export const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB — 0007 실행 후 50MB 로
+
+/**
+ * 첨부 **전체** 합계 상한.
+ *
+ * 개당 상한만 두면 50MB × 5 = 250MB 가 한 요청으로 올 수 있는데, 그러면 코드에
+ * 닿기도 전에 두 군데서 막힙니다.
+ *   · Cloudflare 요청 본문 한도 — 넘으면 워커가 실행되지도 않고 413 이 나갑니다.
+ *     고객 화면에는 원인을 알 수 없는 오류로 보입니다.
+ *   · 워커 메모리 128MB — `formData()` 가 본문을 통째로 메모리에 올리므로
+ *     합계가 크면 그것만으로 한도에 닿습니다.
+ *
+ * 그래서 **여기서 먼저, 사람이 읽을 수 있는 문구로** 막습니다.
+ * 업로드를 한 개씩 순차 처리하는 것도 같은 이유입니다(`lib/quote-files.ts`).
+ */
+export const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 50MB
+
+/**
+ * 받는 파일 형식.
+ *
+ * 확장자로 씁니다. MIME 타입은 브라우저·OS 마다 제각각이라(특히 `.hwp` 는 빈 문자열이나
+ * `application/octet-stream` 으로 오는 일이 흔합니다) 확장자가 훨씬 잘 맞습니다.
+ *
+ * **왜 이 목록인가** — 간판 견적에 실제로 오는 것들입니다.
+ *   · 사진·PDF        현장 사진, 도면 출력본
+ *   · ai psd eps cdr  로고·시안 원본 (사인 업계 표준)
+ *   · dwg dxf         건물 도면·간판 상세도 (CAD)
+ *   · hwp hwpx        **관공서·공공기관 사양서.** 2026-08-03 연구개발특구진흥재단
+ *                     문의가 이 부류였습니다. 국내 발주에서 빠지면 안 됩니다
+ *   · xlsx docx pptx  수량 산출서·발주 사양서
+ *   · zip             여러 개를 묶어 보낼 때
+ *
+ * ⚠️ 실행 파일류(exe·bat·js·html 등)는 일부러 뺐습니다. 견적에 쓸 일이 없고,
+ *    받아 두면 나중에 열어보는 사람이 위험합니다.
+ */
+export const ACCEPTED_FILE_EXTS = [
+  // 이미지
+  "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tif", "tiff",
+  // 문서
+  "pdf", "hwp", "hwpx", "xlsx", "xls", "docx", "doc", "pptx", "ppt", "txt", "csv",
+  // 디자인 원본
+  "ai", "psd", "eps", "cdr", "svg", "indd",
+  // 도면
+  "dwg", "dxf",
+  // 묶음
+  "zip", "7z", "rar",
+] as const;
+
+/** `<input accept>` 에 넣을 문자열 */
+export const ACCEPTED_FILE_TYPES = ACCEPTED_FILE_EXTS.map((e) => `.${e}`).join(",");
+
+/** 사람에게 보여줄 짧은 안내 (폼 아래 한 줄) */
+export const ACCEPTED_FILE_LABEL = "사진 · PDF · 한글 · 오피스 · AI/PSD · CAD(dwg) · zip";
+
+/** 파일명이 허용 형식인가 — **서버에서도 같은 함수로 검사합니다.** */
+export function isAcceptedFile(name: string): boolean {
+  const ext = /\.([a-zA-Z0-9]{1,8})$/.exec(name)?.[1]?.toLowerCase();
+  return Boolean(ext) && (ACCEPTED_FILE_EXTS as readonly string[]).includes(ext!);
+}

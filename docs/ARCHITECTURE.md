@@ -224,7 +224,9 @@ lib/validate.ts               클라이언트·서버 공용 검증
 ├── formatPhone()             자동 하이픈 (02·지역번호 포함)
 ├── isValidPhone/Email()
 ├── validateQuick/Full()
-└── MAX_FILES 5 · MAX_FILE_BYTES 10MB
+├── isAcceptedFile()          확장자 허용 검사 — 폼과 API 가 같은 함수를 씁니다
+├── ACCEPTED_FILE_EXTS        사진·PDF·한글(hwp)·오피스·AI/PSD·CAD(dwg)·zip
+└── MAX_FILES 5 · MAX_FILE_BYTES 10MB · MAX_TOTAL_BYTES 50MB
 
 components/QuickQuoteForm.tsx  히어로 인라인 3필드
 components/QuoteForm.tsx       전체 폼 (+ Daum 우편번호 API 지연로드)
@@ -722,6 +724,35 @@ scripts/check-quote-files.mjs   npm run quotes:check
   있어(0002) 행을 만든 뒤 경로를 채워 넣을 수가 없습니다. 그래서 ID 를 코드에서
   먼저 만들고, 그 폴더에 올린 뒤, 경로까지 담아 한 번에 넣습니다.
   **익명에게 UPDATE 를 열어 주는 쪽이 훨씬 나쁩니다** — 누구나 남의 문의를 고칩니다 [A2].
+- **받는 형식은 확장자로 정합니다** (`ACCEPTED_FILE_EXTS`). MIME 타입은 브라우저·OS 마다
+  제각각이라(`.hwp` 는 빈 문자열이나 `application/octet-stream` 으로 오는 일이 흔합니다)
+  MIME 으로 막으면 멀쩡한 파일이 거부됩니다. 그래서 버킷의 `allowed_mime_types` 도
+  비워 두고 **코드에서** 검사합니다.
+  **관공서 사양서(`.hwp`)와 도면(`.dwg`)이 목록에서 빠지면 안 됩니다** — 2026-08-03
+  연구개발특구진흥재단 문의가 그 부류였습니다.
+- ⚠️ **폼의 `accept` 는 검증이 아닙니다.** 파일 선택창을 걸러 줄 뿐, 브라우저 밖에서
+  요청을 만들면 아무 파일이나 들어옵니다. **서버에서 같은 함수로 다시 검사합니다.**
+  실행 파일류는 일부러 뺐습니다 — 견적에 쓸 일이 없고, 나중에 그 파일을 내려받아
+  여는 건 우리 쪽 사람입니다.
+- 🔴 **용량 상한은 두 곳에 있고, 올릴 때는 DB 먼저입니다.**
+
+  | 곳 | 값 |
+  |---|---|
+  | `lib/validate.ts` 의 `MAX_FILE_BYTES` | 폼·API 가 보는 값 |
+  | `quote-files` 버킷의 `file_size_limit` | 스토리지가 보는 값 (마이그레이션) |
+
+  **코드를 먼저 올리면 폼은 통과시키고 버킷이 거부해서 고객 파일이 사라집니다.**
+  고객 화면에는 접수 완료가 뜨고요. 실제로 재현했습니다(2026-08-06):
+
+  ```
+  [견적문의] 첨부 업로드 실패 (간판 시안 원본.ai): The object exceeded the maximum allowed size
+  ```
+
+  반대 순서(버킷 먼저)는 무해합니다. **항상 DB → 코드 순으로 올리세요.**
+- **합계 상한(`MAX_TOTAL_BYTES`)이 따로 있는 이유** — 개당 상한만 두면 5개 × 상한이
+  한 요청으로 옵니다. 그러면 코드에 닿기 전에 Cloudflare 요청 본문 한도에 걸려
+  **원인을 알 수 없는 오류**가 고객 화면에 뜨고, 워커 메모리(128MB)도 `formData()`
+  하나로 찹니다. 그래서 사람이 읽을 수 있는 문구로 먼저 막습니다.
 - ⚠️ **원본 파일명을 스토리지 키로 쓰지 않습니다.** 실제로 들어온 이름이
   `자석 게시판(필름마감).jpg` 였습니다. 한글·공백·괄호가 섞이면 URL 인코딩 단계마다
   깨질 자리가 생깁니다. 키는 `문의ID/01.jpg` 로 두고, 사람이 보는 이름은 DB 에 남겨
@@ -823,6 +854,7 @@ scripts/check-quote-files.mjs   npm run quotes:check
 | `0004_works_brochure.sql` | 실적 2건 추가(`sort_order` 7~8) + **사진 없는 4건을 맨 뒤(200~230)로** |
 | `0005_content_blocks.sql` | **페이지 문구 표 + RLS + 지금 나가는 문구 그대로 초기 데이터** (F19) |
 | `0006_quote_files.sql` | **견적 첨부 보관 — `quote-files` 비공개 버킷 + storage RLS 3종** (F20) |
+| `0007_quote_files_limits.sql` | 첨부 용량 상한 10MB → 50MB. **실행 후에 `lib/validate.ts` 의 `MAX_FILE_BYTES` 를 올리세요** (순서 중요 — F20) |
 
 > ⚠️ **`config/content.ts` 만 고치면 운영 사이트는 안 바뀝니다.**
 > `getWorks()`/`getSlides()` 는 DB 에 published 행이 하나라도 있으면 그쪽을 씁니다
@@ -959,6 +991,7 @@ Workers Builds 는 `npx wrangler deploy` 로 배포하고, 그 명령은 `wrangl
 | ✅ 확인 | **마이그레이션 `0001`~`0006` 전부 실행 완료** (2026-08-06). 운영 DB 에 직접 물어 확인: `works` 23건 · `content_blocks` 28행(copy 5 · why 4 · stat 4 · process 5 · fabrication 6 · sign_type 4). 프로젝트는 `Gachon-junghyun's Org / SusannaDesign` | §5 |
 | ⚠️ 확인 | **Supabase 깨우기 Actions 시크릿 등록 여부** — 저장소 Actions 탭에 초록 체크가 있는지. 7일 무요청이면 DB 가 멈추고 견적 문의 저장이 죽습니다 | `.github/workflows/keep-supabase-awake.yml` |
 | ⚠️ 정리 | 운영 `/admin/quotes` 에 검증용 테스트 문의 2건(`[검증] 지워주세요`) 남아 있음 | [`DEPLOY.md`](DEPLOY.md) 3단계 |
+| 🔴 DB | **`0007_quote_files_limits.sql` 미실행** — 버킷이 아직 10MB 라 `MAX_FILE_BYTES` 도 10MB 로 묶어 뒀습니다. 실행하면 `lib/validate.ts` 의 값을 50MB 로 올리고 배포하세요(**순서: DB → 코드**). AI·PSD·CAD 원본은 그전까지 못 받습니다 | §5 · F20 |
 | 🔴 배포 | **Cloudflare 에 `RESEND_API_KEY`·`QUOTE_NOTIFY_EMAIL` 을 `Secret` 으로 다시 넣기** — 2026-08-06 배포 때 `wrangler deploy` 가 `Plaintext` 변수를 지워서 **지금 운영 알림이 다시 꺼져 있습니다.** `Plaintext` 로 넣으면 다음 배포에 또 지워집니다. 반드시 `Secret`. `QUOTE_MAIL_FROM` 은 `wrangler.jsonc` 로 옮겨서 이제 안 지워집니다 | §6 · F16 |
 | 🔴 보안 | **`RESEND_API_KEY` 를 새로 발급하고 기존 키 폐기** — 예전 키가 `Plaintext` 로 들어가 있어 대시보드 조회 권한만 있으면 보였고, 2026-08-06 작업 중 화면 캡처에도 값이 찍혔습니다. resend.com → API Keys 에서 재발급 후 기존 키 삭제 | F16 · §6 |
 | TODO | `config/site.ts` 남은 값: 옥외광고사업 등록번호 · 우편번호 · 운영시간 · 누적건수 · 카카오채널 · 지도 URL | `config/site.ts` |

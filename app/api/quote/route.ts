@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { MAX_FILES, MAX_FILE_BYTES, validateFull, validateQuick } from "@/lib/validate";
+import {
+  ACCEPTED_FILE_LABEL,
+  MAX_FILES,
+  MAX_FILE_BYTES,
+  MAX_TOTAL_BYTES,
+  isAcceptedFile,
+  validateFull,
+  validateQuick,
+} from "@/lib/validate";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isCmsEnabled } from "@/lib/supabase/env";
-import { notifyNewQuote, toMailAttachments } from "@/lib/notify";
-import { readQuoteFiles, uploadQuoteFiles } from "@/lib/quote-files";
-import type { QuoteFile } from "@/lib/supabase/types";
+import { MAX_MAIL_ATTACH_BYTES, notifyNewQuote, toMailAttachments } from "@/lib/notify";
+import { uploadQuoteFiles } from "@/lib/quote-files";
 
 export const runtime = "nodejs";
 
@@ -76,9 +83,48 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    if (files.some((f) => f.size > MAX_FILE_BYTES)) {
+    const tooBig = files.find((f) => f.size > MAX_FILE_BYTES);
+    if (tooBig) {
       return NextResponse.json(
-        { ok: false, error: "첨부파일 용량을 초과했습니다." },
+        {
+          ok: false,
+          error:
+            `${tooBig.name} 이(가) 너무 큽니다. ` +
+            `파일 하나당 ${Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB 까지입니다.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    /**
+     * 형식 검사 — **서버에서도 반드시 합니다.**
+     *
+     * 폼의 `accept` 속성은 파일 선택창을 걸러 줄 뿐, 브라우저 밖에서 요청을 만들면
+     * 아무 파일이나 들어옵니다. 예전에는 이 검사가 아예 없어서 실행 파일도 그대로
+     * 저장됐습니다. 비공개 버킷이라 남이 열지는 못하지만, **나중에 그 파일을 내려받아
+     * 여는 건 우리 쪽 사람**이라 여기서 막는 게 맞습니다.
+     */
+    const badType = files.find((f) => !isAcceptedFile(f.name));
+    if (badType) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `${badType.name} 은(는) 받을 수 없는 형식입니다. ${ACCEPTED_FILE_LABEL} 를 올려주세요.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 합계 — 넘으면 코드에 닿기 전에 Cloudflare 가 잘라 원인 모를 오류가 됩니다
+    const totalBytes = files.reduce((n, f) => n + f.size, 0);
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            `첨부파일 전체 용량이 ${Math.round(MAX_TOTAL_BYTES / 1024 / 1024)}MB 를 넘습니다. ` +
+            `나눠서 보내주시거나 큰 파일은 메일로 보내주세요.`,
+        },
         { status: 400 }
       );
     }
@@ -101,16 +147,17 @@ export async function POST(req: Request) {
     const id = crypto.randomUUID();
 
     /**
-     * 🔴 파일 바이트는 **여기서 딱 한 번** 읽습니다 (2026-08-06 운영 장애).
-     *    예전에는 `File` 을 업로드에 넘기고 같은 `File` 을 메일 첨부용으로 다시
-     *    읽었는데, 운영(workerd)에서는 첫 업로드가 스트림을 소비해 두 번째 읽기가
-     *    비어 버렸습니다. 자세한 경위는 `lib/quote-files.ts` 의 `QuoteUpload` 주석에.
+     * 파일은 **한 개씩** 읽어 올리고, 메일에 붙일 것만 예산 안에서 들고 있습니다.
+     * 파일마다 바이트를 읽는 곳은 `uploadQuoteFiles` 한 곳뿐입니다 —
+     * 같은 `File` 을 두 번 읽으면 workerd 에서 두 번째가 비어 버립니다
+     * (`lib/quote-files.ts` 의 `QuoteUpload` 주석).
      */
-    const uploads = await readQuoteFiles(files);
-
-    const storedFiles: QuoteFile[] = supabase
-      ? await uploadQuoteFiles(supabase, id, uploads)
-      : uploads.map((f) => ({ name: f.name, size: f.size, type: f.type }));
+    const { stored: storedFiles, mail } = await uploadQuoteFiles(
+      supabase,
+      id,
+      files,
+      MAX_MAIL_ATTACH_BYTES
+    );
 
     const record = {
       ...data,
@@ -203,16 +250,20 @@ export async function POST(req: Request) {
      */
     try {
       // 사진을 메일에 그대로 붙입니다 — 현장에서 휴대폰으로 메일만 봐도 사양이 보이게
-      const attachments = toMailAttachments(uploads);
+      const attachments = toMailAttachments(mail);
+
+      // 변환까지 성공한 것만 실제로 붙습니다 (빈 내용이면 toMailAttachments 가 전부 버림)
+      const attachedIdx = new Set(attachments.length ? mail.map((m) => m.index) : []);
 
       /**
        * 첨부가 몇 장 붙었는지 **반드시 남깁니다.** 예전에 첨부가 조용히 비어서
        * Resend 가 요청째로 거부했고, 거부된 요청은 발송 로그에도 안 남아
        * "저장은 되는데 알림만 사라지는" 상태를 한참 못 찾았습니다.
        */
-      if (uploads.length) {
+      if (files.length) {
         console.log(
-          `[견적문의] 첨부 ${uploads.length}장 중 ${attachments.length}장을 메일에 첨부합니다.`
+          `[견적문의] 첨부 ${files.length}개 중 ${attachments.length}개를 메일에 붙입니다` +
+            ` (합계 ${Math.round(totalBytes / 1024)}KB).`
         );
       }
 
@@ -227,7 +278,13 @@ export async function POST(req: Request) {
           timing: record.timing,
           address: [record.address, record.addressDetail].filter(Boolean).join(" "),
           message: record.message,
-          files: record.files.map((f) => ({ name: f.name, stored: Boolean(f.path) })),
+          // 메일에 실제로 붙은 것만 attached — 큰 원본과 작은 사양서가 섞여 와도
+          // 받는 사람이 "어느 게 어디 있는지" 를 정확히 압니다
+          files: record.files.map((f, i) => ({
+            name: f.name,
+            stored: Boolean(f.path),
+            attached: attachedIdx.has(i),
+          })),
           receivedAt: record.receivedAt,
         },
         attachments
