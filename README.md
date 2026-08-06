@@ -370,25 +370,23 @@ AI·PSD·CAD 원본은 보통 수십 MB 라 예전 10MB 로는 못 받았습니�
 > 로그인 안 한 사람은 열 수 없는 것까지 확인했습니다. 문의를 지우면 사진도 같이
 > 지워집니다. 나중에 다시 점검하고 싶으시면 `npm run quotes:check` 를 실행하세요.
 
-#### 🔴 지금 해야 할 일 — 값 2개를 **Secret 으로** 다시 넣기
+#### ✅ 끝난 것 — 값 2개를 **Secret 으로** 재등록 (2026-08-06)
 
-**알림이 지금 꺼져 있습니다.** 12:03 에 넣으신 값 3개가 12:10 배포 때 **전부
-지워졌습니다.** 실수가 아니라 Cloudflare 의 동작입니다 — 배포 명령이 워커 설정을
-통째로 덮어쓰는데, 이때 **`Plaintext` 로 넣은 값은 사라지고 `Secret` 만 살아남습니다.**
+한 번은 값 3개가 배포 때 통째로 지워졌었습니다. 실수가 아니라 Cloudflare 의
+동작입니다 — 배포 명령이 워커 설정을 덮어쓰는데, 이때 **`Plaintext` 로 넣은 값은
+사라지고 `Secret` 만 살아남습니다.**
 
-그래서 `QUOTE_MAIL_FROM` 은 코드(`wrangler.jsonc`)로 옮겨 두었습니다. 이제 안 지워집니다.
-**남은 둘만 넣으시면 됩니다. 반드시 `Secret` 타입으로.**
+지금은 이렇게 나뉘어 있어 **다음 배포에도 안 지워집니다.**
 
-Cloudflare → 워커 `susannadesgin` → **Settings → Variables and secrets** → `+ Add`
-→ 타입을 **Secret** 으로 고르고:
+| 값 | 어디에 |
+|---|---|
+| `RESEND_API_KEY` | Cloudflare **Secret** |
+| `QUOTE_NOTIFY_EMAIL` | Cloudflare **Secret** |
+| `QUOTE_MAIL_FROM` | 코드 (`wrangler.jsonc`) |
 
-```
-RESEND_API_KEY      (resend.com → API Keys 의 값)
-QUOTE_NOTIFY_EMAIL  fivepeople201@gmail.com,poing7003@naver.com,sujin4003@hanmail.net
-```
-
-> ⚠️ **`Plaintext` 로 넣으면 다음 배포 때 또 지워집니다.** 반드시 `Secret`.
-> 넣은 뒤 `/admin/quotes` 맨 위 안내가 주황색 경고가 아니면 켜진 것입니다.
+> ⚠️ **앞으로 값을 더 넣으실 때도 반드시 `Secret`.** `Plaintext` 는 다음 배포에 지워집니다.
+> **배포한 뒤 `/admin/quotes` 맨 위 안내가 주황색 경고가 아닌지** 한 번 봐 주세요 —
+> 주황이면 값이 또 날아간 것입니다. 그게 유일한 확인 방법입니다.
 
 #### 🔴 그다음 — API 키 새로 발급
 

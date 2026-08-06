@@ -11,6 +11,7 @@ export const PUBLIC_FILES: readonly string[] = [
   "/_headers",
   "/apple-icon.png",
   "/icon.png",
+  "/images/about-office.jpg",
   "/images/biz-indoor.jpg",
   "/images/biz-outdoor.jpg",
   "/images/biz-sign.jpg",
@@ -36,6 +37,7 @@ export const PUBLIC_FILES: readonly string[] = [
   "/images/work-21.jpg",
   "/images/work-22.jpg",
   "/images/work-23.jpg",
+  "/images/공장사진.png",
   "/logo-white.svg",
   "/logo.svg",
 ];
