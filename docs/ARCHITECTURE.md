@@ -226,7 +226,7 @@ lib/validate.ts               클라이언트·서버 공용 검증
 ├── validateQuick/Full()
 ├── isAcceptedFile()          확장자 허용 검사 — 폼과 API 가 같은 함수를 씁니다
 ├── ACCEPTED_FILE_EXTS        사진·PDF·한글(hwp)·오피스·AI/PSD·CAD(dwg)·zip
-└── MAX_FILES 5 · MAX_FILE_BYTES 10MB · MAX_TOTAL_BYTES 50MB
+└── MAX_FILES 5 · MAX_FILE_BYTES 50MB · MAX_TOTAL_BYTES 50MB
 
 components/QuickQuoteForm.tsx  히어로 인라인 3필드
 components/QuoteForm.tsx       전체 폼 (+ Daum 우편번호 API 지연로드)
@@ -854,7 +854,7 @@ scripts/check-quote-files.mjs   npm run quotes:check
 | `0004_works_brochure.sql` | 실적 2건 추가(`sort_order` 7~8) + **사진 없는 4건을 맨 뒤(200~230)로** |
 | `0005_content_blocks.sql` | **페이지 문구 표 + RLS + 지금 나가는 문구 그대로 초기 데이터** (F19) |
 | `0006_quote_files.sql` | **견적 첨부 보관 — `quote-files` 비공개 버킷 + storage RLS 3종** (F20) |
-| `0007_quote_files_limits.sql` | 첨부 용량 상한 10MB → 50MB. **실행 후에 `lib/validate.ts` 의 `MAX_FILE_BYTES` 를 올리세요** (순서 중요 — F20) |
+| `0007_quote_files_limits.sql` | 첨부 용량 상한 10MB → **50MB 실행 완료** (2026-08-06, 45MB 통과·55MB 거부 실측). 다시 올릴 때도 **DB 먼저, 코드 나중** — F20 |
 
 > ⚠️ **`config/content.ts` 만 고치면 운영 사이트는 안 바뀝니다.**
 > `getWorks()`/`getSlides()` 는 DB 에 published 행이 하나라도 있으면 그쪽을 씁니다
@@ -991,7 +991,6 @@ Workers Builds 는 `npx wrangler deploy` 로 배포하고, 그 명령은 `wrangl
 | ✅ 확인 | **마이그레이션 `0001`~`0006` 전부 실행 완료** (2026-08-06). 운영 DB 에 직접 물어 확인: `works` 23건 · `content_blocks` 28행(copy 5 · why 4 · stat 4 · process 5 · fabrication 6 · sign_type 4). 프로젝트는 `Gachon-junghyun's Org / SusannaDesign` | §5 |
 | ⚠️ 확인 | **Supabase 깨우기 Actions 시크릿 등록 여부** — 저장소 Actions 탭에 초록 체크가 있는지. 7일 무요청이면 DB 가 멈추고 견적 문의 저장이 죽습니다 | `.github/workflows/keep-supabase-awake.yml` |
 | ⚠️ 정리 | 운영 `/admin/quotes` 에 검증용 테스트 문의 2건(`[검증] 지워주세요`) 남아 있음 | [`DEPLOY.md`](DEPLOY.md) 3단계 |
-| 🔴 DB | **`0007_quote_files_limits.sql` 미실행** — 버킷이 아직 10MB 라 `MAX_FILE_BYTES` 도 10MB 로 묶어 뒀습니다. 실행하면 `lib/validate.ts` 의 값을 50MB 로 올리고 배포하세요(**순서: DB → 코드**). AI·PSD·CAD 원본은 그전까지 못 받습니다 | §5 · F20 |
 | 🔴 배포 | **Cloudflare 에 `RESEND_API_KEY`·`QUOTE_NOTIFY_EMAIL` 을 `Secret` 으로 다시 넣기** — 2026-08-06 배포 때 `wrangler deploy` 가 `Plaintext` 변수를 지워서 **지금 운영 알림이 다시 꺼져 있습니다.** `Plaintext` 로 넣으면 다음 배포에 또 지워집니다. 반드시 `Secret`. `QUOTE_MAIL_FROM` 은 `wrangler.jsonc` 로 옮겨서 이제 안 지워집니다 | §6 · F16 |
 | 🔴 보안 | **`RESEND_API_KEY` 를 새로 발급하고 기존 키 폐기** — 예전 키가 `Plaintext` 로 들어가 있어 대시보드 조회 권한만 있으면 보였고, 2026-08-06 작업 중 화면 캡처에도 값이 찍혔습니다. resend.com → API Keys 에서 재발급 후 기존 키 삭제 | F16 · §6 |
 | TODO | `config/site.ts` 남은 값: 옥외광고사업 등록번호 · 우편번호 · 운영시간 · 누적건수 · 카카오채널 · 지도 URL | `config/site.ts` |
