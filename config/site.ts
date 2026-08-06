@@ -98,7 +98,7 @@ export const site = {
    */
   kakaoChannelUrl: "", // TODO — 있으면 채우면 톡상담 버튼이 켜집니다
   instagramUrl: "https://www.instagram.com/susanna_design541/",
-  blogUrl: "", // TODO — 네이버 블로그를 열면 여기 넣으세요 (SEO.md C6)
+  blogUrl: "", // TODO — 네이버 블로그를 열면 여기 넣으세요 (SEO.md C8)
 
   // 지도 (오시는길)
   mapUrl: "", // TODO — 카카오맵/네이버지도 공유 URL

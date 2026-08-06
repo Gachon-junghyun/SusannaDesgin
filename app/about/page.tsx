@@ -1,13 +1,23 @@
 import Link from "next/link";
 import Img from "@/components/Img";
 import { PageHero, Section, SectionHeading } from "@/components/Section";
-import { equipment, history, stats, vision } from "@/config/content";
+import { history, vision } from "@/config/content";
 import { certifications, site } from "@/config/site";
+import { getBlocks } from "@/lib/cms";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata("/about");
 
-export default function AboutPage() {
+/**
+ * 숫자 지표와 공장 공정은 홈과 **같은 블록**을 씁니다(F19). 관리자가 한 번 고치면
+ * 두 페이지가 같이 바뀌어야 하므로 여기서도 DB 를 읽습니다.
+ * 연혁·비전·회사 개요는 그대로 `config/` 에 있습니다.
+ */
+export const dynamic = "force-dynamic";
+
+export default async function AboutPage() {
+  const { stats, fabrication } = await getBlocks();
+
   return (
     <>
       <PageHero eyebrow="ABOUT US" title="회사소개" desc={site.tagline} path="/about" />
@@ -60,13 +70,13 @@ export default function AboutPage() {
         </div>
 
         <dl className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-line lg:grid-cols-4">
-          {stats.map((s) => (
-            <div key={s.label} className="bg-white px-6 py-8 text-center">
+          {stats.map((s, i) => (
+            <div key={s.sub || i} className="bg-white px-6 py-8 text-center">
               <dd className="text-3xl font-black tracking-tight md:text-4xl">
-                {s.value}
-                <span className="ml-0.5 text-lg text-ink-500">{s.unit}</span>
+                {s.title}
+                <span className="ml-0.5 text-lg text-ink-500">{s.eyebrow}</span>
               </dd>
-              <dt className="mt-1.5 text-[14px] font-medium text-ink-500">{s.label}</dt>
+              <dt className="mt-1.5 text-[14px] font-medium text-ink-500">{s.sub}</dt>
             </div>
           ))}
         </dl>
@@ -167,25 +177,25 @@ export default function AboutPage() {
           center
         />
         <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {equipment.map((e, i) => (
-            <li key={e.name} className="overflow-hidden rounded-2xl bg-paper">
+          {fabrication.map((e, i) => (
+            <li key={e.title || i} className="overflow-hidden rounded-2xl bg-paper">
               <div className="relative aspect-4/3">
                 <Img
                   src={e.image}
-                  alt={e.name}
+                  alt={e.alt || e.title}
                   width={800}
                   height={600}
                   fill
                   sizes="(max-width: 640px) 100vw, 360px"
-                  label={e.name}
+                  label={e.title}
                 />
               </div>
               <div className="p-5">
                 <p className="text-[13px] font-black tracking-widest text-accent">
                   {String(i + 1).padStart(2, "0")}
                 </p>
-                <h3 className="mt-0.5 font-black">{e.name}</h3>
-                <p className="mt-1 text-[14px] text-ink-500">{e.desc}</p>
+                <h3 className="mt-0.5 font-black">{e.title}</h3>
+                <p className="mt-1 text-[14px] text-ink-500">{e.sub}</p>
               </div>
             </li>
           ))}

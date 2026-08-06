@@ -8,13 +8,14 @@ export default async function AdminHome() {
   const user = await requireAdmin();
   const supabase = await createClient();
 
-  const [heroCount, workCount, newQuotes] = await Promise.all([
+  const [heroCount, workCount, newQuotes, blockCount] = await Promise.all([
     supabase!.from("hero_slides").select("id", { count: "exact", head: true }),
     supabase!.from("works").select("id", { count: "exact", head: true }),
     supabase!
       .from("quotes")
       .select("id", { count: "exact", head: true })
       .eq("handled", false),
+    supabase!.from("content_blocks").select("id", { count: "exact", head: true }),
   ]);
 
   const pending = newQuotes.count ?? 0;
@@ -40,6 +41,13 @@ export default async function AdminHome() {
       count: workCount.count ?? 0,
       unit: "건",
       desc: "시공한 현장 카드입니다. 위에서부터 6개가 홈페이지에도 함께 나옵니다.",
+    },
+    {
+      href: "/admin/content",
+      title: "페이지 문구",
+      count: blockCount.count ?? 0,
+      unit: "개",
+      desc: "홈페이지 구역 제목, 회사 강점, 숫자 지표, 업무 프로세스, 제작 공정, 사업영역 문구입니다.",
     },
   ];
 

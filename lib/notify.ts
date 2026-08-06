@@ -27,6 +27,15 @@ import { site } from "@/config/site";
 /** 알림 한 건이 이만큼 넘게 걸리면 포기합니다 (고객 응답을 붙잡아 두지 않으려고) */
 const TIMEOUT_MS = 5000;
 
+/**
+ * 메일 한 통에 붙일 수 있는 첨부 총량.
+ *
+ * Resend 한도는 40MB 지만, 폼 한도는 10MB×5장 = 50MB 라 그대로 두면 넘길 수 있습니다.
+ * 게다가 base64 로 부풀어 실제 요청은 1.37배가 됩니다. 넉넉히 낮게 잡고, 넘으면
+ * 붙이지 않고 관리자 화면으로 안내합니다 — 메일이 통째로 실패하는 것보다 낫습니다.
+ */
+const MAX_ATTACH_TOTAL = 12 * 1024 * 1024;
+
 export type QuoteNotice = {
   kind: string;
   name: string;
@@ -37,9 +46,49 @@ export type QuoteNotice = {
   timing?: string;
   address?: string;
   message?: string;
-  fileCount: number;
+  /** 첨부 목록. `stored` 는 스토리지에 들어가 관리자 화면에서 받을 수 있다는 뜻입니다. */
+  files: { name: string; stored: boolean }[];
+  /** 그 파일들이 **이 메일에 직접 붙어 있는가** (용량이 크면 false) */
+  attached?: boolean;
   receivedAt: string;
 };
+
+/** Resend 첨부 서식 — 내용은 base64 문자열입니다. */
+export type MailAttachment = { filename: string; content: string };
+
+/**
+ * 업로드된 파일을 메일 첨부로 바꿉니다.
+ *
+ * **왜 메일에 직접 붙이나**: 간판 견적에서 사진 한 장이 곧 사양서입니다. 링크를
+ * 눌러 로그인하고 관리자 화면까지 들어가야 볼 수 있으면, 현장에서 휴대폰으로
+ * 메일만 확인하는 상황에서 사실상 못 보는 것과 같습니다.
+ *
+ * **전부 아니면 전무**: 총량을 넘으면 일부만 붙이지 않고 하나도 안 붙입니다.
+ * 다섯 장 중 세 장만 온 메일은 "왜 두 장이 없지" 로 헷갈리고, 그 헷갈림이
+ * 고객에게 다시 묻는 전화로 이어집니다.
+ */
+export async function toMailAttachments(files: File[]): Promise<MailAttachment[]> {
+  const total = files.reduce((n, f) => n + f.size, 0);
+  if (total > MAX_ATTACH_TOTAL) {
+    console.warn(
+      `[견적문의] 첨부 ${Math.round(total / 1024 / 1024)}MB 는 메일에 붙이기엔 큽니다. ` +
+        `관리자 화면에서 내려받도록 안내만 넣습니다.`
+    );
+    return [];
+  }
+
+  const out: MailAttachment[] = [];
+  for (const f of files) {
+    try {
+      const buf = new Uint8Array(await f.arrayBuffer());
+      out.push({ filename: f.name, content: Buffer.from(buf).toString("base64") });
+    } catch (e) {
+      console.error(`[견적문의] 첨부를 메일용으로 읽지 못했습니다 (${f.name}):`, e);
+      return []; // 위와 같은 이유 — 반쪽짜리 메일을 만들지 않습니다
+    }
+  }
+  return out;
+}
 
 /** 전화 앱이 바로 걸 수 있는 형태로 (하이픈·공백 제거) */
 function telHref(phone: string): string {
@@ -48,6 +97,19 @@ function telHref(phone: string): string {
 
 function receivedAtKST(iso: string): string {
   return new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+}
+
+/**
+ * 첨부를 어디서 볼 수 있는지 한 줄로.
+ *
+ * 예전에는 무조건 "관리자 화면에서 확인" 이라고 적었는데, 그때는 **파일을 아예
+ * 저장하지 않던 시절**이라 관리자 화면에 가도 이름만 있었습니다. 받는 사람을
+ * 헛걸음시키는 문구였습니다. 이제 세 경우를 구분해서 적습니다.
+ */
+function attachmentHint(q: QuoteNotice): string {
+  if (q.attached) return "이 메일에 첨부되어 있습니다";
+  if (q.files.some((f) => f.stored)) return "용량이 커서 관리자 화면에서 내려받으세요";
+  return "파일을 받지 못했습니다 — 고객께 다시 요청하세요";
 }
 
 /** 사람이 읽는 한 덩어리 텍스트 — 웹훅과 메일 대체본문에서 씁니다. */
@@ -63,7 +125,10 @@ function asText(q: QuoteNotice): string {
     line("간판 종류", q.signType) +
     line("희망 시기", q.timing) +
     line("주소", q.address) +
-    (q.fileCount ? `첨부: ${q.fileCount}개\n` : "") +
+    (q.files.length
+      ? `첨부: ${q.files.length}개 (${attachmentHint(q)})\n` +
+        q.files.map((f) => `  · ${f.name}\n`).join("")
+      : "") +
     (q.message ? `\n내용:\n${q.message}\n` : "") +
     `\n접수: ${receivedAtKST(q.receivedAt)}\n` +
     `확인: ${site.url}/admin/quotes`
@@ -88,13 +153,22 @@ function esc(s: string): string {
  * 메일 클라이언트는 외부 CSS·스크립트를 지우므로 인라인 스타일만 씁니다.
  */
 export function asHtml(q: QuoteNotice): string {
-  const row = (label: string, v?: string) =>
-    v
-      ? `<tr>
-           <td style="padding:6px 12px 6px 0;color:#6b7280;font-size:13px;white-space:nowrap;vertical-align:top">${esc(label)}</td>
-           <td style="padding:6px 0;color:#0F1A19;font-size:15px">${esc(v)}</td>
-         </tr>`
-      : "";
+  const rowHtml = (label: string, html: string) =>
+    `<tr>
+       <td style="padding:6px 12px 6px 0;color:#6b7280;font-size:13px;white-space:nowrap;vertical-align:top">${esc(label)}</td>
+       <td style="padding:6px 0;color:#0F1A19;font-size:15px">${html}</td>
+     </tr>`;
+
+  const row = (label: string, v?: string) => (v ? rowHtml(label, esc(v)) : "");
+
+  /** 첨부는 파일명을 다 적습니다 — 메일만 보고도 무엇이 왔는지 알 수 있게 */
+  const fileRow = q.files.length
+    ? rowHtml(
+        "첨부",
+        q.files.map((f) => esc(f.name)).join("<br>") +
+          `<br><span style="color:#6b7280;font-size:13px">${esc(attachmentHint(q))}</span>`
+      )
+    : "";
 
   // ⚠️ <meta charset> 를 빼면 메일 앱에 따라 한글이 전부 깨집니다(실제로 겪었습니다).
   //    메일은 브라우저와 달리 HTTP 헤더의 charset 이 본문까지 따라가지 않는 경우가 있어,
@@ -115,7 +189,7 @@ export function asHtml(q: QuoteNotice): string {
     ${row("희망 시기", q.timing)}
     ${row("주소", q.address)}
     ${row("이메일", q.email)}
-    ${q.fileCount ? row("첨부", `${q.fileCount}개 — 관리자 화면에서 확인`) : ""}
+    ${fileRow}
     ${row("접수", receivedAtKST(q.receivedAt))}
   </table>
 
@@ -154,13 +228,43 @@ async function sendWebhook(url: string, text: string): Promise<void> {
 }
 
 /**
+ * Resend 가 도메인 인증 전에 내주는 시험용 발신 주소.
+ *
+ * 이 주소로는 **Resend 에 가입한 본인 메일로만** 나갑니다. 그래서 평상시 답이 아니라
+ * "인증이 끝날 때까지 문의를 놓치지 않기 위한" 임시 통로입니다.
+ */
+const TEST_SENDER = "onboarding@resend.dev";
+
+/** 발신 도메인이 인증 안 돼서 거부당한 것인가 */
+function isUnverifiedSender(status: number, body: string): boolean {
+  return status === 403 && /not verified|domain/i.test(body);
+}
+
+/**
  * 이메일 알림 (Resend).
  *
  * ⚠️ `QUOTE_MAIL_FROM` 은 **Resend 에서 소유확인을 마친 도메인**이어야 합니다.
- *    기본값 `onboarding@resend.dev` 는 시험용이고, 한메일·네이버메일은 이런
- *    남의 도메인 발신을 스팸으로 걸러내는 일이 잦습니다.
- *    실제 운영에서는 `susannadesign.co.kr` 을 Resend 에 등록하고
- *    `noreply@susannadesign.co.kr` 로 보내야 안정적으로 도착합니다.
+ *    안 그러면 API 가 403 으로 거부합니다 — 메일이 스팸함에 가는 게 아니라
+ *    **아예 발송되지 않습니다.** 2026-08-06 운영 키로 실측했습니다:
+ *
+ *      POST /emails  from: noreply@susannadesign.co.kr
+ *      → 403 "The susannadesign.co.kr domain is not verified"
+ *
+ *    그동안 견적 문의 알림이 한 통도 안 온 원인이 이것이었습니다. 저장은 정상이라
+ *    `/admin/quotes` 에는 다 쌓여 있었고, 알림만 조용히 죽어 있었습니다.
+ *
+ * **그래서 여기서 한 번 되살립니다.** 발신 도메인이 거부되면 시험용 주소로 다시
+ * 보냅니다. 근본 해결(도메인 인증)은 사람이 DNS 를 넣어야 하는 일이고, 그 사이에
+ * 들어온 문의를 놓치는 게 더 큰 손해라 이렇게 둡니다. 우회가 작동하면 로그에
+ * 남기니, 로그가 보이면 인증이 아직 안 끝난 것입니다.
+ *
+ * ⚠️ 시험용 주소는 **가입 계정 본인 메일 한 곳으로만** 갑니다. 여러 곳으로 받으려면
+ *    도메인 인증 외에 길이 없습니다.
+ *
+ *    다만 **우회 경로에서는 받는 사람마다 따로 보냅니다.** 예전에는 한 요청에 주소를
+ *    모아 보냈는데, 그러면 받을 수 없는 주소가 하나만 섞여도 Resend 가 요청 전체를
+ *    거부해서 **잘 가던 주소까지 같이 죽었습니다.** 주소를 추가하는 행위가 기존
+ *    알림을 끄는 것과 같아지는 셈이라, 한 명이라도 받게 갈라 둡니다.
  */
 async function sendEmail(
   apiKey: string,
@@ -168,36 +272,100 @@ async function sendEmail(
   to: string,
   subject: string,
   html: string,
-  text: string
+  text: string,
+  attachments: MailAttachment[] = []
 ): Promise<void> {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: to.split(",").map((s) => s.trim()).filter(Boolean),
-      subject,
-      html,
-      text, // HTML 을 막아 둔 메일 앱을 위한 대체 본문
-    }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
-  if (!res.ok) throw new Error(`resend ${res.status} ${await res.text()}`);
+  const recipients = to.split(",").map((s) => s.trim()).filter(Boolean);
+
+  /**
+   * 첨부가 붙으면 요청이 커집니다. 5초 고정이면 사진 몇 장에 매번 타임아웃이
+   * 나서 알림이 죽습니다. 용량에 비례해 늘리되 상한을 둡니다 — 고객 화면은
+   * 이 응답을 기다리고 있으므로 무한정 잡아 둘 수 없습니다.
+   */
+  const payloadBytes = attachments.reduce((n, a) => n + a.content.length, 0);
+  const timeout = Math.min(30_000, TIMEOUT_MS + Math.ceil(payloadBytes / 1_000_000) * 2_000);
+
+  const post = (sender: string, to: string[]) =>
+    fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: sender,
+        to,
+        subject,
+        html,
+        text, // HTML 을 막아 둔 메일 앱을 위한 대체 본문
+        ...(attachments.length ? { attachments } : {}),
+      }),
+      signal: AbortSignal.timeout(timeout),
+    });
+
+  const res = await post(from, recipients);
+  if (res.ok) return;
+
+  const body = await res.text();
+
+  if (from !== TEST_SENDER && isUnverifiedSender(res.status, body)) {
+    console.error(
+      `[견적문의] 보내는 주소 ${from} 의 도메인이 Resend 에 인증되지 않았습니다. ` +
+        `resend.com/domains 에서 등록하세요. 이번 건은 ${TEST_SENDER} 로 대신 보냅니다.`
+    );
+
+    // 한 명씩 따로 — 못 받는 주소가 섞여도 받을 수 있는 사람은 받게 합니다
+    const results = await Promise.allSettled(
+      recipients.map(async (addr) => {
+        const retry = await post(TEST_SENDER, [addr]);
+        if (!retry.ok) throw new Error(`${addr}: ${retry.status} ${await retry.text()}`);
+        return addr;
+      })
+    );
+
+    const failed = results.filter((r) => r.status === "rejected");
+    if (failed.length < recipients.length) {
+      // 한 명이라도 받았으면 성공입니다. 다만 못 받은 주소는 반드시 남깁니다 —
+      // 조용히 넘어가면 "저 사람한테도 가고 있겠지" 라고 믿게 됩니다.
+      for (const f of failed) {
+        console.error(
+          `[견적문의] 이 주소로는 아직 못 보냅니다 — ${(f as PromiseRejectedResult).reason}\n` +
+            `           ${TEST_SENDER} 우회 경로는 Resend 가입 계정 본인 메일만 받습니다. ` +
+            `resend.com/domains 에서 도메인을 인증해야 이 주소가 살아납니다.`
+        );
+      }
+      return;
+    }
+
+    throw new Error(
+      `resend(우회) 전원 실패 — ` +
+        failed.map((f) => (f as PromiseRejectedResult).reason).join(" / ")
+    );
+  }
+
+  throw new Error(`resend ${res.status} ${body}`);
 }
 
 /**
  * 설정된 경로로 알림을 보냅니다. 여러 개를 켜 두면 전부 보냅니다.
  * @returns 보낸 경로 이름들 (아무것도 설정 안 됐으면 빈 배열)
  */
-export async function notifyNewQuote(q: QuoteNotice): Promise<string[]> {
+export async function notifyNewQuote(
+  q: QuoteNotice,
+  attachments: MailAttachment[] = []
+): Promise<string[]> {
   const webhook = process.env.QUOTE_WEBHOOK_URL?.trim();
   const resendKey = process.env.RESEND_API_KEY?.trim();
   // 받는 주소를 따로 안 정하면 회사 대표 메일로 보냅니다 [A5 — 값은 config 에서]
   const mailTo = process.env.QUOTE_NOTIFY_EMAIL?.trim() || site.email;
   const mailFrom = process.env.QUOTE_MAIL_FROM?.trim() || "onboarding@resend.dev";
+
+  /**
+   * `attached` 는 **메일에만** 참일 수 있습니다. 웹훅(슬랙 등)에는 파일을 못 붙이니,
+   * 거기까지 "이 메일에 첨부되어 있습니다" 라고 적으면 거짓말이 됩니다.
+   * 그래서 경로별로 다른 안내문을 쓰도록 알림 객체를 갈라 둡니다.
+   */
+  const mail = { ...q, attached: attachments.length > 0 };
 
   const text = asText(q);
   const jobs: Array<[string, Promise<void>]> = [];
@@ -211,13 +379,22 @@ export async function notifyNewQuote(q: QuoteNotice): Promise<string[]> {
         mailFrom,
         mailTo,
         `[견적문의] ${q.name} / ${q.phone}`,
-        asHtml(q),
-        text
+        asHtml(mail),
+        asText(mail),
+        attachments
       ),
     ]);
   }
 
-  if (!jobs.length) return [];
+  if (!jobs.length) {
+    // 조용히 넘어가면 "알림이 꺼져 있는 것"과 "알림이 실패한 것"을 구분할 수 없습니다.
+    // 배포 환경에서는 이 한 줄이 원인 찾기의 시작점입니다 (Cloudflare 관측 로그).
+    console.warn(
+      "[견적문의] 알림 경로가 설정되지 않아 아무 곳에도 알리지 않았습니다. " +
+        "RESEND_API_KEY · QUOTE_NOTIFY_EMAIL 이 배포 환경에 들어 있는지 확인하세요."
+    );
+    return [];
+  }
 
   // 하나가 실패해도 나머지는 보냅니다. 그리고 어느 쪽도 예외를 밖으로 던지지 않습니다.
   const results = await Promise.allSettled(jobs.map(([, p]) => p));

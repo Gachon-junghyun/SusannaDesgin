@@ -3,9 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { SECTIONS } from "@/config/sections";
 import { requireAdmin } from "@/lib/auth";
+import { removeQuoteFiles } from "@/lib/quote-files";
 import { createClient } from "@/lib/supabase/server";
-import type { HeroSlideRow, WorkRow } from "@/lib/supabase/types";
+import type {
+  ContentBlockRow,
+  HeroSlideRow,
+  QuoteFile,
+  WorkRow,
+} from "@/lib/supabase/types";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -25,6 +32,10 @@ async function adminClient() {
 function refreshPublicPages() {
   revalidatePath("/");
   revalidatePath("/works");
+  // 문구 블록(F19)은 이 세 곳에도 같이 나갑니다
+  revalidatePath("/signs");
+  revalidatePath("/process");
+  revalidatePath("/about");
 }
 
 function text(formData: FormData, key: string): string {
@@ -209,6 +220,138 @@ export async function moveWork(formData: FormData) {
 }
 
 // ---------------------------------------------------------------
+// 페이지 문구 블록 (F19)
+// ---------------------------------------------------------------
+
+/**
+ * 넘어온 구역 이름이 우리가 아는 것인지 확인합니다.
+ *
+ * 서버 액션은 화면과 별개로 열려 있는 엔드포인트라 form 의 hidden 값을
+ * 그대로 믿으면 안 됩니다. 모르는 값이면 DB 의 `check` 제약이 막아 주기는 하지만,
+ * 그 오류 메시지는 관리자에게 아무 도움이 안 되므로 여기서 먼저 거릅니다.
+ */
+function sectionOf(formData: FormData) {
+  const key = text(formData, "section");
+  return SECTIONS.find((s) => s.key === key);
+}
+
+/** 상세 항목·특징 — 화면에서는 줄바꿈으로 나눠 적습니다 */
+function toLines(raw: string): string[] {
+  return raw
+    .split("\n")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+export async function saveBlock(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await adminClient();
+
+  const spec = sectionOf(formData);
+  if (!spec) return { error: "어느 구역인지 알 수 없습니다. 새로고침 후 다시 시도해 주세요." };
+
+  const id = text(formData, "id");
+  const title = text(formData, "title");
+  if (!title) {
+    return { error: `${spec.fields.title?.label ?? "제목"}을(를) 넣어 주세요.` };
+  }
+
+  const payload = {
+    section: spec.key,
+    eyebrow: text(formData, "eyebrow"),
+    title,
+    sub: text(formData, "sub"),
+    points: toLines(text(formData, "points")),
+    image_url: text(formData, "image_url"),
+    alt: text(formData, "alt"),
+    published: formData.get("published") === "on",
+  };
+
+  if (id) {
+    // slug 는 코드가 이름으로 집어 오는 값이라 화면에서 바꾸지 않습니다.
+    const { error } = await supabase.from("content_blocks").update(payload).eq("id", id);
+    if (error) return { error: error.message };
+  } else {
+    if (spec.fixed) {
+      return { error: `${spec.label}은(는) 항목을 새로 넣을 수 없습니다. 있는 것을 고쳐 주세요.` };
+    }
+
+    const { data: last } = await supabase
+      .from("content_blocks")
+      .select("sort_order")
+      .eq("section", spec.key)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle<Pick<ContentBlockRow, "sort_order">>();
+
+    const { error } = await supabase
+      .from("content_blocks")
+      .insert({ ...payload, sort_order: (last?.sort_order ?? 0) + 10 });
+    if (error) return { error: error.message };
+  }
+
+  refreshPublicPages();
+  revalidatePath("/admin/content");
+  redirect(`/admin/content?section=${spec.key}&saved=1`);
+}
+
+export async function deleteBlock(formData: FormData) {
+  const supabase = await adminClient();
+
+  const spec = sectionOf(formData);
+  const id = text(formData, "id");
+  if (!spec || spec.fixed || !id) return;
+
+  await supabase.from("content_blocks").delete().eq("id", id);
+
+  refreshPublicPages();
+  revalidatePath("/admin/content");
+}
+
+/**
+ * 같은 구역 안에서만 이웃과 순서를 맞바꿉니다.
+ *
+ * ⚠️ 한 표에 여섯 구역이 섞여 있으므로 `eq("section", …)` 을 빼면 다른 구역의
+ *    항목과 값을 바꿔 버립니다. 화면상으로는 "아무 일도 안 일어난 것처럼" 보이고
+ *    엉뚱한 구역의 순서가 흐트러집니다.
+ */
+export async function moveBlock(formData: FormData) {
+  const supabase = await adminClient();
+
+  const spec = sectionOf(formData);
+  const id = text(formData, "id");
+  const dir = text(formData, "dir"); // "up" | "down"
+  if (!spec || spec.fixed || !id) return;
+
+  const { data: rows } = await supabase
+    .from("content_blocks")
+    .select("id, sort_order")
+    .eq("section", spec.key)
+    .order("sort_order", { ascending: true });
+
+  if (!rows) return;
+
+  const list = rows as Pick<ContentBlockRow, "id" | "sort_order">[];
+  const i = list.findIndex((r) => r.id === id);
+  const j = dir === "up" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= list.length) return;
+
+  await supabase
+    .from("content_blocks")
+    .update({ sort_order: list[j].sort_order })
+    .eq("id", list[i].id);
+  await supabase
+    .from("content_blocks")
+    .update({ sort_order: list[i].sort_order })
+    .eq("id", list[j].id);
+
+  refreshPublicPages();
+  revalidatePath("/admin/content");
+}
+
+// ---------------------------------------------------------------
 // 견적 문의
 // ---------------------------------------------------------------
 
@@ -231,6 +374,14 @@ export async function deleteQuote(formData: FormData) {
   const supabase = await adminClient();
   const id = text(formData, "id");
   if (!id) return;
+
+  /**
+   * 행보다 첨부를 **먼저** 지웁니다. 행이 사라지면 파일 경로를 알 길이 없어져
+   * 고객 사진이 버킷에 영영 남습니다 (F10 의 고아 파일과 같은 실수).
+   * 개인정보처리방침상 보유기간이 있는 자료라 더 그렇습니다.
+   */
+  const { data } = await supabase.from("quotes").select("files").eq("id", id).single();
+  await removeQuoteFiles(supabase, (data?.files ?? []) as QuoteFile[]);
 
   await supabase.from("quotes").delete().eq("id", id);
 

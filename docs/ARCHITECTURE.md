@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-07-28 (**네이버 소유확인 완료** · **URL 검사 느낌표 5건 해소** — 설명 80자↓·페이지별 og·사이트맵 정리 · 실적 사진 12장 투입 · F18 CMS 명령줄 도구 · IndexNow F17) |
+| 최종 갱신 | 2026-08-06 (**견적 첨부파일 실보관 — F20 · `quote-files` 비공개 버킷 신설 · 알림 메일에 사진 직접 첨부 · `0006` 운영 실행 완료** · **Resend `susannadesign.co.kr` 도메인 인증 완료** — 회사 주소로 발송·수신자 2인) · 2026-08-06 (**페이지 문구 CMS — F19 · P14 `/admin/content` · `content_blocks` 표 신설** · **견적 알림 메일 미도착 원인 규명·수정** — 발신 도메인 미인증 403, 시험 발신 주소로 자동 우회) · 2026-07-28 (**당근 비즈프로필 등록 — `수산나디자인 간판제작`** · 채널 전략 4종(당근광고·숨고·플레이스→홈페이지 유입·블로그) [`SEO.md`](SEO.md) C1·C5·C6·C8 · **히어로 인사 슬라이드 추가 → 4장** · **네이버 소유확인 완료** · **URL 검사 느낌표 5건 해소** · 실적 사진 12장 투입 · F18 CMS 명령줄 도구 · IndexNow F17) |
 | 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
@@ -74,6 +74,8 @@ Susanna/
 ├── components/             ← UI 조각
 ├── lib/                    ← 로직 (검증 · 데이터접근 · 인증)
 ├── config/                 ← 회사정보 · 콘텐츠 원본  ★수정 진입점
+│                             site.ts(회사정보·SEO) · content.ts(문구 폴백)
+│                             sections.ts(문구 구역 명세 — 관리자 화면이 읽음, F19)
 ├── public/                 ← 사진 · 로고 · 정적파일
 ├── supabase/migrations/    ← DB 스키마 SQL
 ├── docs/                   ← ARCHITECTURE.md(이 문서) · SEO.md · SUPABASE-SETUP.md
@@ -99,11 +101,11 @@ Susanna/
 
 | # | 경로 | 파일 | 렌더링 | 데이터 출처 |
 |---|---|---|---|---|
-| **P1** | `/` | `app/page.tsx` | **요청 시 SSR** (`dynamic="force-dynamic"`) | **CMS** `getSlides()` `getWorks()` + `config/content.ts` |
-| **P2** | `/about` | `app/about/page.tsx` | 정적 | `config/site.ts` `content.ts` |
-| **P3** | `/signs` | `app/signs/page.tsx` | 정적 | `content.signTypes` |
+| **P1** | `/` | `app/page.tsx` | **요청 시 SSR** (`dynamic="force-dynamic"`) | **CMS** `getSlides()` `getWorks()` `getBlocks()` + `config/content.ts` |
+| **P2** | `/about` | `app/about/page.tsx` | **요청 시 SSR** (F19) | **CMS** `getBlocks()`(지표·공정) + `config/site.ts` `content.ts`(연혁·비전) |
+| **P3** | `/signs` | `app/signs/page.tsx` | **요청 시 SSR** (F19) | **CMS** `getBlocks().signTypes` |
 | **P4** | `/works` | `app/works/page.tsx` | **요청 시 SSR** (`dynamic="force-dynamic"`) | **CMS** `getWorks()` |
-| **P5** | `/process` | `app/process/page.tsx` | 정적 | `content.steps` + 페이지 내 `detail` |
+| **P5** | `/process` | `app/process/page.tsx` | **요청 시 SSR** (F19) | **CMS** `getBlocks().process` (상세 항목 = `points`) |
 | **P6** | `/support` | `app/support/page.tsx` | 정적 | `config/site.ts` (FAQ·오시는길) |
 | **P7** | `/quote` | `app/quote/page.tsx` | 정적 | `content.ts` 선택지 |
 | **P8** | `/privacy` `/terms` `/no-email-collect` | 각 `page.tsx` | 정적 | 하드코딩 ⚠️법률 검토 필요 |
@@ -143,7 +145,8 @@ Susanna/
 | **P10** | `/admin` | `app/admin/page.tsx` | admin | 대시보드 (항목 수 + 사용 안내) |
 | **P11** | `/admin/hero` | `app/admin/hero/page.tsx` | admin | 첫 화면 사진 CRUD + 순서 |
 | **P12** | `/admin/works` | `app/admin/works/page.tsx` | admin | 주요 실적 CRUD + 순서 |
-| **P13** | `/admin/quotes` | `app/admin/quotes/page.tsx` | admin | 견적 문의함. 확인처리·삭제. 대시보드에 미확인 건수 노출 |
+| **P13** | `/admin/quotes` | `app/admin/quotes/page.tsx` | admin | 견적 문의함. 확인처리·삭제. 대시보드에 미확인 건수 노출. **맨 위에 알림이 켜졌는지·어디로 가는지 표시** (F16) |
+| **P14** | `/admin/content` | `app/admin/content/page.tsx` | admin | **페이지 문구** — 구역 제목·강점·지표·프로세스·공정·사업영역 CRUD + 순서 (F19) |
 
 ### 2.3 API
 
@@ -168,6 +171,11 @@ components/HeroSlider.tsx   (client)
 ```
 - 데이터: **F7 CMS** → `slides[]`
 - 회귀 테스트 10건 존재 (스크래치패드 `wheeltest.mjs`)
+- ⚠️ **`eyebrow`("01")는 손으로 적는 값이고, 뒤의 총 개수("/ 04")만 자동**입니다
+  (`/ 0{slides.length}`). 슬라이드를 **중간에 끼워 넣으면 뒤 슬라이드의 번호를
+  같이 고쳐야** 합니다 — 안 고치면 화면에 `01 / 04` 가 두 번 뜹니다.
+- ⚠️ 인디케이터의 React key 가 `s.image` 입니다. **같은 사진을 두 슬라이드에 쓰면
+  키가 겹칩니다** — 사진은 슬라이드마다 다른 것을 쓰세요.
 - ⚠️ 상수를 만질 때는 "히어로 중간에서 읽는 사람을 끌어내리지 않는다"가 기준
 
 ### F2. 헤더 전환
@@ -227,6 +235,7 @@ app/api/quote/route.ts
 ├── 허니팟 company_website → 조용히 200 (저장 안 함)
 ├── IP 레이트리밋 10분 5회 (인메모리)
 ├── 서버 재검증 (클라이언트 우회 시 400)
+├── 첨부 업로드 → quote-files 버킷  → F20   ← **INSERT 보다 먼저**
 ├── 저장  1순위 DB quotes  →  2순위 파일 (isCmsEnabled() 가 꺼졌을 때만)
 │        둘 다 실패하면 500 — 접수됐다고 거짓 응답하지 않음
 └── 저장 확정 후 notifyNewQuote()  → F16
@@ -241,26 +250,107 @@ lib/notify.ts (server-only)
   되어 있던 것을 2026-07-26 에 고쳤습니다.
 - 이 조건 덕분에 **운영에서 `{ok:true}` 는 DB 저장 성공을 뜻합니다.** 파일 경로가
   운영에서 아예 안 타므로 응답만 보고도 판정할 수 있습니다.
+- ⚠️ **행 ID 를 코드에서 먼저 만듭니다**(`crypto.randomUUID()`). DB 가 만들게 두면
+  INSERT 후 `.select()` 로 되받아야 하는데, `quotes` 의 RLS 는 익명에게 **INSERT 만**
+  허용하므로 그 조회가 막힙니다. 첨부 경로가 ID 를 필요로 해서 순서가 이렇습니다 → F20
 
 ### F16. 견적 문의 실시간 알림
 ```
-lib/notify.ts   notifyNewQuote(q) → 보낸 경로 이름[]
+lib/notify.ts   notifyNewQuote(q, attachments) → 보낸 경로 이름[]
 ├── QUOTE_WEBHOOK_URL   웹훅 — 슬랙·카카오워크·디스코드 ({text}/{content} 동시 전송)
 ├── RESEND_API_KEY      이메일 — 받는 주소는 QUOTE_NOTIFY_EMAIL, 없으면 site.email [A5]
 │   └── HTML 본문: 연락처가 큰 버튼이고 tel: 링크 — 휴대폰에서 눌러 바로 통화
 │       + text 대체본문 (HTML 막아 둔 메일 앱 대비)
-├── 타임아웃 5초 · Promise.allSettled — 하나 실패해도 나머지 발송
+├── toMailAttachments()  고객 사진을 base64 로 **메일에 직접 첨부** (총 12MB 이하)
+├── 타임아웃 5초 (첨부 1MB 당 +2초, 상한 30초)
+├── Promise.allSettled — 하나 실패해도 나머지 발송
 └── 예외를 밖으로 던지지 않음
 
 scripts/check-notify.mjs   npm run notify:test
 └── 가짜 문의를 만들지 않고 알림만 시험 발송. 401/403 은 원인까지 안내
+    한글 파일명 첨부 1개를 같이 보냅니다 (아래 참조)
 ```
+- **사진을 메일에 그대로 붙입니다.** 간판 견적은 사진 한 장이 곧 사양서인데, 링크를
+  눌러 로그인하고 관리자 화면까지 들어가야 보인다면 현장에서 휴대폰만 보는 상황에서
+  사실상 못 보는 것과 같습니다. 관리자 화면 내려받기(F20)는 그 보조 경로입니다.
+- **총 12MB 를 넘으면 하나도 안 붙이고** 관리자 화면으로 안내합니다. 폼 한도가
+  10MB×5장 = 50MB 라 Resend 한도(40MB)를 넘길 수 있고, base64 로 1.37배 부풀기까지
+  합니다. 일부만 붙이면 "왜 세 장만 왔지" 로 헷갈려 고객에게 되묻게 되므로 전부 아니면 전무.
+- ⚠️ **웹훅에는 파일을 못 붙입니다.** 그래서 같은 문의라도 메일과 웹훅의 첨부 안내
+  문구가 다릅니다(`attached` 플래그). 웹훅에까지 "이 메일에 첨부" 라고 쓰면 거짓말이 됩니다.
+- ✅ **한글 파일명 실측 통과** (2026-08-06). 실제 문의에 `자석 게시판(필름마감).jpg`
+  같은 이름이 들어와서, 시험 발송도 일부러 한글 파일명으로 보냅니다. 지메일 수신함에서
+  `첨부 시험(한글 파일명).png` / `image/png` 로 온전히 도착하는 것을 확인했습니다.
+  영문 파일명으로 시험하면 이 깨짐(RFC 2231 인코딩)을 못 잡습니다.
 - ⚠️ **SMTP 는 못 씁니다.** Cloudflare Workers 가 TCP 소켓을 못 열어 네이버웍스·Gmail
   계정을 직접 붙이는 방식이 불가능합니다. HTTP API 방식(Resend)이라 이 제약을 피합니다.
-- ⚠️ **Resend 도메인 등록은 선택이 아니라 필수입니다.** 등록 전에는 **가입 계정 본인
-  메일로만** 발송되고 다른 주소는 403 으로 거부됩니다(실측 확인). 즉 `site.email`
-  (`sujin4003@hanmail.net`)로 받으려면 `susannadesign.co.kr` 을 Resend 에 등록해야
-  합니다. 스팸 필터 통과는 그 부수 효과입니다.
+- ✅ **`susannadesign.co.kr` Resend 인증 완료 (2026-08-06 11:14).** 아래 우회 경로는
+  이제 **평상시에 타지 않습니다.** 회사 도메인으로 직접 나가고, 받는 주소도 여러 개
+  됩니다. 실측: `noreply@susannadesign.co.kr → fivepeople201@gmail.com,poing7003@naver.com`
+  한 요청 200, 지메일 받은편지함 도착(스팸 아님).
+
+  넣은 DNS 레코드 4건 (Cloudflare):
+
+  | Type | Name | Content | Priority |
+  |---|---|---|---|
+  | TXT | `resend._domainkey` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDYAx79g/ObLh92KyDVDzJffYbxrO0lAFDAQArBhIGP/TRqqkJXn8M3PGrKUJStPurFVjuqJDXYmanTes4kpM/sYvmyB1ttBhW80R8HanOMRt2y4mz0glpiew6QTwfiqPP15fkW3Qy81vxdEUYaz/Kmg4t0pebNnaRx9aeFsnoJdwIDAQAB` | — |
+  | MX | `send` | `feedback-smtp.ap-northeast-1.amazonses.com` | 10 |
+  | TXT | `send` | `v=spf1 include:amazonses.com ~all` | — |
+  | TXT | `_dmarc` | `v=DMARC1; p=none;` | — |
+
+  ⚠️ **루트 MX(`@ → inbound-smtp.ap-northeast-1.amazonaws.com`)는 일부러 안 넣었습니다.**
+  Resend 가 "Enable Receiving" 으로 같이 권하지만 그건 **수신**용입니다. 우리는 보내기만
+  하면 되고, 넣으면 나중에 회사 메일(네이버웍스 등)을 붙일 때 충돌합니다.
+  SPF 도 루트가 아니라 `send` 서브도메인에 있어 기존 TXT 와 겹치지 않습니다.
+- 🔴 **알림 메일이 한 통도 안 가던 원인 (2026-08-06 규명·수정) — 아래는 인증 전 이야기입니다**
+  `QUOTE_MAIL_FROM=noreply@susannadesign.co.kr` 인데 그 도메인이 Resend 에 인증돼
+  있지 않아 **발송 요청 자체가 403 으로 거부**되고 있었습니다. 운영 키로 실측:
+
+  ```
+  POST /emails  from: noreply@susannadesign.co.kr
+  → 403 {"message":"The susannadesign.co.kr domain is not verified"}
+  ```
+
+  스팸함 문제가 아니라 **아예 발송되지 않은** 것입니다. 저장은 정상이라 문의는
+  `/admin/quotes` 에 다 쌓여 있었고, 알림만 조용히 죽어 있었습니다.
+  받는 주소도 기본값(`site.email` = 한메일)이라 지메일로 올 수가 없었습니다.
+
+  **수정 세 가지**
+  1. `sendEmail()` 이 이 403 을 알아보고 **`onboarding@resend.dev` 로 자동 재시도**합니다.
+     도메인 인증은 사람이 DNS 를 넣어야 하는 일이고, 그 사이 문의를 놓치는 게 더 큰
+     손해라 우회를 둡니다. 우회가 돌면 로그가 남으니 **로그가 보이면 인증이 아직 안 끝난 것**입니다.
+  2. 받는 주소를 `QUOTE_NOTIFY_EMAIL` 로 지정 (`fivepeople201@gmail.com`).
+  3. `/admin/quotes` 맨 위에 **알림이 켜졌는지·어디로 가는지**를 표시합니다.
+     꺼져 있으면 주황색 경고. 값은 배포 환경의 환경변수를 그대로 읽으므로,
+     운영 화면에서 보면 Cloudflare 에 값이 들어갔는지까지 확인됩니다.
+- ⚠️ **우회 경로는 안전망으로 남겨 둡니다.** 인증이 끝나 평상시엔 안 타지만, 키를
+  갈아 끼우거나 DNS 가 흔들려 403 이 나면 그때 다시 살아납니다. 로그에 우회 문구가
+  보이면 **인증이 깨진 것**이니 그때 확인하면 됩니다.
+- **우회 경로에서는 받는 사람마다 따로 보냅니다 (2026-08-06 수정).**
+  예전에는 한 요청에 주소를 모아 보냈습니다. 그러면 못 받는 주소가 **하나만 섞여도**
+  Resend 가 요청 전체를 거부해서, **잘 가던 주소까지 같이 죽었습니다.** 즉 받을 사람을
+  추가하는 행위가 기존 알림을 끄는 것과 같았습니다. 인증이 끝난 지금은 정상 경로가
+  한 요청으로 나가므로 이 분리 로직은 우회할 때만 돕니다. 인증 전 실측(2026-08-06):
+
+  ```
+  to: [fivepeople201@gmail.com, poing7003@naver.com]  (한 요청)
+  → 403 "You can only send testing emails to your own email address"   ← 둘 다 못 받음
+
+  한 명씩 나눠 보낸 뒤
+  → poing7003@naver.com   403 (도메인 인증 전까지 계속)
+  → fivepeople201@gmail.com  200 ✅                                    ← 이건 살아남음
+  ```
+
+  못 받은 주소는 **로그에 반드시 남깁니다.** 조용히 넘어가면 "저 사람한테도 가고
+  있겠지" 라고 믿게 되고, 그 믿음이 문의를 놓치는 경로가 됩니다.
+- ✅ **수신자 3인 개통** — `fivepeople201@gmail.com` · `poing7003@naver.com` ·
+  `sujin4003@hanmail.net`(회사 대표 메일 = `site.email`). 인증 후 **한 요청**으로 셋 다
+  나가는 것을 실측했습니다(2026-08-06 11:51). 인증 전에는 지메일 하나뿐이었습니다.
+- ⚠️ **한메일·네이버메일은 초기 스팸함 유입 가능성**이 있습니다. 도메인 인증은 발송
+  자격이지 평판이 아니라서, 그 도메인에서 나간 이력이 쌓이기 전까지는 필터가 보수적으로
+  잡습니다. 받는 사람이 "스팸 아님" 처리를 해 주는 게 가장 빠른 해결입니다.
+- `scripts/check-notify.mjs` 도 **같은 우회 규칙**을 씁니다. 안 그러면 "시험은 실패인데
+  운영은 도착" 하는 상태가 되어, 고칠 이유가 없는 값을 계속 고치게 됩니다.
 - **미리보기**: `app/api/dev/mail-preview` (개발 전용, 운영에서는 404) 로 메일 본문을
   브라우저에서 확인할 수 있습니다. 서식을 고칠 때 실제 모양을 보고 작업하세요.
 - **왜 전화 버튼이 큰가**: 견적은 먼저 연락한 곳이 가져갑니다. 받은 사람이 화면을
@@ -542,6 +632,119 @@ scripts/cms.mjs        npm run cms -- <명령>
   상태가 되므로, 제목·사진 존재·분류를 먼저 다 확인하고 나서 업로드를 시작합니다.
 - 비밀번호가 `.env.local` 에 평문으로 남습니다(§7). `NEXT_PUBLIC_` 접두어가 없어
   **브라우저·서버 코드로는 나가지 않습니다** — 이 스크립트만 읽습니다.
+- 🔴 **Windows 에서 `npm run cms -- --title "여러 단어"` 는 값이 잘립니다.**
+  npm 이 `--` 뒤 인자를 넘길 때 인용부호를 풀어 다시 쪼개기 때문에, 공백이 있는 값은
+  **첫 낱말만 저장되고 나머지 플래그는 통째로 사라집니다.** 오류가 안 나고 `✔` 가 떠서
+  목록을 확인하기 전엔 모릅니다 (2026-07-28 실제로 제목 둘째 줄·`--sub`·`--alt` 를
+  잃었습니다). **공백이나 줄바꿈이 든 값을 넣을 때는 npm 을 건너뛰고 직접 부르세요:**
+  ```bash
+  node scripts/cms.mjs hero set <id> --title "두 낱말" --sub "설명 문장"
+  ```
+  줄바꿈은 Bash 의 `$'첫 줄\n둘째 줄'` 형식으로 넣습니다. 넣은 뒤에는 항상
+  `node scripts/cms.mjs list hero` 로 **저장된 값을 눈으로 확인**합니다.
+
+### F19. 페이지 문구 CMS ★
+```
+supabase/migrations/0005_content_blocks.sql
+└── public.content_blocks   한 표에 여섯 구역. `section` 으로 갈라 씁니다.
+
+config/sections.ts   SECTIONS[]   ★ 구역 명세 (A5)
+      ├── 탭 이름 · 어디에 나오는지 설명
+      ├── fixed?      항목 추가·삭제 금지 (copy 구역)
+      └── fields{}    구역마다 칸의 뜻이 달라서, 라벨을 여기서 읽습니다
+            ↓ import
+components/admin/BlockForm.tsx   명세대로 칸을 그림 (구역별 폼 한 벌)
+app/admin/content/page.tsx  P14   탭 + 목록 + 순서 + 삭제
+app/admin/actions.ts              saveBlock · deleteBlock · moveBlock
+
+lib/cms.ts  getBlocks()  → { copy, why, stats, process, fabrication, signTypes }
+      └── 조회 1회로 전부. 구역 단위 폴백 → config/content.ts   [원칙 A1]
+            ↓
+      app/page.tsx(P1) · about(P2) · signs(P3) · process(P5)
+```
+
+**칸의 뜻이 구역마다 다릅니다.** 이 표가 유일한 기준입니다 (마이그레이션 맨 위·`config/sections.ts` 와 동일):
+
+| section | eyebrow | title | sub | points | image_url |
+|---|---|---|---|---|---|
+| `copy` | 영문 머리말 | 큰 제목 | 설명 | — | — |
+| `why` | — | 근거 제목 | 근거 설명 | — | — |
+| `stat` | 단위(평) | 숫자(795) | 이름 | — | — |
+| `process` | 번호(01) | 단계 이름 | 한 줄 설명 | 상세 항목 | 사진 |
+| `fabrication` | — | 공정 이름 | 한 줄 설명 | — | 사진 |
+| `sign_type` | 영문(OUTDOOR) | 분야 이름 | 소개 문단 | 특징 | 사진 |
+
+- **왜 표를 하나로 합쳤나**: 구역마다 표를 만들면 같은 CRUD·폼·액션이 여섯 벌이 됩니다.
+  그중 하나만 고치는 실수가 반드시 나므로, 표 하나 + 명세 하나로 두고 화면이 명세를
+  읽어 그리게 했습니다. 대신 **칸의 뜻이 구역마다 다르다는 부담**을 위 표로 못박습니다.
+- ⚠️ **`copy` 구역은 항목을 늘리거나 지울 수 없습니다.** 코드가 `slug`(`home-fabrication`
+  같은 값)로 집어 오기 때문에, 새로 넣으면 아무 데도 안 나오고 지우면 그 구역 제목이
+  통째로 사라집니다. 서버 액션과 화면 양쪽에서 막습니다.
+- ⚠️ **`moveBlock` 은 반드시 `eq("section", …)` 을 겁니다.** 한 표에 여섯 구역이 섞여
+  있어서 이걸 빼면 **다른 구역 항목과 순서를 맞바꿉니다** — 화면상 아무 일도 안 일어난
+  것처럼 보이고 엉뚱한 구역이 흐트러집니다.
+- **폴백은 구역 단위입니다.** `process` 만 DB 에 있고 `stat` 이 비어 있으면 프로세스는
+  DB, 지표는 config 값이 나갑니다. 전부-아니면-전무로 만들면 구역 하나를 비웠을 때
+  멀쩡한 나머지까지 옛 내용으로 되돌아갑니다.
+- **SQL 을 안 돌려도 사이트는 그대로입니다** [A1]. `content_blocks` 가 없으면 조회가
+  실패하고 `config/content.ts` 내용이 나갑니다 — 지금 화면과 같은 문구입니다.
+  관리자 화면에는 "0005 를 실행하세요" 안내가 뜹니다.
+- **대가**: `/about` `/signs` `/process` 가 정적에서 **요청 시 SSR** 로 바뀌었습니다.
+  방문마다 DB 조회가 한 번 더 붙습니다(§7 의 SSR 부채 항목에 포함).
+- 홈에서 구역 제목의 줄바꿈은 `whitespace-pre-line` 으로 살립니다. 관리자가 폼에서
+  줄을 나누면 화면에서도 같은 자리에서 나뉩니다.
+
+### F20. 견적 첨부파일 보관 ★
+```
+lib/quote-files.ts (server-only)
+├── uploadQuoteFiles()   익명 키로 업로드. 실패해도 접수는 계속 (path 없이 반환)
+├── signQuoteFiles()     관리자 세션으로 서명 URL 일괄 발급 (수명 1시간)
+└── removeQuoteFiles()   문의 삭제 시 첨부도 제거
+
+storage 'quote-files'    **비공개** 버킷 · 10MB 제한 · 키는 `문의ID/01.jpg`
+├── INSERT  anon+authenticated  ← 홈페이지 폼은 로그인이 없습니다
+├── SELECT  authenticated + is_admin()
+└── DELETE  authenticated + is_admin()
+
+quotes.files jsonb   [{ name, size, type, path? }]
+                     path 없음 = 파일을 못 받았다는 뜻
+
+scripts/check-quote-files.mjs   npm run quotes:check
+└── 익명 업로드 성공 / 익명 열람 차단 / 관리자 열람·삭제를 실제로 왕복 검사
+```
+- 🔴 **왜 만들었나 (2026-08-06)**: 그전까지는 **이름과 크기만** 적고 파일을 버렸습니다.
+  2026-08-03 연구개발특구진흥재단 문의에서 현판 예시 사진 2장이 실제로 그렇게
+  사라졌습니다. 간판 견적은 사진 한 장이 곧 사양서라, 못 받으면 견적 자체를 못 냅니다.
+- **`media` 버킷과 반대로 비공개입니다.** `media`(0001)는 홈페이지에 그대로 걸리는
+  사진이라 공개가 맞지만, 여기는 고객 도면·매장 사진·개인정보가 들어옵니다.
+  주소를 안다고 열려선 안 되므로 볼 때마다 서명 URL 을 새로 발급합니다.
+- ⚠️ **업로드가 INSERT 보다 먼저입니다.** `quotes` 의 RLS 는 익명에게 INSERT 만 열려
+  있어(0002) 행을 만든 뒤 경로를 채워 넣을 수가 없습니다. 그래서 ID 를 코드에서
+  먼저 만들고, 그 폴더에 올린 뒤, 경로까지 담아 한 번에 넣습니다.
+  **익명에게 UPDATE 를 열어 주는 쪽이 훨씬 나쁩니다** — 누구나 남의 문의를 고칩니다 [A2].
+- ⚠️ **원본 파일명을 스토리지 키로 쓰지 않습니다.** 실제로 들어온 이름이
+  `자석 게시판(필름마감).jpg` 였습니다. 한글·공백·괄호가 섞이면 URL 인코딩 단계마다
+  깨질 자리가 생깁니다. 키는 `문의ID/01.jpg` 로 두고, 사람이 보는 이름은 DB 에 남겨
+  내려받을 때 `?download=` 로 되살립니다.
+- **service_role 키를 쓰지 않습니다** [§6]. 올리기는 익명 키 + INSERT 정책, 보기는
+  관리자 세션 + `is_admin()` 정책으로 갈립니다. RLS 를 우회하는 코드가 없습니다.
+- **`0006` 을 안 돌려도 접수는 됩니다** [A1 의 연장]. 버킷이 없으면 업로드만 실패하고
+  문의는 그대로 저장됩니다. 관리자 화면에 "파일 없음" 으로 표시됩니다.
+  실측으로도 확인했습니다 — 실행 전 접수는 `Bucket not found` 로그만 남기고 `{ok:true}`.
+- ✅ **운영 DB 실측 완료 (2026-08-06).** `0006` 실행 후 폼으로 사진 2장을 실제 접수해
+  한 바퀴 돌렸습니다:
+
+  | 확인 | 결과 |
+  |---|---|
+  | 익명 업로드 (문의 폼 권한) | ✔ `{문의ID}/01.jpg` `02.jpg` 로 저장 |
+  | 익명 직접 접근 | ✔ 차단 (HTTP 400) |
+  | 익명 서명 URL 발급 | ✔ 차단 |
+  | 관리자 서명 URL 내려받기 | ✔ HTTP 200 · **원본과 SHA-256 일치** (47,399 / 159,479 바이트) |
+  | 삭제 시 첨부 제거 | ✔ 행·첨부 모두 제거 확인 |
+
+  `npm run quotes:check` 가 이 중 앞의 다섯을 언제든 다시 검사합니다.
+- 첨부를 알림 메일에 직접 붙이는 건 F16 쪽입니다. 이 화면 경로는 **보조**입니다 —
+  메일이 12MB 를 넘겼거나, 지난 문의를 다시 찾아볼 때 씁니다.
 
 ---
 
@@ -549,14 +752,16 @@ scripts/cms.mjs        npm run cms -- <명령>
 
 ```
 [공개 방문자]
-  DB 안 쓰는 페이지 (/about /signs /process /support /quote …)
+  DB 안 쓰는 페이지 (/support /quote /privacy …)
     브라우저 → 빌드 시 만든 정적 HTML                        ← 캐시됨
 
-  DB 읽는 페이지 (/ /works /rss.xml)
+  DB 읽는 페이지 (/ /works /about /signs /process /rss.xml)
     브라우저 → 요청마다 서버 렌더링 → lib/cms.ts
-                   ├─ Supabase 연결됨 → hero_slides · works  (RLS: published=true)
+                   ├─ Supabase 연결됨 → hero_slides · works · content_blocks
+                   │                    (RLS: published=true)
                    └─ 실패/미설정      → config/content.ts    [A1 폴백]
-                 ※ 방문 1회 = SSR 1회 + DB 조회 1~2회 (§7 부채)
+                 ※ 방문 1회 = SSR 1회 + DB 조회 1~3회 (§7 부채)
+                   getBlocks() 는 여섯 구역을 조회 1회로 가져옵니다 (F19)
 
 [관리자]
   브라우저 → /admin/* page.tsx → requireAdmin()
@@ -591,17 +796,27 @@ scripts/cms.mjs        npm run cms -- <명령>
 | `0002_quotes.sql` | 견적 문의 테이블 |
 | `0003_works_photos.sql` | 실적 6건 추가 (사진 있는 현장, `sort_order` 1~6) |
 | `0004_works_brochure.sql` | 실적 2건 추가(`sort_order` 7~8) + **사진 없는 4건을 맨 뒤(200~230)로** |
+| `0005_content_blocks.sql` | **페이지 문구 표 + RLS + 지금 나가는 문구 그대로 초기 데이터** (F19) |
+| `0006_quote_files.sql` | **견적 첨부 보관 — `quote-files` 비공개 버킷 + storage RLS 3종** (F20) |
 
 > ⚠️ **`config/content.ts` 만 고치면 운영 사이트는 안 바뀝니다.**
 > `getWorks()`/`getSlides()` 는 DB 에 published 행이 하나라도 있으면 그쪽을 씁니다
 > (config 는 A1 폴백 전용). 실적·슬라이드를 늘릴 때는 **DB 와 config 양쪽**에
 > 넣어야 합니다 — 마이그레이션 파일 + `config/content.ts`.
+>
+> **문구 블록(F19)도 같습니다.** `content_blocks` 에 그 구역 행이 하나라도 있으면
+> `config/content.ts` 의 `sectionCopy`·`whyPoints`·`steps`·`equipment`·`signTypes`·`stats`
+> 는 **안 읽힙니다.** 운영 문구를 바꾸는 정상 경로는 `/admin/content` 입니다.
 
 ```
 public.profiles          id(→auth.users) · email · role('admin'|'viewer')
 public.hero_slides       eyebrow · title · sub · image_url · alt · sort_order · published
 public.works             title · category · location · tags[] · image_url · sort_order · published
-storage.buckets 'media'  public read
+public.content_blocks    section · slug · eyebrow · title · sub · points[] · image_url · alt
+                         · sort_order · published        ← F19. 칸의 뜻은 구역마다 다름
+public.quotes            + files jsonb  [{ name, size, type, path? }]   ← F20
+storage.buckets 'media'        public read
+storage.buckets 'quote-files'  **비공개** — 서명 URL 로만 열람 (F20)
 
 함수
 ├── public.is_admin()          SECURITY DEFINER — profiles 정책의 무한 재귀 회피
@@ -611,7 +826,8 @@ storage.buckets 'media'  public read
 RLS
 ├── 공개 SELECT  : published = true
 ├── 관리자 ALL   : is_admin()
-└── storage      : 읽기 공개 / 쓰기·삭제 admin
+├── storage media       : 읽기 공개 / 쓰기·삭제 admin
+└── storage quote-files : 쓰기 익명 허용(문의 폼) / 읽기·삭제 admin 전용   ← F20
 ```
 
 **image_url 두 가지 형태를 모두 허용합니다**
@@ -632,19 +848,32 @@ RLS
 | `NEXT_PUBLIC_SITE_URL` | ✕ (선택) | `config/site.ts` 의 확정 도메인을 씁니다. **임시 주소로 배포할 때만** 이 값을 넣으세요 — `site.isProductionDomain` 이 false 가 되어 `robots.txt` 가 전면 차단으로 바뀝니다 |
 | `QUOTE_WEBHOOK_URL` | ✕ (선택) | 견적 알림 웹훅 꺼짐. 접수·저장은 정상 (F16) |
 | `RESEND_API_KEY` | ✕ (선택) | 견적 알림 **이메일 꺼짐**. 이 키만 넣으면 `site.email` 로 갑니다 (F16) |
-| `QUOTE_NOTIFY_EMAIL` | ✕ (선택) | `config/site.ts` 의 `site.email` 로 발송. 쉼표로 여러 주소 가능 |
-| `QUOTE_MAIL_FROM` | ✕ (선택) | `onboarding@resend.dev`(시험용)로 발송 — 한메일에서 스팸 위험 |
+| `QUOTE_NOTIFY_EMAIL` | ✕ (선택) | `config/site.ts` 의 `site.email` 로 발송. **쉼표로 여러 주소 가능** — 도메인 인증 전에는 Resend 가입 계정 본인 메일만 실제로 받고, 나머지는 로그에 실패로 남습니다(F16). 현재값: `fivepeople201@gmail.com,poing7003@naver.com,sujin4003@hanmail.net` |
+| `QUOTE_MAIL_FROM` | ✕ (선택) | `onboarding@resend.dev`(시험용)로 발송 — 한메일에서 스팸 위험. **도메인 인증을 마쳤으니 `noreply@susannadesign.co.kr` 을 넣으세요**(2026-08-06) |
 | `SUPABASE_ADMIN_EMAIL` | ✕ (선택) | `npm run cms` 만 안 됩니다 (F18). 화면·홈페이지는 정상 |
 | `SUPABASE_ADMIN_PASSWORD` | ✕ (선택) | 〃 — 관리자 화면에 쓰는 그 계정의 비밀번호 |
 
 `SUPABASE_ADMIN_*` 에는 `NEXT_PUBLIC_` 접두어가 **없습니다.** 그래서 브라우저로 나가지 않고,
 앱 코드도 읽지 않습니다 — `scripts/cms.mjs` 전용입니다.
 
-확인 명령: `npm run notify:test` — 가짜 문의를 만들지 않고 알림만 시험 발송합니다.
+확인 명령: `npm run notify:test` — 가짜 문의를 만들지 않고 알림만 시험 발송합니다
+(한글 파일명 첨부 1개가 같이 갑니다 — 첨부 경로까지 한 번에 확인됩니다).
+`npm run quotes:check` — 첨부 보관·권한이 실제로 도는지 왕복 검사 (F20).
 콘텐츠 관리 명령: `npm run cms -- help` (F18).
 
 **운영(Cloudflare) 환경변수는 들어가 있습니다** — 2026-07-26 확인
 (`/admin/login` 이 "아직 연결 전입니다" 안내문이 아니라 로그인 폼을 그림 = 키가 읽힌다는 뜻).
+
+✅ **알림 3종도 런타임 칸에 들어갔습니다** (2026-08-06). 운영 폼으로 실제 접수해
+**접수와 같은 초에 세 주소로 메일이 도착하는 것**을 확인했습니다.
+
+> ⚠️ **런타임 칸과 빌드 칸은 다른 저장소입니다.** `NEXT_PUBLIC_*` 는 빌드(Build →
+> Variables and secrets), 서버가 실행 중 `process.env` 로 읽는 값은 **워커 최상단의
+> Variables and secrets**. 8월 3일 문의 알림이 안 간 원인이 이 칸이 비어 있어서였습니다.
+>
+> ⚠️ **값을 넣은 직후의 요청은 아직 옛 설정으로 처리될 수 있습니다.** 2026-08-06 에
+> 12:01 접수는 알림이 안 갔고 12:03 접수는 갔습니다 — 그 사이에 값이 저장됐습니다.
+> "안 온다"고 판단하기 전에 **저장 시각 이후로 한 번 더** 넣어 보세요.
 
 `SUPABASE_SERVICE_ROLE_KEY` 는 **의도적으로 사용하지 않습니다.**
 
@@ -671,14 +900,16 @@ RLS
 | 🔴 등록 | **구글 비즈니스 프로필 미등록.** 검색 우측 지식 패널(로고·사진·영업시간 카드)은 홈페이지가 아니라 여기서 만들어집니다 | [`SEO.md`](SEO.md) C2 |
 | ⚠️ 색인 | **구글 색인이 홈 1페이지뿐.** 소유확인은 끝났습니다(2026-07-28, DNS TXT 실측 확인). 남은 건 Search Console 에서 **사이트맵 제출 + `/works` `/about` 색인 요청** | [`SEO.md`](SEO.md) C4 |
 | ⚠️ 확인 | **색인 상태는 `hl=ko&gl=kr` 로만 판정합니다.** 미국 기준 검색 도구로는 결과가 안 보여서, 한 번 그것만 보고 "인덱스 0건" 으로 잘못 판정한 적이 있습니다 | [`SEO.md`](SEO.md) 맨 위 |
-| 🔴 실행 | **`0004_works_brochure.sql` 미실행** — 돌리기 전에는 새 실적 2건(청주 아이파크·홈센터)이 안 보이고, 사진 없는 4건이 목록 중간에 회색 상자로 남습니다. 사진 파일은 이미 배포에 들어 있습니다. SQL Editor 에서 실행하세요 | §5 |
-| ✅ 확인 | `0003_works_photos.sql` 은 **실행됐습니다** — 운영 홈이 `work-16`~`21` 을 앞에 그리는 것으로 확인(2026-07-27) | §5 |
+| 🔴 문의 | **2026-08-03 연구개발특구진흥재단(송예진) 문의가 미확인 상태**입니다. 알림 메일이 안 갔고(당시 Cloudflare 런타임에 `RESEND_API_KEY` 없음), 첨부 사진 2장은 보관 기능이 없어 **이미 유실**됐습니다. 사진은 고객께 다시 요청해야 합니다 | `/admin/quotes` |
+| ✅ 확인 | **마이그레이션 `0001`~`0006` 전부 실행 완료** (2026-08-06). 운영 DB 에 직접 물어 확인: `works` 23건 · `content_blocks` 28행(copy 5 · why 4 · stat 4 · process 5 · fabrication 6 · sign_type 4). 프로젝트는 `Gachon-junghyun's Org / SusannaDesign` | §5 |
 | ⚠️ 확인 | **Supabase 깨우기 Actions 시크릿 등록 여부** — 저장소 Actions 탭에 초록 체크가 있는지. 7일 무요청이면 DB 가 멈추고 견적 문의 저장이 죽습니다 | `.github/workflows/keep-supabase-awake.yml` |
 | ⚠️ 정리 | 운영 `/admin/quotes` 에 검증용 테스트 문의 2건(`[검증] 지워주세요`) 남아 있음 | [`DEPLOY.md`](DEPLOY.md) 3단계 |
-| TODO | 견적 알림이 **꺼져 있습니다** — `RESEND_API_KEY` 를 넣어야 켜집니다. 안 넣으면 `/admin/quotes` 를 직접 봐야 새 문의를 압니다 | F16 · §6 |
+| 🔴 보안 | **`RESEND_API_KEY` 가 Cloudflare 에 `Plaintext` 타입으로 들어가 있습니다** — `Secret`(암호화)이어야 합니다. 지금은 대시보드 조회 권한만 있으면 키가 그대로 보이고, 2026-08-06 작업 중 화면 캡처에도 값이 찍혔습니다. resend.com 에서 **키를 새로 발급해 기존 키를 폐기하고**, 새 키는 반드시 `Secret` 으로 넣으세요 | F16 · §6 |
+| ⚠️ 배포 | **실배포 Worker 이름이 `susannadesgin`(오타)인데 `wrangler.jsonc` 는 `susanna-design`** — 지금은 Git 연동 빌드라 문제가 없지만, CLI 로 `wrangler deploy` 하는 순간 **같은 사이트가 워커 두 개로 갈라집니다.** 대시보드도 맞추라는 배너를 띄우고 있습니다 | `wrangler.jsonc` |
 | TODO | `config/site.ts` 남은 값: 옥외광고사업 등록번호 · 우편번호 · 운영시간 · 누적건수 · 카카오채널 · 지도 URL | `config/site.ts` |
 | ⚠️ 확인 | **네이버 URL 검사 재실행 필요** — `robots.txt 없음` 경고가 남아 있는지. Yeti UA 실측은 `200 / text/plain / 500B` 로 정상이라 오탐으로 보고 있습니다. 배포 후에도 뜨면 다시 파야 합니다 | [`SEO.md`](SEO.md) 느낌표 표 3번 |
 | 🔴 등록 | **서치어드바이저에 사이트맵·RSS 미제출** — 소유확인은 끝났습니다(2026-07-28). `요청 → 사이트맵 제출`에 `sitemap.xml`, `요청 → RSS 제출`에 `rss.xml`. **둘 다** 내야 합니다 | [`SEO.md`](SEO.md) C3 |
+| 🔴 코드 | **당근 비즈프로필이 `sameAs` 에 없습니다** — 2026-07-28 등록 완료(`수산나디자인 간판제작`). `config/site.ts` 에 `daangnUrl` 을 신설해 프로필 URL 을 넣어야 검색엔진·AI 가 홈페이지와 같은 회사로 묶습니다. **URL 만 받으면 되는 작업** | `config/site.ts` · [`SEO.md`](SEO.md) C5 |
 | TODO | `sameAs` 에 `blogUrl`·`kakaoChannelUrl` 이 비어 있음 — 채널이 생기면 넣으세요. 엔티티 연결이 한 겹 더 두꺼워집니다 | `config/site.ts` |
 | ⚠️ SEO | `site.geo` 좌표가 대전 서구 근사값 — 로컬 검색의 "거리" 요인에 영향 | `config/site.ts` |
 | ⚠️ 법률 | 개인정보처리방침 · 이용약관이 **초안 상태** | `app/privacy` `app/terms` |
@@ -692,13 +923,16 @@ RLS
 | 미검증 | 관리자 CRUD 중 **삭제 · 순서변경(`moveSlide`/`moveWork`) 이 실동작 미확인**. 저장·사진업로드는 운영에서 끝까지 통하는 것을 확인했습니다 | F9 F10 |
 | 미검증 | **F18 CLI 의 DB 작업이 실계정 미검증** — 로그인 실패 경로(잘못된 비밀번호 → 안내문)와 인자 파싱·분류 검사만 확인했습니다. `SUPABASE_ADMIN_*` 를 채운 뒤 `list` → `works add --draft` → `rm --yes` 순으로 한 바퀴 돌려 봐야 합니다 | F18 |
 | 부채 | **관리자 비밀번호가 `.env.local` 에 평문** — F18 이 브라우저 없이 로그인하려면 필요합니다. git 제외지만 이 PC 를 쓰는 사람은 볼 수 있습니다. 화면 공유·녹화 시 주의 | F18 · §6 |
-| 부채 | **방문마다 SSR + DB 조회** — ISR 을 걷어낸 대가(§2.1 주석). 홈 HTML 에 캐시가 없습니다(`no-store` 실측). 다만 홈 TTFB 0.78~1.58s 대 정적 `/about` 0.92s 로 체감 차이가 거의 없어 급하지 않습니다. 트래픽이 커지면 Cache Rules 또는 R2 로 ISR 을 되살리는 게 정석 | `app/page.tsx` `app/works/page.tsx` |
+| 부채 | **방문마다 SSR + DB 조회** — ISR 을 걷어낸 대가(§2.1 주석). 홈 HTML 에 캐시가 없습니다(`no-store` 실측). **2026-08-06 F19 로 `/about` `/signs` `/process` 도 여기 들어왔습니다** — 정적이던 세 페이지가 요청 시 SSR 이 됐습니다(문구를 관리자가 바꾸려면 불가피). 트래픽이 커지면 Cache Rules 또는 R2 로 ISR 을 되살리는 게 정석 | `app/page.tsx` `works` `about` `signs` `process` |
 | 부채 | 견적 폼 레이트리밋이 **인메모리** — 서버리스라 인스턴스마다 따로 세므로 사실상 헐거움 | F5 |
 | 부채 | 관리자에서 사진 교체 시 **이전 파일이 스토리지에 남음** (고아 파일) | F10 |
-| 부채 | `sort_order` 가 같으면 순서 변경이 동작하지 않음. **관리자 화면은 여전히 그렇습니다** — 걸리면 `npm run cms -- works renumber` 로 풉니다 (F18) | F9 |
+| 부채 | **첨부를 올린 뒤 DB INSERT 가 실패하면 파일이 고아로 남습니다** (F20). 익명에게 UPDATE 를 안 주려고 업로드를 먼저 하는 구조의 대가입니다. INSERT 실패 자체가 드물고, 실패 시 고객에게 500 을 돌려주므로 문의를 삼키지는 않습니다. 쌓이면 `_check/` 와 함께 버킷에서 손으로 지웁니다 | F20 |
+| 문서 | **`scripts/formtest.mjs` 가 저장소에 없습니다** — F5 설명이 "회귀 테스트 12건(`formtest.mjs`)" 이라고 적고 있는데 파일이 존재하지 않습니다. 문서가 낡았거나 파일이 유실된 것이라, 폼을 고칠 때 기댈 회귀 검사가 사실상 없습니다 | F5 |
+| 부채 | `sort_order` 가 같으면 순서 변경이 동작하지 않음. **관리자 화면은 여전히 그렇습니다** — 걸리면 `npm run cms -- works renumber` 로 풉니다 (F18). **`content_blocks`(F19)에는 `renumber` 가 없습니다** — 초기 데이터가 10 단위라 당장은 안 걸리지만, 항목을 많이 넣고 지우다 겹치면 손으로 `sort_order` 를 고쳐야 합니다 | F9 · F19 |
 | 부채 | 로고 SVG 가 저해상도 래스터 트레이싱본. 대형 출력엔 원본 AI/EPS 필요 | `public/logo.svg` |
 | 미도입 | **시공사례 개별 페이지** — 로컬 SEO 최대 자산이나, 지금 데이터로 만들면 "얇은 콘텐츠" 페널티. 사례별 상세(위치·간판종류·기간·자재·현장 메모) 확보가 선행 | [`SEO.md`](SEO.md) B-1 |
-| 미도입 | 사업영역·공정·장비·회사정보는 아직 CMS 미연결 (코드 수정 필요) | `config/content.ts` |
+| 🔴 배포 | **F19 코드가 아직 배포 전입니다** — DB(`content_blocks`)는 만들어졌지만 운영에 나가 있는 건 이전 코드라, 지금 `/admin/content` 로 들어가면 404 입니다. 배포해야 관리자 화면이 생깁니다 | F19 |
+| 미도입 | **회사 개요·연혁·비전은 아직 CMS 미연결** — 사업영역·공정·프로세스·지표·구역 제목은 2026-08-06 F19 로 연결됐습니다. 남은 셋은 바뀌는 빈도가 낮아 `config/` 에 둡니다 | `config/content.ts` `config/site.ts` |
 
 ---
 

@@ -1,9 +1,18 @@
 import "server-only";
 
-import { works as fallbackWorks, slides as fallbackSlides } from "@/config/content";
-import type { Slide, Work } from "@/config/content";
+import {
+  equipment as fallbackFab,
+  sectionCopy as fallbackCopy,
+  signTypes as fallbackSignTypes,
+  slides as fallbackSlides,
+  stats as fallbackStats,
+  steps as fallbackSteps,
+  whyPoints as fallbackWhy,
+  works as fallbackWorks,
+} from "@/config/content";
+import type { SectionCopy, Slide, Work } from "@/config/content";
 import { createPublicClient } from "@/lib/supabase/public";
-import type { HeroSlideRow, WorkRow } from "@/lib/supabase/types";
+import type { ContentBlockRow, HeroSlideRow, WorkRow } from "@/lib/supabase/types";
 
 /**
  * 공개 페이지가 콘텐츠를 읽는 유일한 통로입니다.
@@ -73,5 +82,147 @@ export async function getWorks(): Promise<Work[]> {
   } catch (e) {
     console.error("[cms] 주요실적을 못 읽어 기본 내용으로 대체합니다.", e);
     return fallbackWorks;
+  }
+}
+
+// ---------------------------------------------------------------
+// 페이지 문구 블록 (F19)
+// ---------------------------------------------------------------
+
+/** 화면이 쓰는 모양. DB 행과 config 폴백이 둘 다 이걸로 변환됩니다. */
+export type Block = {
+  slug: string;
+  eyebrow: string;
+  title: string;
+  sub: string;
+  points: string[];
+  image: string;
+  alt: string;
+};
+
+export type SiteBlocks = {
+  /** 구역 머리말 — `slug` 로 집어 옵니다 (예: "home-fabrication") */
+  copy: Record<string, SectionCopy>;
+  why: Block[];
+  stats: Block[];
+  process: Block[];
+  fabrication: Block[];
+  signTypes: Block[];
+};
+
+function block(b: Partial<Block>): Block {
+  return {
+    slug: "",
+    eyebrow: "",
+    title: "",
+    sub: "",
+    points: [],
+    image: "",
+    alt: "",
+    ...b,
+  };
+}
+
+function rowToBlock(r: ContentBlockRow): Block {
+  return {
+    slug: r.slug,
+    eyebrow: r.eyebrow,
+    title: r.title,
+    sub: r.sub,
+    points: r.points ?? [],
+    image: r.image_url,
+    alt: r.alt,
+  };
+}
+
+/**
+ * DB 가 없을 때 쓰는 내용 — `config/content.ts` 를 블록 모양으로 옮긴 것뿐입니다 [A1].
+ * 칸의 뜻이 구역마다 다른 것은 `config/sections.ts` 의 명세와 같습니다.
+ */
+function fallbackBlocks(): SiteBlocks {
+  return {
+    copy: fallbackCopy,
+    why: fallbackWhy.map((w) => block({ title: w.title, sub: w.desc })),
+    stats: fallbackStats.map((s) =>
+      block({ title: s.value, eyebrow: s.unit, sub: s.label })
+    ),
+    process: fallbackSteps.map((s) =>
+      block({
+        eyebrow: s.no,
+        title: s.title,
+        sub: s.desc,
+        points: s.points,
+        image: s.image,
+      })
+    ),
+    fabrication: fallbackFab.map((e) =>
+      block({ title: e.name, sub: e.desc, image: e.image })
+    ),
+    signTypes: fallbackSignTypes.map((t) =>
+      block({
+        slug: t.slug,
+        eyebrow: t.en,
+        title: t.name,
+        sub: t.desc,
+        points: t.points,
+        image: t.image,
+      })
+    ),
+  };
+}
+
+/**
+ * 홈·사업영역·업무프로세스가 쓰는 문구를 **한 번의 조회로** 다 가져옵니다.
+ *
+ * 구역별로 따로 부르면 홈 한 번 그리는 데 조회가 다섯 번 나갑니다. 방문마다
+ * SSR 하는 구조(§7)라 그 차이가 그대로 응답 시간이 됩니다.
+ *
+ * 폴백은 **구역 단위**입니다. `process` 만 DB 에 있고 `stat` 이 비어 있으면
+ * 프로세스는 DB 값, 지표는 config 값이 나갑니다. 전부-아니면-전무로 만들면
+ * 구역 하나를 지웠을 때 멀쩡한 나머지까지 옛 내용으로 되돌아갑니다.
+ */
+export async function getBlocks(): Promise<SiteBlocks> {
+  const fallback = fallbackBlocks();
+
+  const supabase = createPublicClient();
+  if (!supabase) return fallback;
+
+  try {
+    const { data, error } = await supabase
+      .from("content_blocks")
+      .select("*")
+      .eq("published", true)
+      .order("sort_order", { ascending: true });
+
+    if (error) throw error;
+
+    const rows = (data ?? []) as ContentBlockRow[];
+    const of = (section: string) =>
+      rows.filter((r) => r.section === section).map(rowToBlock);
+
+    /** 그 구역이 DB 에 하나도 없으면 config 내용을 씁니다 */
+    const pick = (section: string, fb: Block[]) => {
+      const list = of(section);
+      return list.length ? list : fb;
+    };
+
+    // 머리말은 목록이 아니라 이름표라, 있는 것만 덮어씁니다.
+    // 새 구역을 코드에 추가하고 SQL 을 아직 안 돌렸을 때 그 구역만 비는 것을 막습니다.
+    const copy = { ...fallback.copy };
+    for (const b of of("copy")) {
+      if (b.slug) copy[b.slug] = { eyebrow: b.eyebrow, title: b.title, desc: b.sub };
+    }
+
+    return {
+      copy,
+      why: pick("why", fallback.why),
+      stats: pick("stat", fallback.stats),
+      process: pick("process", fallback.process),
+      fabrication: pick("fabrication", fallback.fabrication),
+      signTypes: pick("sign_type", fallback.signTypes),
+    };
+  } catch (e) {
+    console.error("[cms] 페이지 문구를 못 읽어 기본 내용으로 대체합니다.", e);
+    return fallback;
   }
 }

@@ -8,6 +8,7 @@ const NAV = [
   { href: "/admin/quotes", label: "견적 문의" },
   { href: "/admin/hero", label: "첫 화면 사진" },
   { href: "/admin/works", label: "주요 실적" },
+  { href: "/admin/content", label: "페이지 문구" },
 ];
 
 /** 관리자 화면 공통 껍데기. 각 페이지가 `requireAdmin()` 을 통과한 뒤 감싸 씁니다. */

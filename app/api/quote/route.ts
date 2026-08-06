@@ -4,7 +4,9 @@ import path from "node:path";
 import { MAX_FILES, MAX_FILE_BYTES, validateFull, validateQuick } from "@/lib/validate";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isCmsEnabled } from "@/lib/supabase/env";
-import { notifyNewQuote } from "@/lib/notify";
+import { notifyNewQuote, toMailAttachments } from "@/lib/notify";
+import { uploadQuoteFiles } from "@/lib/quote-files";
+import type { QuoteFile } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
 
@@ -81,9 +83,30 @@ export async function POST(req: Request) {
       );
     }
 
+    const supabase = createPublicClient();
+
+    /**
+     * 첨부파일 — **DB 에 넣기 전에** 스토리지부터 올립니다.
+     *
+     * 순서가 이상해 보이지만 이유가 있습니다. `quotes` 의 RLS 는 익명에게
+     * INSERT 만 허용합니다(0002). UPDATE 권한이 없으니 행을 먼저 만들고 나서
+     * 파일 경로를 채워 넣을 수가 없습니다. 그래서 ID 를 여기서 미리 만들고,
+     * 파일을 그 ID 폴더에 올린 뒤, 경로까지 담아 **한 번에** INSERT 합니다.
+     * (익명에게 UPDATE 를 열어 주는 쪽이 훨씬 나쁩니다 — 누구나 남의 문의를
+     *  고칠 수 있게 됩니다. [원칙 A2])
+     *
+     * 업로드가 실패해도 접수는 계속합니다. 사진을 잃는 것과 문의를 통째로
+     * 잃는 것 중에는 후자가 비교할 수 없이 큽니다.
+     */
+    const id = crypto.randomUUID();
+    const storedFiles: QuoteFile[] = supabase
+      ? await uploadQuoteFiles(supabase, id, files)
+      : files.map((f) => ({ name: f.name, size: f.size, type: f.type }));
+
     const record = {
       ...data,
-      files: files.map((f) => ({ name: f.name, size: f.size, type: f.type })),
+      id,
+      files: storedFiles,
       ip,
       receivedAt: new Date().toISOString(),
     };
@@ -100,9 +123,9 @@ export async function POST(req: Request) {
     let stored = false;
 
     // 1순위: DB (배포 환경에서 유일하게 확실한 저장소)
-    const supabase = createPublicClient();
     if (supabase) {
       const { error } = await supabase.from("quotes").insert({
+        id: record.id,
         kind: record.kind,
         name: record.name,
         phone: record.phone,
@@ -170,19 +193,25 @@ export async function POST(req: Request) {
      * 환경변수를 안 넣으면 조용히 아무것도 안 합니다(기본 꺼짐).
      */
     try {
-      const sent = await notifyNewQuote({
-        kind: record.kind,
-        name: record.name,
-        phone: record.phone,
-        email: record.email,
-        region: record.region,
-        signType: record.signType,
-        timing: record.timing,
-        address: [record.address, record.addressDetail].filter(Boolean).join(" "),
-        message: record.message,
-        fileCount: record.files.length,
-        receivedAt: record.receivedAt,
-      });
+      // 사진을 메일에 그대로 붙입니다 — 현장에서 휴대폰으로 메일만 봐도 사양이 보이게
+      const attachments = await toMailAttachments(files);
+
+      const sent = await notifyNewQuote(
+        {
+          kind: record.kind,
+          name: record.name,
+          phone: record.phone,
+          email: record.email,
+          region: record.region,
+          signType: record.signType,
+          timing: record.timing,
+          address: [record.address, record.addressDetail].filter(Boolean).join(" "),
+          message: record.message,
+          files: record.files.map((f) => ({ name: f.name, stored: Boolean(f.path) })),
+          receivedAt: record.receivedAt,
+        },
+        attachments
+      );
       if (sent.length) console.log("[견적문의] 알림 발송:", sent.join(", "));
     } catch (e) {
       console.error("[견적문의] 알림 처리 중 예외(접수는 정상):", e);

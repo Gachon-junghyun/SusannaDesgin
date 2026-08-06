@@ -5,9 +5,8 @@ import Img from "@/components/Img";
 import JsonLd from "@/components/JsonLd";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
-import { equipment, signTypes, stats, steps } from "@/config/content";
 import { site } from "@/config/site";
-import { getSlides, getWorks } from "@/lib/cms";
+import { getBlocks, getSlides, getWorks } from "@/lib/cms";
 import { imageExists } from "@/lib/images";
 
 /**
@@ -45,9 +44,25 @@ const websiteJsonLd = {
   url: site.url,
 };
 
+/**
+ * 구역 제목은 관리자 화면에서 줄바꿈을 넣을 수 있습니다(F19).
+ * 화면에서도 같은 자리에서 줄이 나뉘도록 `whitespace-pre-line` 로 감쌉니다.
+ */
+function Lines({ text }: { text: string }) {
+  return <span className="block whitespace-pre-line">{text}</span>;
+}
+
 export default async function Home() {
-  const [slides, works] = await Promise.all([getSlides(), getWorks()]);
+  const [slides, works, blocks] = await Promise.all([
+    getSlides(),
+    getWorks(),
+    getBlocks(),
+  ]);
   const heroSlides = slides.map((s) => ({ ...s, available: imageExists(s.image) }));
+
+  /** 없는 구역을 불러도 화면이 깨지지 않게 빈 문구를 돌려줍니다 [A1] */
+  const copy = (slug: string) =>
+    blocks.copy[slug] ?? { eyebrow: "", title: "", desc: "" };
 
   return (
     <>
@@ -66,18 +81,18 @@ export default async function Home() {
         className="relative z-10 -mt-8 scroll-mt-24 rounded-t-[28px] border-b border-line bg-white shadow-[0_-12px_40px_rgba(0,0,0,.18)] md:-mt-10 md:rounded-t-[36px]"
       >
         <ul className="wrap grid grid-cols-2 divide-x divide-y divide-line lg:grid-cols-4 lg:divide-y-0">
-          {signTypes.map((t, idx) => (
-            <li key={t.slug}>
+          {blocks.signTypes.map((t, idx) => (
+            <li key={t.slug || idx}>
               <Link
-                href={`/signs#${t.slug}`}
+                href={t.slug ? `/signs#${t.slug}` : "/signs"}
                 className="group flex flex-col items-center gap-1 px-4 py-8 text-center transition-colors hover:bg-paper md:py-10"
               >
                 <Reveal delay={idx * 70}>
                   <span className="block text-[11px] font-bold tracking-[0.2em] text-ink-500">
-                    {t.en}
+                    {t.eyebrow}
                   </span>
                   <span className="mt-1 block text-lg font-black transition-colors group-hover:text-brand">
-                    {t.name}
+                    {t.title}
                   </span>
                 </Reveal>
               </Link>
@@ -91,44 +106,23 @@ export default async function Home() {
         <div className="grid gap-12 lg:grid-cols-[1fr_1.1fr] lg:items-center">
           <Reveal>
             <SectionHeading
-              eyebrow="WHY SUSANNA"
-              title={
-                <>
-                  만드는 곳과 다는 곳이
-                  <br />
-                  같아야 책임이 명확합니다
-                </>
-              }
-              desc="제작과 시공이 나뉘면 문제가 생겼을 때 서로를 가리킵니다. 수산나디자인은 2012년부터 디자인·제작·시공·관리를 한 팀이 맡아 왔습니다."
+              eyebrow={copy("home-why").eyebrow}
+              title={<Lines text={copy("home-why").title} />}
+              desc={copy("home-why").desc}
             />
 
             <ul className="mt-8 space-y-4">
-              {[
-                {
-                  t: "795평 자체 공장",
-                  d: "절단·가공·도색·조립을 외주 없이 공장 안에서 끝냅니다.",
-                },
-                {
-                  t: "사인물과 철구조물을 함께",
-                  d: "캐노피·파사드 같은 구조물까지 한 번에 설계하고 시공합니다.",
-                },
-                {
-                  t: "대형 현장 경험",
-                  d: "삼성화재, KAIST, 교보생명, 금성백조, 대전무역회관 등을 시공했습니다.",
-                },
-                {
-                  t: "인증·등록 6종 보유",
-                  d: "옥외광고사업 등록, 직접생산확인, 공장등록을 갖춘 정식 등록 업체입니다.",
-                },
-              ].map((f) => (
-                <li key={f.t} className="flex gap-4">
+              {blocks.why.map((f, idx) => (
+                <li key={f.title || idx} className="flex gap-4">
                   <span
                     aria-hidden="true"
                     className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand"
                   />
                   <div>
-                    <p className="font-bold">{f.t}</p>
-                    <p className="mt-0.5 text-[15px] leading-relaxed text-ink-500">{f.d}</p>
+                    <p className="font-bold">{f.title}</p>
+                    <p className="mt-0.5 text-[15px] leading-relaxed text-ink-500">
+                      {f.sub}
+                    </p>
                   </div>
                 </li>
               ))}
@@ -150,13 +144,13 @@ export default async function Home() {
 
         {/* 신뢰 지표 */}
         <dl className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-line lg:grid-cols-4">
-          {stats.map((s) => (
-            <div key={s.label} className="bg-white px-6 py-8 text-center">
+          {blocks.stats.map((s, idx) => (
+            <div key={s.sub || idx} className="bg-white px-6 py-8 text-center">
               <dd className="text-3xl font-black tracking-tight md:text-4xl">
-                {s.value}
-                <span className="ml-0.5 text-lg text-ink-500">{s.unit}</span>
+                {s.title}
+                <span className="ml-0.5 text-lg text-ink-500">{s.eyebrow}</span>
               </dd>
-              <dt className="mt-1.5 text-[14px] font-medium text-ink-500">{s.label}</dt>
+              <dt className="mt-1.5 text-[14px] font-medium text-ink-500">{s.sub}</dt>
             </div>
           ))}
         </dl>
@@ -165,35 +159,37 @@ export default async function Home() {
       {/* 제작 공정 */}
       <Section className="bg-paper">
         <SectionHeading
-          eyebrow="PROCESS"
-          title="상담부터 시공까지, 이렇게 진행됩니다"
-          desc="현장 확인과 시안 제작까지 무료로 진행합니다."
+          eyebrow={copy("home-process").eyebrow}
+          title={<Lines text={copy("home-process").title} />}
+          desc={copy("home-process").desc}
           center
         />
 
         <ol className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-          {steps.map((s, idx) => (
+          {blocks.process.map((s, idx) => (
             <Reveal
               as="li"
-              key={s.no}
+              key={s.eyebrow || idx}
               delay={idx * 90}
               className="overflow-hidden rounded-2xl bg-white"
             >
               <div className="relative aspect-4/3">
                 <Img
                   src={s.image}
-                  alt={s.title}
+                  alt={s.alt || s.title}
                   width={640}
                   height={480}
                   fill
                   sizes="(max-width: 640px) 100vw, 300px"
-                  label={`${s.no}. ${s.title}`}
+                  label={`${s.eyebrow}. ${s.title}`}
                 />
               </div>
               <div className="p-6">
-                <p className="text-[13px] font-black tracking-widest text-brand">{s.no}</p>
+                <p className="text-[13px] font-black tracking-widest text-brand">
+                  {s.eyebrow}
+                </p>
                 <h3 className="mt-1 text-lg font-black">{s.title}</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-ink-500">{s.desc}</p>
+                <p className="mt-2 text-[14px] leading-relaxed text-ink-500">{s.sub}</p>
               </div>
             </Reveal>
           ))}
@@ -213,9 +209,9 @@ export default async function Home() {
       <Section>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionHeading
-            eyebrow="OUR WORK"
-            title="주요 실적"
-            desc="관공서 · 금융 · 기업 · 상업시설 등 다양한 분야에서 시공했습니다."
+            eyebrow={copy("home-works").eyebrow}
+            title={<Lines text={copy("home-works").title} />}
+            desc={copy("home-works").desc}
           />
           <Link
             href="/works"
@@ -256,40 +252,34 @@ export default async function Home() {
       <Section className="bg-ink text-white">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-center">
           <SectionHeading
-            eyebrow="FABRICATION"
-            title={
-              <>
-                공장을 가졌다는 건
-                <br />
-                일정을 지킬 수 있다는 뜻입니다
-              </>
-            }
-            desc="절단부터 검수까지 795평 자체 공장 안에서 끝냅니다. 외주 대기로 납기가 밀리지 않습니다."
+            eyebrow={copy("home-fabrication").eyebrow}
+            title={<Lines text={copy("home-fabrication").title} />}
+            desc={copy("home-fabrication").desc}
             dark
           />
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            {equipment.map((e, idx) => (
+            {blocks.fabrication.map((e, idx) => (
               <Reveal
                 as="li"
-                key={e.name}
+                key={e.title || idx}
                 delay={(idx % 3) * 90}
                 className="overflow-hidden rounded-xl bg-ink-800"
               >
                 <div className="relative aspect-square">
                   <Img
                     src={e.image}
-                    alt={e.name}
+                    alt={e.alt || e.title}
                     width={800}
                     height={600}
                     fill
                     sizes="200px"
-                    label={e.name}
+                    label={e.title}
                     dark
                   />
                 </div>
                 <div className="p-4">
-                  <p className="font-bold">{e.name}</p>
-                  <p className="mt-0.5 text-[13px] text-white/50">{e.desc}</p>
+                  <p className="font-bold">{e.title}</p>
+                  <p className="mt-0.5 text-[13px] text-white/50">{e.sub}</p>
                 </div>
               </Reveal>
             ))}
@@ -301,11 +291,11 @@ export default async function Home() {
       <section className="bg-brand py-16 text-white md:py-20">
         <div className="wrap flex flex-col items-center gap-8 text-center md:flex-row md:justify-between md:text-left">
           <div>
-            <h2 className="text-3xl font-black tracking-tight md:text-4xl">
-              어느 정도 규모인지 알려주세요
+            <h2 className="text-3xl font-black tracking-tight whitespace-pre-line md:text-4xl">
+              {copy("home-cta").title}
             </h2>
-            <p className="mt-3 leading-relaxed text-white/85">
-              현장 확인과 디자인 시안까지 무료입니다. 부담 없이 문의하세요.
+            <p className="mt-3 leading-relaxed whitespace-pre-line text-white/85">
+              {copy("home-cta").desc}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">

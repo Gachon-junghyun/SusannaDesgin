@@ -16,20 +16,27 @@ export type Slide = {
 export const slides: Slide[] = [
   {
     eyebrow: "01",
+    title: "안녕하세요\n수산나디자인입니다",
+    sub: "2012년부터 대전에서 간판을 디자인하고 만들고 세워 왔습니다. 상담부터 시공 후 관리까지 한자리에서 맡습니다.",
+    image: "/images/work-01.jpg",
+    alt: "저녁 무렵 점등된 고층 건물 옥상 간판",
+  },
+  {
+    eyebrow: "02",
     title: "건물의 이름을\n가장 높은 곳에",
     sub: "빌딩 외벽, 옥상 광고탑, 도로변 사인까지. 규모가 큰 현장을 다뤄 왔습니다.",
     image: "/images/hero-night.jpg",
     alt: "야간 점등된 옥상 광고탑",
   },
   {
-    eyebrow: "02",
+    eyebrow: "03",
     title: "795평 자체 공장에서\n직접 만듭니다",
     sub: "절단·가공·도색·조립을 공장 안에서 끝내기 때문에 일정과 품질을 저희가 통제합니다.",
     image: "/images/hero-factory.jpg",
     alt: "수산나디자인 자체 공장 제작 현장",
   },
   {
-    eyebrow: "03",
+    eyebrow: "04",
     title: "사인물을 넘어\n철구조물까지",
     sub: "캐노피, 파사드, 구조물 설계와 제작·시공을 함께 진행합니다.",
     image: "/images/hero-install.jpg",
@@ -103,6 +110,8 @@ export type Step = {
   title: string;
   desc: string;
   image: string;
+  /** `/process` 상세 페이지에서 단계마다 펼쳐 보여주는 항목 */
+  points: string[];
 };
 
 /** 업무 프로세스 — 회사소개서 06 — 640×480 */
@@ -112,30 +121,55 @@ export const steps: Step[] = [
     title: "상담 및 접수",
     desc: "고객 요구사항을 파악하고 현장을 직접 확인합니다.",
     image: "/images/step-1-consult.jpg",
+    points: [
+      "요구사항을 듣고 현장을 직접 확인합니다.",
+      "벽면 재질과 상태를 봅니다. 드라이비트·석재·유리마다 고정 방식이 달라집니다.",
+      "전기 인입 위치, 층수, 도로 폭을 확인합니다. 고소작업차 진입 여부가 시공비를 좌우합니다.",
+    ],
   },
   {
     no: "02",
     title: "디자인 기획",
     desc: "콘셉트를 설정하고 시안을 제작합니다.",
     image: "/images/step-2-design.jpg",
+    points: [
+      "건물 용도와 브랜드 톤에 맞춰 콘셉트를 잡습니다.",
+      "실제 건물 사진에 사인물을 합성해 보여드립니다.",
+      "주간 시안과 야간 점등 시안을 함께 드립니다.",
+    ],
   },
   {
     no: "03",
     title: "시안 확정",
     desc: "고객 검토를 거쳐 최종 디자인을 확정합니다.",
     image: "/images/step-3-confirm.jpg",
+    points: [
+      "시안을 검토하시고 최종안을 확정합니다.",
+      "확정 전까지 수정해 드리며, 시안 제작에는 비용이 들지 않습니다.",
+      "확정 후 제작 도면과 일정을 공유합니다.",
+    ],
   },
   {
     no: "04",
     title: "제작",
     desc: "795평 자체 공장에서 전문 인력이 제작합니다.",
     image: "/images/step-4-production.jpg",
+    points: [
+      "795평 자체 공장에서 절단·가공·도색·조립을 진행합니다.",
+      "외주로 넘기지 않기 때문에 일정과 품질을 저희가 통제합니다.",
+      "철구조물이 포함된 경우 구조 검토 후 함께 제작합니다.",
+    ],
   },
   {
     no: "05",
     title: "시공 및 완료",
     desc: "현장 시공 후 A/S까지 관리합니다.",
     image: "/images/step-5-install.jpg",
+    points: [
+      "자사 제작시공팀이 직접 설치합니다.",
+      "옥외광고물 신고가 필요한 경우 행정 절차를 대행합니다.",
+      "설치 후 점등·안전 확인까지 마치고 A/S를 관리합니다.",
+    ],
   },
 ];
 
@@ -200,8 +234,10 @@ export const workCategories = [
   "생활·문화", // 교회·체육관·커뮤니티시설 등. 2026-07 실적 사진 추가하며 신설
 ];
 
+export type Fab = { name: string; desc: string; image: string };
+
 /** 공장 공정 — 구 회사소개서 05. 업무프로세스 (절단→검수) — 800×600 */
-export const equipment = [
+export const equipment: Fab[] = [
   { name: "절단", desc: "판재·형강 재단", image: "/images/fab-1-cut.jpg" },
   { name: "가공", desc: "밴딩·성형 가공", image: "/images/fab-2-form.jpg" },
   { name: "도색", desc: "분체·우레탄 도장", image: "/images/fab-3-paint.jpg" },
@@ -234,12 +270,75 @@ export const vision = {
   ],
 };
 
+export type Stat = { value: string; unit: string; label: string };
+
 /** 신뢰 지표 */
-export const stats = [
+export const stats: Stat[] = [
   { value: "2012", unit: "년~", label: "설립" },
   { value: "795", unit: "평", label: "자체 공장" },
   { value: "6", unit: "종", label: "보유 인증·등록" },
   { value: "0,000", unit: "건", label: "누적 시공" }, // TODO — 실제 건수로 교체
+];
+
+/**
+ * 홈 각 구역의 머리말(작은 영문 · 큰 제목 · 설명).
+ *
+ * 예전에는 `app/page.tsx` 안에 그대로 적혀 있어서 문구 한 줄을 고치려면 코드를
+ * 고치고 배포해야 했습니다. 회사 문구는 `config/` 밖으로 새지 않는다는 원칙(A5)에
+ * 어긋나기도 했습니다. 지금은 여기 있고, **관리자 화면(F19)에서도 바꿉니다.**
+ *
+ * `title` 의 줄바꿈(`\n`)은 화면에서도 그대로 줄이 나뉩니다.
+ */
+export type SectionCopy = { eyebrow: string; title: string; desc: string };
+
+export const sectionCopy: Record<string, SectionCopy> = {
+  "home-why": {
+    eyebrow: "WHY SUSANNA",
+    title: "만드는 곳과 다는 곳이\n같아야 책임이 명확합니다",
+    desc: "제작과 시공이 나뉘면 문제가 생겼을 때 서로를 가리킵니다. 수산나디자인은 2012년부터 디자인·제작·시공·관리를 한 팀이 맡아 왔습니다.",
+  },
+  "home-process": {
+    eyebrow: "PROCESS",
+    title: "상담부터 시공까지, 이렇게 진행됩니다",
+    desc: "현장 확인과 시안 제작까지 무료로 진행합니다.",
+  },
+  "home-works": {
+    eyebrow: "OUR WORK",
+    title: "주요 실적",
+    desc: "관공서 · 금융 · 기업 · 상업시설 등 다양한 분야에서 시공했습니다.",
+  },
+  "home-fabrication": {
+    eyebrow: "FABRICATION",
+    title: "공장을 가졌다는 건\n일정을 지킬 수 있다는 뜻입니다",
+    desc: "절단부터 검수까지 795평 자체 공장 안에서 끝냅니다. 외주 대기로 납기가 밀리지 않습니다.",
+  },
+  "home-cta": {
+    eyebrow: "",
+    title: "어느 정도 규모인지 알려주세요",
+    desc: "현장 확인과 디자인 시안까지 무료입니다. 부담 없이 문의하세요.",
+  },
+};
+
+/** 홈 WHY SUSANNA 구역의 근거 네 줄 */
+export type WhyPoint = { title: string; desc: string };
+
+export const whyPoints: WhyPoint[] = [
+  {
+    title: "795평 자체 공장",
+    desc: "절단·가공·도색·조립을 외주 없이 공장 안에서 끝냅니다.",
+  },
+  {
+    title: "사인물과 철구조물을 함께",
+    desc: "캐노피·파사드 같은 구조물까지 한 번에 설계하고 시공합니다.",
+  },
+  {
+    title: "대형 현장 경험",
+    desc: "삼성화재, KAIST, 교보생명, 금성백조, 대전무역회관 등을 시공했습니다.",
+  },
+  {
+    title: "인증·등록 6종 보유",
+    desc: "옥외광고사업 등록, 직접생산확인, 공장등록을 갖춘 정식 등록 업체입니다.",
+  },
 ];
 
 /** 견적폼 선택지 */
