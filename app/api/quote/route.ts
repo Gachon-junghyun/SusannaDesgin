@@ -5,7 +5,7 @@ import { MAX_FILES, MAX_FILE_BYTES, validateFull, validateQuick } from "@/lib/va
 import { createPublicClient } from "@/lib/supabase/public";
 import { isCmsEnabled } from "@/lib/supabase/env";
 import { notifyNewQuote, toMailAttachments } from "@/lib/notify";
-import { uploadQuoteFiles } from "@/lib/quote-files";
+import { readQuoteFiles, uploadQuoteFiles } from "@/lib/quote-files";
 import type { QuoteFile } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -99,9 +99,18 @@ export async function POST(req: Request) {
      * 잃는 것 중에는 후자가 비교할 수 없이 큽니다.
      */
     const id = crypto.randomUUID();
+
+    /**
+     * 🔴 파일 바이트는 **여기서 딱 한 번** 읽습니다 (2026-08-06 운영 장애).
+     *    예전에는 `File` 을 업로드에 넘기고 같은 `File` 을 메일 첨부용으로 다시
+     *    읽었는데, 운영(workerd)에서는 첫 업로드가 스트림을 소비해 두 번째 읽기가
+     *    비어 버렸습니다. 자세한 경위는 `lib/quote-files.ts` 의 `QuoteUpload` 주석에.
+     */
+    const uploads = await readQuoteFiles(files);
+
     const storedFiles: QuoteFile[] = supabase
-      ? await uploadQuoteFiles(supabase, id, files)
-      : files.map((f) => ({ name: f.name, size: f.size, type: f.type }));
+      ? await uploadQuoteFiles(supabase, id, uploads)
+      : uploads.map((f) => ({ name: f.name, size: f.size, type: f.type }));
 
     const record = {
       ...data,
@@ -194,7 +203,18 @@ export async function POST(req: Request) {
      */
     try {
       // 사진을 메일에 그대로 붙입니다 — 현장에서 휴대폰으로 메일만 봐도 사양이 보이게
-      const attachments = await toMailAttachments(files);
+      const attachments = toMailAttachments(uploads);
+
+      /**
+       * 첨부가 몇 장 붙었는지 **반드시 남깁니다.** 예전에 첨부가 조용히 비어서
+       * Resend 가 요청째로 거부했고, 거부된 요청은 발송 로그에도 안 남아
+       * "저장은 되는데 알림만 사라지는" 상태를 한참 못 찾았습니다.
+       */
+      if (uploads.length) {
+        console.log(
+          `[견적문의] 첨부 ${uploads.length}장 중 ${attachments.length}장을 메일에 첨부합니다.`
+        );
+      }
 
       const sent = await notifyNewQuote(
         {

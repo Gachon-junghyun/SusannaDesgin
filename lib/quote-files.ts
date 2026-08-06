@@ -37,6 +37,39 @@ function objectKey(quoteId: string, index: number, name: string): string {
 }
 
 /**
+ * 업로드된 파일을 **한 번만 읽어** 메모리에 들고 있는 형태.
+ *
+ * 🔴 **`File` 을 그대로 돌려쓰면 안 됩니다 (2026-08-06 운영 장애).**
+ *    예전에는 `File` 을 스토리지 업로드에 넘기고, 같은 `File` 을 메일 첨부용으로
+ *    다시 `arrayBuffer()` 했습니다. Node(로컬)에서는 `Blob` 이 메모리 기반이라
+ *    두 번 읽혀서 통과했지만, **운영(Cloudflare workerd)에서는 첫 업로드가
+ *    본문 스트림을 소비해 두 번째 읽기가 빈 내용**이 됐습니다.
+ *    빈 첨부는 Resend 가 요청 단계에서 거부하고, 거부된 요청은 발송 로그에도
+ *    안 남아서 **"저장은 되는데 알림만 조용히 사라지는"** 상태가 됐습니다.
+ *
+ *    그래서 라우트가 **맨 앞에서 딱 한 번** 바이트를 읽고, 저장과 메일이
+ *    그 바이트를 나눠 씁니다. 아래 함수들이 `File` 이 아니라 이 타입을 받는 이유입니다.
+ */
+export type QuoteUpload = {
+  name: string;
+  type: string;
+  size: number;
+  bytes: Uint8Array;
+};
+
+/** 폼으로 들어온 `File` 을 한 번에 읽어 둡니다. 이후로는 아무도 `File` 을 만지지 않습니다. */
+export async function readQuoteFiles(files: File[]): Promise<QuoteUpload[]> {
+  return Promise.all(
+    files.map(async (f) => ({
+      name: f.name,
+      type: f.type,
+      size: f.size,
+      bytes: new Uint8Array(await f.arrayBuffer()),
+    }))
+  );
+}
+
+/**
  * 첨부파일을 버킷에 올리고, DB 에 적을 메타데이터를 돌려줍니다.
  *
  * **한 장이 실패해도 나머지는 올립니다.** 그리고 예외를 밖으로 던지지 않습니다 —
@@ -46,15 +79,16 @@ function objectKey(quoteId: string, index: number, name: string): string {
 export async function uploadQuoteFiles(
   supabase: SupabaseClient,
   quoteId: string,
-  files: File[]
+  uploads: QuoteUpload[]
 ): Promise<QuoteFile[]> {
   return Promise.all(
-    files.map(async (file, i): Promise<QuoteFile> => {
+    uploads.map(async (file, i): Promise<QuoteFile> => {
       const meta = { name: file.name, size: file.size, type: file.type };
       const path = objectKey(quoteId, i, file.name);
 
       try {
-        const { error } = await supabase.storage.from(QUOTE_BUCKET).upload(path, file, {
+        // 바이트를 넘깁니다 — File 을 넘기면 스트림이 소비돼 메일 첨부가 비어 버립니다
+        const { error } = await supabase.storage.from(QUOTE_BUCKET).upload(path, file.bytes, {
           contentType: file.type || "application/octet-stream",
           upsert: false,
         });

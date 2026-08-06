@@ -1,5 +1,6 @@
 import "server-only";
 import { site } from "@/config/site";
+import type { QuoteUpload } from "@/lib/quote-files";
 
 /**
  * 견적 문의 실시간 알림.
@@ -57,6 +58,23 @@ export type QuoteNotice = {
 export type MailAttachment = { filename: string; content: string };
 
 /**
+ * 바이트 → base64.
+ *
+ * `Buffer` 를 쓰지 않습니다. 운영은 Cloudflare workerd 라 Node 전용 전역이
+ * 있으리라 가정하지 않는 편이 안전하고, 이 함수는 표준 API 만 씁니다.
+ * `String.fromCharCode(...arr)` 를 한 번에 부르면 큰 파일에서 스택이 터지므로
+ * 조각을 나눠 붙입니다.
+ */
+function toBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000; // 32KB — 인자 개수 상한에 안 걸리는 크기
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+/**
  * 업로드된 파일을 메일 첨부로 바꿉니다.
  *
  * **왜 메일에 직접 붙이나**: 간판 견적에서 사진 한 장이 곧 사양서입니다. 링크를
@@ -66,9 +84,12 @@ export type MailAttachment = { filename: string; content: string };
  * **전부 아니면 전무**: 총량을 넘으면 일부만 붙이지 않고 하나도 안 붙입니다.
  * 다섯 장 중 세 장만 온 메일은 "왜 두 장이 없지" 로 헷갈리고, 그 헷갈림이
  * 고객에게 다시 묻는 전화로 이어집니다.
+ *
+ * ⚠️ **이미 읽어 둔 바이트를 받습니다** (`File` 이 아닙니다). 이유는
+ *    `lib/quote-files.ts` 의 `QuoteUpload` 주석에 있습니다 — 운영 장애의 원인이었습니다.
  */
-export async function toMailAttachments(files: File[]): Promise<MailAttachment[]> {
-  const total = files.reduce((n, f) => n + f.size, 0);
+export function toMailAttachments(uploads: QuoteUpload[]): MailAttachment[] {
+  const total = uploads.reduce((n, f) => n + f.bytes.length, 0);
   if (total > MAX_ATTACH_TOTAL) {
     console.warn(
       `[견적문의] 첨부 ${Math.round(total / 1024 / 1024)}MB 는 메일에 붙이기엔 큽니다. ` +
@@ -78,12 +99,17 @@ export async function toMailAttachments(files: File[]): Promise<MailAttachment[]
   }
 
   const out: MailAttachment[] = [];
-  for (const f of files) {
+  for (const f of uploads) {
+    // 빈 첨부는 Resend 가 요청째로 거부하고, 거부된 요청은 발송 로그에도 안 남습니다.
+    // 그러면 "저장은 됐는데 알림만 사라진" 상태가 되므로 여기서 먼저 걸러 냅니다.
+    if (!f.bytes.length) {
+      console.error(`[견적문의] 첨부 내용이 비어 있어 메일에 붙이지 않습니다 (${f.name}).`);
+      return [];
+    }
     try {
-      const buf = new Uint8Array(await f.arrayBuffer());
-      out.push({ filename: f.name, content: Buffer.from(buf).toString("base64") });
+      out.push({ filename: f.name, content: toBase64(f.bytes) });
     } catch (e) {
-      console.error(`[견적문의] 첨부를 메일용으로 읽지 못했습니다 (${f.name}):`, e);
+      console.error(`[견적문의] 첨부를 메일용으로 변환하지 못했습니다 (${f.name}):`, e);
       return []; // 위와 같은 이유 — 반쪽짜리 메일을 만들지 않습니다
     }
   }
