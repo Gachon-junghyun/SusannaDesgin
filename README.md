@@ -357,31 +357,34 @@ Resend 가 같이 권하는 **루트 MX(수신용)는 일부러 넣지 않았습
 > 로그인 안 한 사람은 열 수 없는 것까지 확인했습니다. 문의를 지우면 사진도 같이
 > 지워집니다. 나중에 다시 점검하고 싶으시면 `npm run quotes:check` 를 실행하세요.
 
-#### ✅ 운영 알림 작동 확인 (2026-08-06)
+#### 🔴 지금 해야 할 일 — 값 2개를 **Secret 으로** 다시 넣기
 
-Cloudflare 워커(`susannadesgin`)의 **Variables and secrets (런타임)** 에 세 값이
-들어갔고, 운영 홈페이지 폼으로 실제 접수해 **접수와 같은 초에 세 주소로 메일이
-도착하는 것**을 확인했습니다. 시험 문의는 지웠습니다.
+**알림이 지금 꺼져 있습니다.** 12:03 에 넣으신 값 3개가 12:10 배포 때 **전부
+지워졌습니다.** 실수가 아니라 Cloudflare 의 동작입니다 — 배포 명령이 워커 설정을
+통째로 덮어쓰는데, 이때 **`Plaintext` 로 넣은 값은 사라지고 `Secret` 만 살아남습니다.**
+
+그래서 `QUOTE_MAIL_FROM` 은 코드(`wrangler.jsonc`)로 옮겨 두었습니다. 이제 안 지워집니다.
+**남은 둘만 넣으시면 됩니다. 반드시 `Secret` 타입으로.**
+
+Cloudflare → 워커 `susannadesgin` → **Settings → Variables and secrets** → `+ Add`
+→ 타입을 **Secret** 으로 고르고:
 
 ```
-RESEND_API_KEY      (resend.com → API Keys)
-QUOTE_NOTIFY_EMAIL  = fivepeople201@gmail.com,poing7003@naver.com,sujin4003@hanmail.net
-QUOTE_MAIL_FROM     = noreply@susannadesign.co.kr
+RESEND_API_KEY      (resend.com → API Keys 의 값)
+QUOTE_NOTIFY_EMAIL  fivepeople201@gmail.com,poing7003@naver.com,sujin4003@hanmail.net
 ```
 
-> ⚠️ 나중에 값을 고치실 때: **빌드 변수가 아니라 런타임 칸**이어야 합니다.
-> 서버가 돌면서 읽는 값입니다. 8월 3일 실제 문의 알림이 안 간 원인이 이 칸이
-> 비어 있어서였습니다. 그리고 **값을 저장한 직후의 접수는 아직 옛 설정으로 처리될 수
-> 있으니**, 안 온다고 판단하기 전에 한 번 더 넣어 보세요.
+> ⚠️ **`Plaintext` 로 넣으면 다음 배포 때 또 지워집니다.** 반드시 `Secret`.
+> 넣은 뒤 `/admin/quotes` 맨 위 안내가 주황색 경고가 아니면 켜진 것입니다.
 
-#### 🔴 남은 일 — API 키를 Secret 으로 바꾸기
+#### 🔴 그다음 — API 키 새로 발급
 
-`RESEND_API_KEY` 가 지금 **Plaintext(평문)** 로 들어가 있습니다. 대시보드를 볼 수 있는
-사람에게 키가 그대로 보이고, 화면 공유·캡처에도 찍힙니다.
+지난번 키가 `Plaintext` 로 들어가 있어서 대시보드를 볼 수 있는 사람에게 그대로
+보였고, 작업 중 화면 캡처에도 찍혔습니다.
 
-1. resend.com → **API Keys** 에서 **새 키를 발급**하고 기존 키는 **삭제(폐기)**
-2. Cloudflare 의 `RESEND_API_KEY` 를 지우고, 새 키를 **Secret(암호화)** 타입으로 다시 추가
-3. `npm run notify:test` 로 확인 (내 컴퓨터 `.env.local` 의 키도 새 값으로 교체)
+1. resend.com → **API Keys** 에서 **새 키 발급**, 기존 키 **삭제**
+2. 위 `RESEND_API_KEY` Secret 을 새 키로 교체
+3. 내 컴퓨터 `.env.local` 의 키도 새 값으로 바꾸고 `npm run notify:test`
 
 #### ✅ 끝난 것 — 도메인 등록 (2026-08-06)
 
