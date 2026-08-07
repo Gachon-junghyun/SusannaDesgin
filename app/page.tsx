@@ -148,7 +148,7 @@ export default async function Home() {
           <Reveal delay={140} className="relative aspect-4/3 overflow-hidden rounded-2xl">
             <Img
               src="/images/about-factory.jpg"
-              alt="수산나디자인 자체 공장 전경"
+              alt="수산나디자인 자체 공장 내부 — 채널 사인 LED 배선 작업 중"
               width={1200}
               height={900}
               fill
