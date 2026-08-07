@@ -5,7 +5,6 @@ import {
   sectionCopy as fallbackCopy,
   signTypes as fallbackSignTypes,
   slides as fallbackSlides,
-  stats as fallbackStats,
   steps as fallbackSteps,
   whyPoints as fallbackWhy,
   works as fallbackWorks,
@@ -104,7 +103,6 @@ export type SiteBlocks = {
   /** 구역 머리말 — `slug` 로 집어 옵니다 (예: "home-fabrication") */
   copy: Record<string, SectionCopy>;
   why: Block[];
-  stats: Block[];
   process: Block[];
   fabrication: Block[];
   signTypes: Block[];
@@ -143,9 +141,6 @@ function fallbackBlocks(): SiteBlocks {
   return {
     copy: fallbackCopy,
     why: fallbackWhy.map((w) => block({ title: w.title, sub: w.desc })),
-    stats: fallbackStats.map((s) =>
-      block({ title: s.value, eyebrow: s.unit, sub: s.label })
-    ),
     process: fallbackSteps.map((s) =>
       block({
         eyebrow: s.no,
@@ -177,9 +172,14 @@ function fallbackBlocks(): SiteBlocks {
  * 구역별로 따로 부르면 홈 한 번 그리는 데 조회가 다섯 번 나갑니다. 방문마다
  * SSR 하는 구조(§7)라 그 차이가 그대로 응답 시간이 됩니다.
  *
- * 폴백은 **구역 단위**입니다. `process` 만 DB 에 있고 `stat` 이 비어 있으면
- * 프로세스는 DB 값, 지표는 config 값이 나갑니다. 전부-아니면-전무로 만들면
+ * 폴백은 **구역 단위**입니다. `process` 만 DB 에 있고 `why` 가 비어 있으면
+ * 프로세스는 DB 값, 강점은 config 값이 나갑니다. 전부-아니면-전무로 만들면
  * 구역 하나를 지웠을 때 멀쩡한 나머지까지 옛 내용으로 되돌아갑니다.
+ *
+ * ⚠️ **뒤집어 말하면, 한 구역의 항목을 관리자 화면에서 전부 지워도 화면은 비지
+ * 않습니다** — 0건이 되는 순간 config 내용이 대신 나갑니다 [A1]. 실제로 2026-08-07
+ * 에 "숫자 지표를 다 지웠는데 안 없어진다" 는 문의가 이것이었습니다. 구역 자체를
+ * 없애려면 화면에서 지우는 게 아니라 **코드에서 그 구역을 걷어내야** 합니다.
  */
 export async function getBlocks(): Promise<SiteBlocks> {
   const fallback = fallbackBlocks();
@@ -216,7 +216,6 @@ export async function getBlocks(): Promise<SiteBlocks> {
     return {
       copy,
       why: pick("why", fallback.why),
-      stats: pick("stat", fallback.stats),
       process: pick("process", fallback.process),
       fabrication: pick("fabrication", fallback.fabrication),
       signTypes: pick("sign_type", fallback.signTypes),

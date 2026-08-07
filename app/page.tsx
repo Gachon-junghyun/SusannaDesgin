@@ -141,19 +141,6 @@ export default async function Home() {
             />
           </Reveal>
         </div>
-
-        {/* 신뢰 지표 */}
-        <dl className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-line lg:grid-cols-4">
-          {blocks.stats.map((s, idx) => (
-            <div key={s.sub || idx} className="bg-white px-6 py-8 text-center">
-              <dd className="text-3xl font-black tracking-tight md:text-4xl">
-                {s.title}
-                <span className="ml-0.5 text-lg text-ink-500">{s.eyebrow}</span>
-              </dd>
-              <dt className="mt-1.5 text-[14px] font-medium text-ink-500">{s.sub}</dt>
-            </div>
-          ))}
-        </dl>
       </Section>
 
       {/* 제작 공정 */}

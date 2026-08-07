@@ -9,14 +9,14 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata = pageMetadata("/about");
 
 /**
- * 숫자 지표와 공장 공정은 홈과 **같은 블록**을 씁니다(F19). 관리자가 한 번 고치면
+ * 공장 공정은 홈과 **같은 블록**을 씁니다(F19). 관리자가 한 번 고치면
  * 두 페이지가 같이 바뀌어야 하므로 여기서도 DB 를 읽습니다.
  * 연혁·비전·회사 개요는 그대로 `config/` 에 있습니다.
  */
 export const dynamic = "force-dynamic";
 
 export default async function AboutPage() {
-  const { stats, fabrication } = await getBlocks();
+  const { fabrication } = await getBlocks();
 
   return (
     <>
@@ -68,18 +68,6 @@ export default async function AboutPage() {
             />
           </div>
         </div>
-
-        <dl className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-line lg:grid-cols-4">
-          {stats.map((s, i) => (
-            <div key={s.sub || i} className="bg-white px-6 py-8 text-center">
-              <dd className="text-3xl font-black tracking-tight md:text-4xl">
-                {s.title}
-                <span className="ml-0.5 text-lg text-ink-500">{s.eyebrow}</span>
-              </dd>
-              <dt className="mt-1.5 text-[14px] font-medium text-ink-500">{s.sub}</dt>
-            </div>
-          ))}
-        </dl>
       </Section>
 
       {/* 회사 개요 */}

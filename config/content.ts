@@ -270,16 +270,6 @@ export const vision = {
   ],
 };
 
-export type Stat = { value: string; unit: string; label: string };
-
-/** 신뢰 지표 */
-export const stats: Stat[] = [
-  { value: "2012", unit: "년~", label: "설립" },
-  { value: "795", unit: "평", label: "자체 공장" },
-  { value: "6", unit: "종", label: "보유 인증·등록" },
-  { value: "0,000", unit: "건", label: "누적 시공" }, // TODO — 실제 건수로 교체
-];
-
 /**
  * 홈 각 구역의 머리말(작은 영문 · 큰 제목 · 설명).
  *

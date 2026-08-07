@@ -1,12 +1,17 @@
 /**
  * 페이지 문구 구역 명세 — 관리자 화면(F19)이 이 파일 하나만 보고 그려집니다.
  *
- * `content_blocks` 는 여섯 구역을 한 표에 담고 있어서 **칸의 뜻이 구역마다 다릅니다**
- * (`stat` 구역에서 `title` 은 "795", `eyebrow` 는 "평"). 그 대응을 코드 여기저기에
- * 흩어 두면 관리자 화면 라벨과 실제 화면이 어긋납니다. 그래서 한 곳에 모읍니다 [A5].
+ * `content_blocks` 는 여러 구역을 한 표에 담고 있어서 **칸의 뜻이 구역마다 다릅니다**
+ * (`process` 구역에서 `eyebrow` 는 "01", `points` 는 상세 항목). 그 대응을 코드
+ * 여기저기에 흩어 두면 관리자 화면 라벨과 실제 화면이 어긋납니다. 그래서 한 곳에
+ * 모읍니다 [A5].
  *
  * 새 구역을 넣을 때는 ① 마이그레이션의 `check` 목록 ② `ContentSection` 타입
  * ③ 이 배열 ④ `lib/cms.ts` 의 폴백 — 네 곳을 같이 고칩니다.
+ *
+ * ⚠️ **이 배열에 없는 구역은 관리자 화면에 탭이 안 뜹니다.** `stat`(숫자 지표)이
+ * 그렇습니다 — 2026-08-07 에 홈·회사소개에서 지표 띠를 걷어내면서 같이 뺐습니다.
+ * DB 의 `section='stat'` 행은 남아 있지만 어디에도 안 나옵니다.
  */
 
 import type { ContentSection } from "@/lib/supabase/types";
@@ -67,16 +72,6 @@ export const SECTIONS: SectionSpec[] = [
     fields: {
       title: { label: "강점", placeholder: "795평 자체 공장" },
       sub: { label: "설명", placeholder: "절단·가공·도색·조립을 외주 없이 공장 안에서 끝냅니다." },
-    },
-  },
-  {
-    key: "stat",
-    label: "숫자 지표",
-    where: "홈페이지 가운데 네 칸짜리 숫자 띠입니다.",
-    fields: {
-      title: { label: "숫자", hint: "크게 나오는 값", placeholder: "795" },
-      eyebrow: { label: "단위", hint: "숫자 뒤 작은 글씨", placeholder: "평" },
-      sub: { label: "이름", placeholder: "자체 공장" },
     },
   },
   {

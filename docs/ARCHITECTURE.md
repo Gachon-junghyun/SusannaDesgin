@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 최종 갱신 | 2026-08-06 (**공장 전경 사진 투입 — 홈 `about-factory.jpg` + `/about` `about-office.jpg` · §7 사진 부채에서 "사옥 전경 1" 해소** · `public/images/README.md` 에 홈 자리가 누락돼 있던 것을 F4 함정으로 기록 · 알림 환경변수 `Secret` 재등록 완료) · 2026-08-06 (**견적 첨부파일 실보관 — F20 · `quote-files` 비공개 버킷 신설 · 알림 메일에 사진 직접 첨부 · `0006` 운영 실행 완료** · **Resend `susannadesign.co.kr` 도메인 인증 완료** — 회사 주소로 발송·수신자 2인) · 2026-08-06 (**페이지 문구 CMS — F19 · P14 `/admin/content` · `content_blocks` 표 신설** · **견적 알림 메일 미도착 원인 규명·수정** — 발신 도메인 미인증 403, 시험 발신 주소로 자동 우회) · 2026-07-28 (**당근 비즈프로필 등록 — `수산나디자인 간판제작`** · 채널 전략 4종(당근광고·숨고·플레이스→홈페이지 유입·블로그) [`SEO.md`](SEO.md) C1·C5·C6·C8 · **히어로 인사 슬라이드 추가 → 4장** · **네이버 소유확인 완료** · **URL 검사 느낌표 5건 해소** · 실적 사진 12장 투입 · F18 CMS 명령줄 도구 · IndexNow F17) |
+| 최종 갱신 | 2026-08-07 (**숫자 지표 띠(`stat` 구역) 제거 — 홈·`/about` 양쪽.** 4칸 격자에 1건만 남아 **빈 회색 칸 3개**가 보이던 상태였고, 관리자 화면에서 마지막 1건을 지워도 **0건 → config 폴백**으로 되살아나 없앨 수가 없었습니다 [A1의 부작용]. 코드에서 걷어냈습니다 — 두 페이지의 `<dl>` · `config/sections.ts` 명세(관리자 탭) · `lib/cms.ts` `SiteBlocks.stats` · `config/content.ts` `stats`/`Stat`. 마이그레이션 `0005` 와 DB 행은 그대로 둡니다 · §3 F19 에 "구역을 비울 수 없다" 함정 기록) · 2026-08-07 (**주요실적 4건 추가 — CMS `works batch`, 코드·배포 없음.** `belkin · NEWNESS 매장 사인` · `라온카페` · `영림중문 도어 매장 실내 사인` · `청춘예찬` — 전부 상업시설·대전, 사진은 Supabase 스토리지. **F18 CLI 의 실계정 DB 작업이 이때 처음 실증됐습니다**(로그인·`list`·`batch` 4건) · §7.2 미검증 항목 축소) · 2026-08-06 (**Google Analytics 4 설치 — F22 신설**(`G-NNT57E6S9L`, 확정 도메인에서만 로드) · **개인정보처리방침 위탁·쿠키 조항 신설**(법적 의무) · §7 에 GA 속성 3개 정리 + Ads 미완성 캠페인 부채 신설) · 2026-08-06 (**우편번호 교정 `35374`(추정) → `35425`(대표님 확인)** — 푸터·회사개요·오시는길과 **구조화 데이터 `postalCode`** 5곳에 틀린 값이 나가고 있었습니다 · **구글 Search Console 색인 요청 5건**(`/works` `/about` `/process` `/support` `/quote`) · **구글 비즈니스 프로필 소유권 주장 진행중** — 기존 미소유 등록의 카테고리·주소·전화를 교정 · §7 갱신) · 2026-08-06 (**네이버 예약 개설 — 검수 신청까지 완료.** 예약 사업자 `1713161` · 상품 `간판 무료 상담`(날짜선택형·무료·노출중) · 상세소개에서 **사진/도면은 `susannadesign.co.kr/quote` 로 유도** · 적는 칸은 자유 입력(기타 요청사항) · §7 부채 1건 신설 · [`SEO.md`](SEO.md) C1-b 신설) · 2026-08-06 (**오시는길 링크 카드 — F21 신설.** `map.naver.com` 이 `x-frame-options: DENY` 라 지도 임베드가 불가능해, 주소·영업시간 + 네이버 플레이스·카카오맵 길찾기·전화 버튼으로 대체. `/support` 는 정적 유지) · 2026-08-06 (**네이버 스마트플레이스 — 가격정보 9건·영업시간·부가정보 직접 입력 완료**(플레이스 ID `1378209445`) · **`site.naverPlaceUrl` 신설 → `sameAs` 연결** · **`site.geo` 를 등록 좌표로 교체 — 이전 근사값이 실제 위치에서 약 10km 벗어나 있었음** · `site.mapUrl` 채움 · §7 부채 2건 해소·1건 신설(대표키워드·전화번호는 "업체 검토중" 으로 잠김)) · 2026-08-06 (**공장 전경 사진 투입 — 홈 `about-factory.jpg` + `/about` `about-office.jpg` · §7 사진 부채에서 "사옥 전경 1" 해소** · `public/images/README.md` 에 홈 자리가 누락돼 있던 것을 F4 함정으로 기록 · 알림 환경변수 `Secret` 재등록 완료) · 2026-08-06 (**견적 첨부파일 실보관 — F20 · `quote-files` 비공개 버킷 신설 · 알림 메일에 사진 직접 첨부 · `0006` 운영 실행 완료** · **Resend `susannadesign.co.kr` 도메인 인증 완료** — 회사 주소로 발송·수신자 2인) · 2026-08-06 (**페이지 문구 CMS — F19 · P14 `/admin/content` · `content_blocks` 표 신설** · **견적 알림 메일 미도착 원인 규명·수정** — 발신 도메인 미인증 403, 시험 발신 주소로 자동 우회) · 2026-07-28 (**당근 비즈프로필 등록 — `수산나디자인 간판제작`** · 채널 전략 4종(당근광고·숨고·플레이스→홈페이지 유입·블로그) [`SEO.md`](SEO.md) C1·C5·C6·C8 · **히어로 인사 슬라이드 추가 → 4장** · **네이버 소유확인 완료** · **URL 검사 느낌표 5건 해소** · 실적 사진 12장 투입 · F18 CMS 명령줄 도구 · IndexNow F17) |
 | 서비스 주소 | **https://susannadesign.co.kr — 배포 완료·운영 중** (2026-07-26 확인) |
 | 스택 | Next.js 16.2.11 (App Router, Turbopack) · React 19.2.4 · TypeScript 5 · Tailwind CSS v4 |
 | 백엔드 | Supabase (Postgres + Auth + Storage) — **선택적**. 없어도 사이트는 동작 |
@@ -102,7 +102,7 @@ Susanna/
 | # | 경로 | 파일 | 렌더링 | 데이터 출처 |
 |---|---|---|---|---|
 | **P1** | `/` | `app/page.tsx` | **요청 시 SSR** (`dynamic="force-dynamic"`) | **CMS** `getSlides()` `getWorks()` `getBlocks()` + `config/content.ts` |
-| **P2** | `/about` | `app/about/page.tsx` | **요청 시 SSR** (F19) | **CMS** `getBlocks()`(지표·공정) + `config/site.ts` `content.ts`(연혁·비전) |
+| **P2** | `/about` | `app/about/page.tsx` | **요청 시 SSR** (F19) | **CMS** `getBlocks()`(공정) + `config/site.ts` `content.ts`(연혁·비전) |
 | **P3** | `/signs` | `app/signs/page.tsx` | **요청 시 SSR** (F19) | **CMS** `getBlocks().signTypes` |
 | **P4** | `/works` | `app/works/page.tsx` | **요청 시 SSR** (`dynamic="force-dynamic"`) | **CMS** `getWorks()` |
 | **P5** | `/process` | `app/process/page.tsx` | **요청 시 SSR** (F19) | **CMS** `getBlocks().process` (상세 항목 = `points`) |
@@ -128,7 +128,7 @@ Susanna/
 / (P1)
 ├── HeroSlider          ← CMS: hero_slides
 ├── 사업영역 바          ← content.signTypes
-├── WHY SUSANNA         ← 페이지 내 하드코딩 + content.stats
+├── WHY SUSANNA         ← CMS: content_blocks(why) + 페이지 내 하드코딩
 ├── PROCESS 5단계        ← content.steps
 ├── 주요실적 6건         ← CMS: works (앞에서 6개)
 ├── FABRICATION 6종      ← content.equipment
@@ -146,7 +146,7 @@ Susanna/
 | **P11** | `/admin/hero` | `app/admin/hero/page.tsx` | admin | 첫 화면 사진 CRUD + 순서 |
 | **P12** | `/admin/works` | `app/admin/works/page.tsx` | admin | 주요 실적 CRUD + 순서 |
 | **P13** | `/admin/quotes` | `app/admin/quotes/page.tsx` | admin | 견적 문의함. 확인처리·삭제. 대시보드에 미확인 건수 노출. **맨 위에 알림이 켜졌는지·어디로 가는지 표시** (F16) |
-| **P14** | `/admin/content` | `app/admin/content/page.tsx` | admin | **페이지 문구** — 구역 제목·강점·지표·프로세스·공정·사업영역 CRUD + 순서 (F19) |
+| **P14** | `/admin/content` | `app/admin/content/page.tsx` | admin | **페이지 문구** — 구역 제목·강점·프로세스·공정·사업영역 CRUD + 순서 (F19) |
 
 ### 2.3 API
 
@@ -450,6 +450,10 @@ next.config.ts → remotePatterns 에 Supabase 호스트 자동 등록
 ```
 config/site.ts → seo{}          지역×서비스×의도 키워드 · 홈 타이틀/설명 · 소유확인코드
 config/site.ts → site.geo       좌표 (로컬팩 "거리" 요인)
+                                ⚠️ 2026-08-06 네이버 플레이스 등록 좌표로 교체했습니다.
+                                   이전 근사값은 실제 위치에서 **약 10km** 벗어나 있었습니다.
+config/site.ts → naverPlaceUrl  네이버 스마트플레이스 (sameAs + 오시는길 지도 URL)
+                                대전 유입의 8할이 네이버라, 이 연결이 인스타그램보다 큽니다
 
 config/site.ts → seo.pages     하위 9개 페이지의 타이틀·설명 [A5]
 config/site.ts → noindexPaths  검색 노출 제외 목록 ★ 사이트맵과 robots 의 단일 출처
@@ -570,6 +574,52 @@ app/robots.ts
 - ⚠️ 이건 **보조 장치**입니다. 확실한 해제는 Cloudflare 대시보드(§7). 크롤러마다
   규칙 해석이 조금씩 달라 100% 보장은 아닙니다.
 
+### F22. 방문 통계 — Google Analytics 4
+```
+config/site.ts → site.gaMeasurementId   "G-NNT57E6S9L"  ★ 단일 출처 (A5)
+      ↓
+app/layout.tsx
+└── site.isProductionDomain && site.gaMeasurementId 일 때만
+    ├── <Script src="googletagmanager.com/gtag/js?id=..."  strategy="afterInteractive" />
+    └── <Script id="ga4" strategy="afterInteractive">  gtag('config', ...)
+```
+- **왜 `@next/third-parties` 를 안 쓰나**: Next 문서가 그 패키지를 **experimental
+  under active development** 라고 명시합니다. `next/script` 두 줄로 같은 동작이 나오는데
+  실험 단계 의존성을 회사 홈페이지에 들일 이유가 없습니다.
+- **왜 환경변수가 아니라 `config/` 인가**: 측정 ID 는 **비밀이 아닙니다.** 모든 방문자의
+  페이지 소스에 그대로 찍히는 값이라 `indexNowKey` 와 같은 취급을 합니다 [A5].
+- ⚠️ **`isProductionDomain` 조건이 반드시 있어야 합니다.** 미리보기·임시 주소의 방문이
+  실제 통계에 한 번 섞이면 **되돌릴 수 없습니다.** GA 는 과거 데이터를 못 지웁니다.
+- `afterInteractive` 라 첫 화면 렌더를 막지 않고, 스크립트가 실패해도 페이지는 그대로
+  뜹니다 [원칙 A1 의 연장]. 값을 비우면 애널리틱스만 조용히 꺼집니다.
+- 🔴 **GA 를 켜면 개인정보처리방침에 고지해야 합니다** — 쿠키로 방문자를 식별하므로
+  법적 의무입니다. 2026-08-06 에 `app/privacy/page.tsx` 에 **제5조(위탁) 실제 업체 명시 +
+  제5조의2(쿠키·분석도구)** 를 신설했습니다. 분석 도구를 바꾸면 여기도 같이 고칩니다.
+- ⚠️ **`/admin/*` 방문도 집계됩니다.** 내부 트래픽이 통계를 오염시키므로, 신경 쓰이면
+  GA 쪽에서 **관리 → 데이터 필터 → 내부 트래픽**으로 거르세요(코드로 막지 않았습니다).
+- ⚠️ **속성을 헷갈리지 마세요.** 같은 계정에 이름이 비슷한 속성이 여럿 있습니다 — §7 참조.
+
+### F21. 오시는길 — 지도 임베드 대신 길찾기 링크
+```
+app/support/page.tsx  (P6, 정적)
+├── site.mapUrl 이 있으면      → iframe 으로 지도 임베드 (기존 경로 유지)
+└── 비어 있으면(현재)          → 링크 카드
+    ├── 주소 · 영업시간          config/site.ts [A5]
+    ├── 네이버 지도에서 보기      site.naverPlaceUrl
+    ├── 카카오맵 길찾기          map.kakao.com/link/to/{상호},{lat},{lng} ← site.geo
+    └── 전화                    site.phoneHref
+```
+- ⚠️ **`site.mapUrl` 에 네이버 플레이스 주소를 넣지 마세요.** `map.naver.com` 은
+  `x-frame-options: DENY` 입니다(2026-08-06 실측). 넣으면 **오류도 안 나고 빈 상자**가
+  나가서, 예전 안내 플레이스홀더보다 나빠집니다. 여기 들어갈 수 있는 건 임베드
+  전용 URL(카카오맵 "지도 퍼가기" 등)뿐입니다.
+- **왜 그림 대신 링크인가**: 손님이 누르는 건 약도가 아니라 "길찾기" 이고, 그건 어차피
+  지도 앱으로 넘어갑니다. 게다가 네이버 플레이스로 보내면 **방문·클릭이 쌓여 플레이스
+  노출에도 도움**이 됩니다(플레이스는 클릭 이후 행동 데이터가 순위에 반영됩니다).
+- 카카오맵 길찾기 URL 은 `site.geo` 좌표를 씁니다 — 좌표가 틀리면 **엉뚱한 곳으로
+  안내합니다.** 2026-08-06 에 좌표를 실측값으로 고친 이유 중 하나입니다.
+- `/support` 는 이 변경 뒤에도 **정적(`○`)** 입니다 (빌드 결과 확인).
+
 ### F17. IndexNow — 검색엔진 색인 즉시 통보
 ```
 config/site.ts   site.indexNowKey   ★ 키 원본 (A5)
@@ -664,7 +714,7 @@ components/admin/BlockForm.tsx   명세대로 칸을 그림 (구역별 폼 한 �
 app/admin/content/page.tsx  P14   탭 + 목록 + 순서 + 삭제
 app/admin/actions.ts              saveBlock · deleteBlock · moveBlock
 
-lib/cms.ts  getBlocks()  → { copy, why, stats, process, fabrication, signTypes }
+lib/cms.ts  getBlocks()  → { copy, why, process, fabrication, signTypes }
       └── 조회 1회로 전부. 구역 단위 폴백 → config/content.ts   [원칙 A1]
             ↓
       app/page.tsx(P1) · about(P2) · signs(P3) · process(P5)
@@ -676,7 +726,6 @@ lib/cms.ts  getBlocks()  → { copy, why, stats, process, fabrication, signTypes
 |---|---|---|---|---|---|
 | `copy` | 영문 머리말 | 큰 제목 | 설명 | — | — |
 | `why` | — | 근거 제목 | 근거 설명 | — | — |
-| `stat` | 단위(평) | 숫자(795) | 이름 | — | — |
 | `process` | 번호(01) | 단계 이름 | 한 줄 설명 | 상세 항목 | 사진 |
 | `fabrication` | — | 공정 이름 | 한 줄 설명 | — | 사진 |
 | `sign_type` | 영문(OUTDOOR) | 분야 이름 | 소개 문단 | 특징 | 사진 |
@@ -690,9 +739,19 @@ lib/cms.ts  getBlocks()  → { copy, why, stats, process, fabrication, signTypes
 - ⚠️ **`moveBlock` 은 반드시 `eq("section", …)` 을 겁니다.** 한 표에 여섯 구역이 섞여
   있어서 이걸 빼면 **다른 구역 항목과 순서를 맞바꿉니다** — 화면상 아무 일도 안 일어난
   것처럼 보이고 엉뚱한 구역이 흐트러집니다.
-- **폴백은 구역 단위입니다.** `process` 만 DB 에 있고 `stat` 이 비어 있으면 프로세스는
-  DB, 지표는 config 값이 나갑니다. 전부-아니면-전무로 만들면 구역 하나를 비웠을 때
+- **폴백은 구역 단위입니다.** `process` 만 DB 에 있고 `why` 가 비어 있으면 프로세스는
+  DB, 강점은 config 값이 나갑니다. 전부-아니면-전무로 만들면 구역 하나를 비웠을 때
   멀쩡한 나머지까지 옛 내용으로 되돌아갑니다.
+- 🔴 **그래서 관리자 화면에서 한 구역을 텅 비우는 것은 불가능합니다.** 마지막 항목을
+  지우는 순간 0건이 되어 **config 내용이 대신 나옵니다** — 지운 것이 되살아난 것처럼
+  보입니다. 2026-08-07 에 "숫자 지표 칸이 안 없어진다" 는 문의가 정확히 이것이었고,
+  실제로는 4건 중 3건이 지워져 **1건만 남은 채 4칸 격자에 빈 회색 칸 3개**가 보이던
+  상태였습니다(격자 배경이 `bg-line`). 구역을 없애려면 **코드에서 걷어내야** 합니다.
+- ⚠️ **`stat`(숫자 지표) 구역은 2026-08-07 에 화면에서 제거됐습니다.** `config/sections.ts`
+  에서 빠져 **관리자 탭도 안 뜹니다.** DB 의 `section='stat'` 행과 마이그레이션 `0005` 의
+  `check` 목록·시드는 그대로 남아 있지만 어디에도 안 나옵니다(이미 실행된 마이그레이션은
+  고치지 않습니다). 되살리려면 `config/sections.ts` 명세 · `lib/cms.ts` 의 `SiteBlocks`
+  · 두 페이지의 `<dl>` 을 되돌려야 합니다.
 - **SQL 을 안 돌려도 사이트는 그대로입니다** [A1]. `content_blocks` 가 없으면 조회가
   실패하고 `config/content.ts` 내용이 나갑니다 — 지금 화면과 같은 문구입니다.
   관리자 화면에는 "0005 를 실행하세요" 안내가 뜹니다.
@@ -867,7 +926,7 @@ scripts/check-quote-files.mjs   npm run quotes:check
 > 넣어야 합니다 — 마이그레이션 파일 + `config/content.ts`.
 >
 > **문구 블록(F19)도 같습니다.** `content_blocks` 에 그 구역 행이 하나라도 있으면
-> `config/content.ts` 의 `sectionCopy`·`whyPoints`·`steps`·`equipment`·`signTypes`·`stats`
+> `config/content.ts` 의 `sectionCopy`·`whyPoints`·`steps`·`equipment`·`signTypes`
 > 는 **안 읽힙니다.** 운영 문구를 바꾸는 정상 경로는 `/admin/content` 입니다.
 
 ```
@@ -999,23 +1058,28 @@ Workers Builds 는 `npx wrangler deploy` 로 배포하고, 그 명령은 `wrangl
 |---|---|---|
 | 🔴 사진 | **남은 자리: 실적 4자리 + 히어로 2 + 공정 5.** 회사소개서에서 12장을 뽑아 넣어 실적 15자리 중 11자리·사업영역 4자리 전부가 채워졌고(2026-07-27), **사옥 전경은 대표님이 주신 현장 촬영본으로 채웠습니다**(2026-08-06). 급한 순서: ① **히어로 2·3 — 현장 촬영이 유일한 길입니다.** 네 개 PDF 를 전수 확인했고 1920px 이상은 스톡/합성 그래픽뿐, 자사 실사진 최대치는 1400×1050 ② 공장 공정 5칸(회사소개서엔 채널문자 제작 1장뿐) ③ 남은 실적 4건(교보생명·우리은행·KT탄방타워는 회사소개서에 4장이 한 띠로 합쳐져 435×276 밖에 안 나오고, 뉴코아는 사진 자체가 없음) | `public/images/README.md` |
 | 🔴 개인정보 | **회사소개서 5·6페이지는 사업자등록증·여성기업확인서·옥외광고사업등록증·공장등록증명서 스캔입니다.** 사진을 더 뽑을 때 섞여 들어가지 않게 하세요 — 사업자등록번호·대표자 정보가 읽힙니다. 웹 게시 금지 | `public/images/README.md` |
-| 🔴 등록 | **네이버 스마트플레이스 미등록.** 대전 지역 유입의 8할이 네이버이고, 플레이스가 그 실체입니다. 신규는 90일간 노출 우대 | [`SEO.md`](SEO.md) C1 |
+| ⚠️ 등록 | **네이버 스마트플레이스 등록·사진 완료** (2026-08-06, 대표님 확인). 남은 건 소개글·대표키워드·가격·새소식 — 복붙 문구는 `_place-upload/네이버플레이스_등록내용.md`. **신규 90일 노출 우대 구간이라 지금 채우는 게 가장 효율이 좋습니다** | [`SEO.md`](SEO.md) C1 |
+| 🔴 등록 | **플레이스 노출 전화번호가 `042-541-0171` 입니다** — 홈페이지 대표번호(`010-7449-4600`)와 다릅니다. NAP 불일치라 고쳐야 하는데, **신규 등록 직후엔 기본정보가 "업체 검토중" 으로 잠깁니다.** 검토 완료 후 스마트플레이스 → 업체정보 → 기본정보에서 대표번호를 010 으로 바꾸세요. 같은 화면의 **대표키워드도 아직 0개**입니다. **네이버 예약의 `예약문의` 도 이 값을 읽기 전용으로 끌어쓰므로 여기만 고치면 양쪽이 같이 바뀝니다** | [`SEO.md`](SEO.md) C1 |
+| ⏳ 등록 | **네이버 예약 검수 진행중** (2026-08-06 신청, 영업일 2~3일). 예약 사업자 `1713161` · 상품 `간판 무료 상담` 노출중. 결과는 `poing7003@naver.com` 메일. **통과하면 `설정 → 운영설정`에서 ① `예약받기` 를 시작 ② `플레이스 연결하기`** — 그래야 플레이스에 [예약] 버튼이 붙습니다. 반려되면 사유가 메일에 옵니다 | [`SEO.md`](SEO.md) C1-b |
 | 🔴 등록 | **구글 비즈니스 프로필 미등록.** 검색 우측 지식 패널(로고·사진·영업시간 카드)은 홈페이지가 아니라 여기서 만들어집니다 | [`SEO.md`](SEO.md) C2 |
 | ⚠️ 색인 | **구글 색인이 홈 1페이지뿐.** 소유확인은 끝났습니다(2026-07-28, DNS TXT 실측 확인). 남은 건 Search Console 에서 **사이트맵 제출 + `/works` `/about` 색인 요청** | [`SEO.md`](SEO.md) C4 |
 | ⚠️ 확인 | **색인 상태는 `hl=ko&gl=kr` 로만 판정합니다.** 미국 기준 검색 도구로는 결과가 안 보여서, 한 번 그것만 보고 "인덱스 0건" 으로 잘못 판정한 적이 있습니다 | [`SEO.md`](SEO.md) 맨 위 |
 | 🔴 문의 | **2026-08-03 연구개발특구진흥재단(송예진) 문의가 미확인 상태**입니다. 알림 메일이 안 갔고(당시 Cloudflare 런타임에 `RESEND_API_KEY` 없음), 첨부 사진 2장은 보관 기능이 없어 **이미 유실**됐습니다. 사진은 고객께 다시 요청해야 합니다 | `/admin/quotes` |
-| ✅ 확인 | **마이그레이션 `0001`~`0006` 전부 실행 완료** (2026-08-06). 운영 DB 에 직접 물어 확인: `works` 23건 · `content_blocks` 28행(copy 5 · why 4 · stat 4 · process 5 · fabrication 6 · sign_type 4). 프로젝트는 `Gachon-junghyun's Org / SusannaDesign` | §5 |
+| ✅ 확인 | **마이그레이션 `0001`~`0006` 전부 실행 완료** (2026-08-06). 운영 DB 에 직접 물어 확인: `content_blocks` 28행(copy 5 · why 4 · stat 4 · process 5 · fabrication 6 · sign_type 4). 프로젝트는 `Gachon-junghyun's Org / SusannaDesign`. ⚠️ 이때 `works` 를 **23건**으로 적어 뒀으나, 2026-08-07 `cms list works`(미공개 포함)는 **17건**이었습니다 — 4건 추가 후 **21건**. 차이의 원인은 확인하지 못했습니다. 실적 건수를 인용할 때는 이 줄이 아니라 `list works` 를 보세요 | §5 |
 | ⚠️ 확인 | **Supabase 깨우기 Actions 시크릿 등록 여부** — 저장소 Actions 탭에 초록 체크가 있는지. 7일 무요청이면 DB 가 멈추고 견적 문의 저장이 죽습니다 | `.github/workflows/keep-supabase-awake.yml` |
 | ⚠️ 정리 | 운영 `/admin/quotes` 에 검증용 테스트 문의 2건(`[검증] 지워주세요`) 남아 있음 | [`DEPLOY.md`](DEPLOY.md) 3단계 |
 | ⚠️ 확인 | **알림 환경변수 `Secret` 재등록 — 대표님이 완료했다고 알려 주셨습니다** (2026-08-06). 코드에서는 확인할 수 없는 값이라, **다음 배포 뒤에 운영 `/admin/quotes` 맨 위 배너가 주황 경고가 아닌지** 한 번 보면 끝입니다. 주황이면 `Plaintext` 로 들어간 것입니다 | §6 · F16 |
 | 🔴 보안 | **`RESEND_API_KEY` 를 새로 발급하고 기존 키 폐기** — 예전 키가 `Plaintext` 로 들어가 있어 대시보드 조회 권한만 있으면 보였고, 2026-08-06 작업 중 화면 캡처에도 값이 찍혔습니다. resend.com → API Keys 에서 재발급 후 기존 키 삭제 | F16 · §6 |
-| TODO | `config/site.ts` 남은 값: 옥외광고사업 등록번호 · 우편번호 · 운영시간 · 누적건수 · 카카오채널 · 지도 URL | `config/site.ts` |
+| TODO | `config/site.ts` 남은 값: 옥외광고사업 등록번호 · 누적건수 · 카카오채널 | `config/site.ts` |
+| ⏳ 등록 | **구글 비즈니스 프로필 — 소유권 주장 진행중** (2026-08-06). 구글 지도에 **남이 만든 미소유 등록이 이미 있었고 내용이 틀렸습니다** — `그래픽 디자이너 / 유성구 원내동 98-1`. 주장 절차에서 **카테고리 → `간판제작업체`, 주소 → `대전 서구 사기점골길 128`, 전화 → `010-7449-4600`** 으로 교정했습니다. **다음은 구글이 지정하는 소유권 인증**(영상통화·엽서·전화 중 택일, 엽서면 2주)이라 대표님만 할 수 있습니다. 인증 후 사진 22장·영업시간·홈페이지·서비스지역을 채우면 검색 우측 지식 패널이 생깁니다 | [`SEO.md`](SEO.md) C2 |
+| 미도입 | **오시는길에 지도 그림이 없습니다** — 주소·영업시간 + 길찾기 링크 카드로 대체했습니다(F21). 진짜 지도를 그리려면 **카카오맵 JS SDK**(개발자 키 무료 발급 필요)가 정석입니다. 급하지 않은 이유: 손님이 실제로 누르는 건 약도 그림이 아니라 길찾기이고 그건 이미 됩니다 | `app/support/page.tsx` |
 | ⚠️ 확인 | **네이버 URL 검사 재실행 필요** — `robots.txt 없음` 경고가 남아 있는지. Yeti UA 실측은 `200 / text/plain / 500B` 로 정상이라 오탐으로 보고 있습니다. 배포 후에도 뜨면 다시 파야 합니다 | [`SEO.md`](SEO.md) 느낌표 표 3번 |
 | 🔴 등록 | **서치어드바이저에 사이트맵·RSS 미제출** — 소유확인은 끝났습니다(2026-07-28). `요청 → 사이트맵 제출`에 `sitemap.xml`, `요청 → RSS 제출`에 `rss.xml`. **둘 다** 내야 합니다 | [`SEO.md`](SEO.md) C3 |
 | 🔴 코드 | **당근 비즈프로필이 `sameAs` 에 없습니다** — 2026-07-28 등록 완료(`수산나디자인 간판제작`). `config/site.ts` 에 `daangnUrl` 을 신설해 프로필 URL 을 넣어야 검색엔진·AI 가 홈페이지와 같은 회사로 묶습니다. **URL 만 받으면 되는 작업** | `config/site.ts` · [`SEO.md`](SEO.md) C5 |
 | TODO | `sameAs` 에 `blogUrl`·`kakaoChannelUrl` 이 비어 있음 — 채널이 생기면 넣으세요. 엔티티 연결이 한 겹 더 두꺼워집니다 | `config/site.ts` |
-| ⚠️ SEO | `site.geo` 좌표가 대전 서구 근사값 — 로컬 검색의 "거리" 요인에 영향 | `config/site.ts` |
-| ⚠️ 법률 | 개인정보처리방침 · 이용약관이 **초안 상태** | `app/privacy` `app/terms` |
+| ⚠️ 법률 | 개인정보처리방침의 **위탁(제5조)·쿠키(제5조의2)는 2026-08-06 에 실제 내용으로 채웠습니다**(Google·Resend·Cloudflare·Supabase). 나머지 조항과 **이용약관은 여전히 초안**이라 법률 검토가 필요합니다 | `app/privacy` `app/terms` |
+| ⚠️ 정리 | **GA 속성이 3개입니다** — `수산나디자인 홈페이지(G-NNT57E6S9L, 실사용)` · `susanna1(G-BFTM7QMRF2, 정체 불명)` · `susanna-8bcad(G-G2CS3P127V, Firebase 앱 `com.example.susannaDesginApplication`)`. **홈페이지에 심은 건 첫 번째 하나뿐**입니다. `susanna1` 은 Ads 캠페인 흐름에서 딸려 생긴 것으로 보이며, 안 쓰는 속성은 지워야 나중에 어느 게 진짜인지 헷갈리지 않습니다 | F22 |
+| ⚠️ 확인 | **Google Ads 미완성 캠페인** — 계정 `848-526-3219`, 캠페인 `24115193992` 가 생성 흐름 도중 중단된 채 남아 있습니다. **결제수단 미등록이라 게재·과금 없습니다.** 정리하려면 광고 차단기를 끈 뒤 계정 취소를, 아니면 그대로 두면 됩니다(권장). ⚠️ 그 흐름의 `건너뛰기`는 나가는 버튼이 아니라 **예산·결제로 더 들어가는** 버튼입니다 | — |
 | ⚠️ 법률 | **견적 알림을 켜면 개인정보 위탁 고지가 필요합니다** — 고객 이름·연락처가 Resend·슬랙 등 외부로 나갑니다. 처리방침 위탁 항목에 업체명·위탁업무를 적어야 합니다(개인정보보호법 제26조). 켜기 전에는 해당 없음 | `app/privacy` · F16 |
 | ⚠️ 배포 | **Vercel Hobby 사용 금지** — 상업적 이용 위반이라 사전 통보 없이 중단될 수 있습니다 | [`DEPLOY.md`](DEPLOY.md) |
 
@@ -1024,7 +1088,7 @@ Workers Builds 는 `npx wrangler deploy` 로 배포하고, 그 명령은 `wrangl
 | 구분 | 내용 | 위치 |
 |---|---|---|
 | 미검증 | 관리자 CRUD 중 **삭제 · 순서변경(`moveSlide`/`moveWork`) 이 실동작 미확인**. 저장·사진업로드는 운영에서 끝까지 통하는 것을 확인했습니다 | F9 F10 |
-| 미검증 | **F18 CLI 의 DB 작업이 실계정 미검증** — 로그인 실패 경로(잘못된 비밀번호 → 안내문)와 인자 파싱·분류 검사만 확인했습니다. `SUPABASE_ADMIN_*` 를 채운 뒤 `list` → `works add --draft` → `rm --yes` 순으로 한 바퀴 돌려 봐야 합니다 | F18 |
+| 미검증 | **F18 CLI 중 `rm`·`move`·`renumber` 가 실계정 미검증.** 로그인 → `list works` → `works batch`(4건 업로드+등록)는 2026-08-07 운영 DB 에서 실증했습니다. 남은 셋은 되돌릴 수 없거나 순서를 흐트러뜨리는 명령이라, 시험용 `--draft` 행을 하나 만들어 그걸로 돌려 봐야 합니다 | F18 |
 | 부채 | **관리자 비밀번호가 `.env.local` 에 평문** — F18 이 브라우저 없이 로그인하려면 필요합니다. git 제외지만 이 PC 를 쓰는 사람은 볼 수 있습니다. 화면 공유·녹화 시 주의 | F18 · §6 |
 | 부채 | **방문마다 SSR + DB 조회** — ISR 을 걷어낸 대가(§2.1 주석). 홈 HTML 에 캐시가 없습니다(`no-store` 실측). **2026-08-06 F19 로 `/about` `/signs` `/process` 도 여기 들어왔습니다** — 정적이던 세 페이지가 요청 시 SSR 이 됐습니다(문구를 관리자가 바꾸려면 불가피). 트래픽이 커지면 Cache Rules 또는 R2 로 ISR 을 되살리는 게 정석 | `app/page.tsx` `works` `about` `signs` `process` |
 | 부채 | 견적 폼 레이트리밋이 **인메모리** — 서버리스라 인스턴스마다 따로 세므로 사실상 헐거움 | F5 |
@@ -1035,7 +1099,7 @@ Workers Builds 는 `npx wrangler deploy` 로 배포하고, 그 명령은 `wrangl
 | 부채 | 로고 SVG 가 저해상도 래스터 트레이싱본. 대형 출력엔 원본 AI/EPS 필요 | `public/logo.svg` |
 | 미도입 | **시공사례 개별 페이지** — 로컬 SEO 최대 자산이나, 지금 데이터로 만들면 "얇은 콘텐츠" 페널티. 사례별 상세(위치·간판종류·기간·자재·현장 메모) 확보가 선행 | [`SEO.md`](SEO.md) B-1 |
 | 🔴 배포 | **F19 코드가 아직 배포 전입니다** — DB(`content_blocks`)는 만들어졌지만 운영에 나가 있는 건 이전 코드라, 지금 `/admin/content` 로 들어가면 404 입니다. 배포해야 관리자 화면이 생깁니다 | F19 |
-| 미도입 | **회사 개요·연혁·비전은 아직 CMS 미연결** — 사업영역·공정·프로세스·지표·구역 제목은 2026-08-06 F19 로 연결됐습니다. 남은 셋은 바뀌는 빈도가 낮아 `config/` 에 둡니다 | `config/content.ts` `config/site.ts` |
+| 미도입 | **회사 개요·연혁·비전은 아직 CMS 미연결** — 사업영역·공정·프로세스·구역 제목은 2026-08-06 F19 로 연결됐습니다. 남은 셋은 바뀌는 빈도가 낮아 `config/` 에 둡니다 | `config/content.ts` `config/site.ts` |
 
 ---
 
