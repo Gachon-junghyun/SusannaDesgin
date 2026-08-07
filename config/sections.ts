@@ -92,7 +92,11 @@ export const SECTIONS: SectionSpec[] = [
   {
     key: "fabrication",
     label: "제작 공정",
-    where: "홈페이지 검은 배경의 FABRICATION 구역, 여섯 칸입니다.",
+    // 2026-08-07 — SHOW_FABRICATION 이 false 라 이 탭의 내용이 지금은 어느 화면에도
+    // 안 나갑니다. 안내문을 안 고치면 "고쳤는데 왜 안 바뀌지" 로 시간을 씁니다.
+    // 스위치를 다시 켤 때 아래 문구를 원래대로 되돌리세요.
+    where:
+      "⚠️ 지금은 홈페이지에 안 나옵니다 — 공정 사진 6장 중 1장뿐이라 구역을 내려 두었습니다. 사진이 준비되면 다시 켭니다(코드 작업). 그때까지 여기서 고친 내용은 화면에 반영되지 않습니다.",
     fields: {
       title: { label: "공정 이름", placeholder: "절단" },
       sub: { label: "한 줄 설명", placeholder: "판재·형강 재단" },

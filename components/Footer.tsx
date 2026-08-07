@@ -56,7 +56,9 @@ export default function Footer() {
             links={[
               { href: "/about", label: "회사소개" },
               { href: "/about#history", label: "연혁" },
-              { href: "/about#equipment", label: "공장 공정" },
+              // "공장 공정"(/about#equipment)을 뺐습니다 (2026-08-07). 그 구역이
+              // SHOW_FABRICATION 로 닫히면서 앵커가 사라져, 누르면 /about 맨 위로만
+              // 떨어졌습니다. 스위치를 다시 켤 때 이 줄도 같이 살리세요.
               { href: "/support#location", label: "오시는길" },
             ]}
           />

@@ -236,6 +236,25 @@ export const workCategories = [
 
 export type Fab = { name: string; desc: string; image: string };
 
+/**
+ * FABRICATION(공장 공정) 구역을 화면에 그릴지 — **홈과 `/about` 이 같이 쓰는 스위치.**
+ *
+ * 2026-08-07 에 `false` 로 내렸습니다. 여섯 칸 중 실사진이 `fab-4-assemble.jpg`
+ * 하나뿐이라 **"사진 준비 중" 상자 다섯 개**가 나가고 있었습니다.
+ * 처음에는 홈만 껐는데(`app/page.tsx` 안의 지역 상수였습니다) `/about` 에 같은
+ * 구역이 그대로 남아 있었습니다. 같은 날 `/about` 도 내리면서 **스위치를 여기 하나로
+ * 합쳤습니다** — 둘로 두면 사진이 들어왔을 때 한쪽만 켜고 끝납니다.
+ *
+ * **지우지 않고 스위치로 둔 이유**: 공장 공정 사진이 들어오면 다시 켤 자리입니다.
+ * 되살리려면 이 값을 `true` 로 바꾸면 끝입니다 — 두 페이지의 JSX·DB·관리자 화면이
+ * 전부 그대로 살아 있습니다.
+ *
+ * ⚠️ **관리자 화면(F19)의 "제작 공정" 탭은 계속 보입니다.** 이 값이 `false` 인 동안
+ * 그 탭에서 무엇을 고쳐도 **어느 화면에도 안 나옵니다.** F19 의 "구역을 비울 수
+ * 없다" 함정과 같은 계열입니다.
+ */
+export const SHOW_FABRICATION: boolean = false;
+
 /** 공장 공정 — 구 회사소개서 05. 업무프로세스 (절단→검수) — 800×600 */
 export const equipment: Fab[] = [
   { name: "절단", desc: "판재·형강 재단", image: "/images/fab-1-cut.jpg" },

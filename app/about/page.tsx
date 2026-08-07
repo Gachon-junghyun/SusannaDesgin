@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Img from "@/components/Img";
 import { PageHero, Section, SectionHeading } from "@/components/Section";
-import { history, vision } from "@/config/content";
+import { SHOW_FABRICATION, history, vision } from "@/config/content";
 import { certifications, site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 import { pageMetadata } from "@/lib/seo";
@@ -12,6 +12,10 @@ export const metadata = pageMetadata("/about");
  * 공장 공정은 홈과 **같은 블록**을 씁니다(F19). 관리자가 한 번 고치면
  * 두 페이지가 같이 바뀌어야 하므로 여기서도 DB 를 읽습니다.
  * 연혁·비전·회사 개요는 그대로 `config/` 에 있습니다.
+ *
+ * ⚠️ 2026-08-07 부터 그 구역은 `SHOW_FABRICATION` 로 **닫혀 있습니다.** 닫혀 있어도
+ * `getBlocks()` 는 그대로 부릅니다 — 이 페이지가 어차피 DB 를 읽어야 하고, 스위치를
+ * 켜는 순간 아무것도 안 고치고 되살아나야 하기 때문입니다.
  */
 export const dynamic = "force-dynamic";
 
@@ -164,39 +168,42 @@ export default async function AboutPage() {
         </div>
       </Section>
 
-      {/* 공장 공정 */}
-      <Section id="equipment" className="scroll-mt-24">
-        <SectionHeading
-          eyebrow="FABRICATION"
-          title="공장 공정"
-          desc={`${site.factory} 자체 공장에서 절단부터 검수까지 끝냅니다. 외주 대기가 없어 납기가 밀리지 않습니다.`}
-          center
-        />
-        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {fabrication.map((e, i) => (
-            <li key={e.title || i} className="overflow-hidden rounded-2xl bg-paper">
-              <div className="relative aspect-4/3">
-                <Img
-                  src={e.image}
-                  alt={e.alt || e.title}
-                  width={800}
-                  height={600}
-                  fill
-                  sizes="(max-width: 640px) 100vw, 360px"
-                  label={e.title}
-                />
-              </div>
-              <div className="p-5">
-                <p className="text-[13px] font-black tracking-widest text-accent">
-                  {String(i + 1).padStart(2, "0")}
-                </p>
-                <h3 className="mt-0.5 font-black">{e.title}</h3>
-                <p className="mt-1 text-[14px] text-ink-500">{e.sub}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      {/* 공장 공정 — config/content.ts 의 SHOW_FABRICATION 로 여닫습니다 (지금은 닫힘).
+          홈의 같은 구역과 스위치를 공유하므로 한 번 켜면 양쪽이 같이 켜집니다. */}
+      {SHOW_FABRICATION && (
+        <Section id="equipment" className="scroll-mt-24">
+          <SectionHeading
+            eyebrow="FABRICATION"
+            title="공장 공정"
+            desc={`${site.factory} 자체 공장에서 절단부터 검수까지 끝냅니다. 외주 대기가 없어 납기가 밀리지 않습니다.`}
+            center
+          />
+          <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {fabrication.map((e, i) => (
+              <li key={e.title || i} className="overflow-hidden rounded-2xl bg-paper">
+                <div className="relative aspect-4/3">
+                  <Img
+                    src={e.image}
+                    alt={e.alt || e.title}
+                    width={800}
+                    height={600}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 360px"
+                    label={e.title}
+                  />
+                </div>
+                <div className="p-5">
+                  <p className="text-[13px] font-black tracking-widest text-accent">
+                    {String(i + 1).padStart(2, "0")}
+                  </p>
+                  <h3 className="mt-0.5 font-black">{e.title}</h3>
+                  <p className="mt-1 text-[14px] text-ink-500">{e.sub}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       {/* 비전 */}
       <Section className="bg-ink text-white">
