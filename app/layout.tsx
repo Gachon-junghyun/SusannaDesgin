@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
@@ -118,7 +119,12 @@ const jsonLd = {
       closes: "18:00",
     },
   ],
-  sameAs: [site.blogUrl, site.instagramUrl, site.kakaoChannelUrl].filter(Boolean),
+  sameAs: [
+    site.blogUrl,
+    site.instagramUrl,
+    site.kakaoChannelUrl,
+    site.naverPlaceUrl,
+  ].filter(Boolean),
   // 사업자등록번호. 검색엔진·AI 가 "이 홈페이지 = 그 사업자" 를 잇는 근거가 됩니다.
   // 비어 있으면 키 자체를 빼야 합니다 — 빈 문자열을 내보내면 잘못된 값으로 읽힙니다.
   ...(site.bizNo ? { taxID: site.bizNo } : {}),
@@ -153,6 +159,23 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {/*
+          Google 애널리틱스 4 — 확정 도메인에서만 붙입니다.
+          미리보기·임시 주소의 방문이 실제 통계에 섞이면 되돌릴 수 없습니다.
+          `strategy="afterInteractive"` 라 첫 화면 렌더를 막지 않고, 스크립트가
+          실패해도 페이지는 그대로 뜹니다 [원칙 A1].
+        */}
+        {site.isProductionDomain && site.gaMeasurementId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${site.gaMeasurementId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${site.gaMeasurementId}');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

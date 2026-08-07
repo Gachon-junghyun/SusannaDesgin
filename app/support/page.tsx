@@ -147,28 +147,59 @@ export default function SupportPage() {
         <SectionHeading eyebrow="LOCATION" title="오시는길" />
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-          <div className="flex aspect-video items-center justify-center rounded-2xl border-2 border-dashed border-line bg-paper text-center text-ink-500">
-            {site.mapUrl ? (
+          {site.mapUrl ? (
+            <div className="aspect-video overflow-hidden rounded-2xl border border-line bg-paper">
               <iframe
                 src={site.mapUrl}
                 title="약도"
-                className="h-full w-full rounded-2xl border-0"
+                className="h-full w-full border-0"
                 loading="lazy"
               />
-            ) : (
-              <div className="px-6">
-                <p className="font-bold">지도 자리</p>
-                <p className="mt-1.5 text-[13px] leading-relaxed">
-                  카카오맵 또는 네이버지도 공유 URL을
-                  <br />
-                  <code className="font-mono text-[12px]">config/site.ts</code> 의{" "}
-                  <code className="font-mono text-[12px]">mapUrl</code> 에 넣으면
-                  <br />
-                  이 자리에 지도가 표시됩니다.
-                </p>
+            </div>
+          ) : (
+            /**
+             * 지도 그림 대신 길찾기 링크를 놓습니다.
+             *
+             * `site.mapUrl` 은 iframe `src` 인데 네이버 지도는 `x-frame-options: DENY`
+             * 라 끼울 수 없습니다(2026-08-06 실측). 그리고 손님이 실제로 누르는 것은
+             * 약도 그림이 아니라 "길찾기" 이고, 그건 어차피 지도 앱으로 넘어갑니다.
+             * 네이버 플레이스로 보내면 방문수가 쌓여 플레이스 노출에도 도움이 됩니다.
+             */
+            <div className="flex flex-col justify-center rounded-2xl border border-line bg-paper p-8 sm:aspect-video">
+              <p className="text-[13px] font-bold text-ink-500">찾아오시는 길</p>
+              <p className="mt-2 text-xl leading-snug font-bold">{site.address}</p>
+              <p className="mt-1 text-[14px] text-ink-500">
+                {site.hours} · {site.hoursNote}
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                {site.naverPlaceUrl && (
+                  <a
+                    href={site.naverPlaceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-brand px-5 py-3 text-[14px] font-bold text-white transition-transform hover:scale-105"
+                  >
+                    네이버 지도에서 보기
+                  </a>
+                )}
+                <a
+                  href={`https://map.kakao.com/link/to/${encodeURIComponent(site.name)},${site.geo.lat},${site.geo.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-line bg-white px-5 py-3 text-[14px] font-bold transition-transform hover:scale-105"
+                >
+                  카카오맵 길찾기
+                </a>
+                <a
+                  href={site.phoneHref}
+                  className="rounded-full border border-line bg-white px-5 py-3 text-[14px] font-bold transition-transform hover:scale-105"
+                >
+                  전화 {site.phone}
+                </a>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <dl className="divide-y divide-line border-y border-line">
             {[

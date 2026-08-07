@@ -49,6 +49,12 @@ next-env.d.ts
 # 개인 사진·임시 파일
 KakaoTalk_*.jpg
 
+# 네이버 플레이스 업로드용 사진 사본 (public/images 에서 파일명만 바꿔 복사한 것)
+/_place-upload
+
 # Cloudflare 배포 산출물
 .open-next/
 .wrangler/
+
+# 형제 저장소(DeGaJa_Agent) 연결 — 이 PC 의 절대경로가 들어가고 저장소는 공개입니다
+.mcp.json
