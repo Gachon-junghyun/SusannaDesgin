@@ -52,6 +52,22 @@ function Lines({ text }: { text: string }) {
   return <span className="block whitespace-pre-line">{text}</span>;
 }
 
+/**
+ * 홈의 **FABRICATION(검은 배경 여섯 칸) 구역**을 그릴지.
+ *
+ * 2026-08-07 에 `false` 로 내렸습니다 — 여섯 칸 중 실사진이 `fab-4-assemble.jpg`
+ * 하나뿐이라 검은 배경에 "사진 준비 중" 상자 다섯 개가 나가고 있었습니다.
+ *
+ * **지우지 않고 스위치로 둔 이유**: 공장 공정 사진이 들어오면 다시 켤 자리입니다.
+ * 되살리려면 이 값을 `true` 로 바꾸면 끝입니다 — 아래 JSX·DB·관리자 화면은
+ * 전부 그대로 살아 있습니다.
+ *
+ * ⚠️ **관리자 화면(F19)의 "제작 공정" 탭은 계속 보입니다.** 여기가 `false` 인 동안
+ * 그 탭에서 무엇을 고쳐도 홈에는 아무 변화가 없습니다(회사소개 `/about` 의 같은
+ * 구역에는 반영됩니다 — 거기는 `fabrication` 을 따로 그립니다).
+ */
+const SHOW_HOME_FABRICATION: boolean = false;
+
 export default async function Home() {
   const [slides, works, blocks] = await Promise.all([
     getSlides(),
@@ -160,17 +176,14 @@ export default async function Home() {
               delay={idx * 90}
               className="overflow-hidden rounded-2xl bg-white"
             >
-              <div className="relative aspect-4/3">
-                <Img
-                  src={s.image}
-                  alt={s.alt || s.title}
-                  width={640}
-                  height={480}
-                  fill
-                  sizes="(max-width: 640px) 100vw, 300px"
-                  label={`${s.eyebrow}. ${s.title}`}
-                />
-              </div>
+              {/*
+                사진 칸을 뺐습니다 (2026-08-07 요청). 5칸 중 실사진이 0장이라
+                "사진 준비 중" 회색 상자만 다섯 개 늘어서 있었습니다 — 빈 자리를
+                보여 주느니 글 상자만 두는 편이 낫습니다.
+                단계 사진(step-1-consult.jpg 등)은 업무프로세스 페이지에서 계속 씁니다.
+                관리자 화면(F19)의 "업무 프로세스 → 사진" 칸도 그대로 살아 있습니다.
+                되살릴 때는 app/process/page.tsx 의 Img 블록을 그대로 가져오면 됩니다.
+              */}
               <div className="p-6">
                 <p className="text-[13px] font-black tracking-widest text-brand">
                   {s.eyebrow}
@@ -235,44 +248,46 @@ export default async function Home() {
         </ul>
       </Section>
 
-      {/* 보유 장비 */}
-      <Section className="bg-ink text-white">
-        <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-center">
-          <SectionHeading
-            eyebrow={copy("home-fabrication").eyebrow}
-            title={<Lines text={copy("home-fabrication").title} />}
-            desc={copy("home-fabrication").desc}
-            dark
-          />
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            {blocks.fabrication.map((e, idx) => (
-              <Reveal
-                as="li"
-                key={e.title || idx}
-                delay={(idx % 3) * 90}
-                className="overflow-hidden rounded-xl bg-ink-800"
-              >
-                <div className="relative aspect-square">
-                  <Img
-                    src={e.image}
-                    alt={e.alt || e.title}
-                    width={800}
-                    height={600}
-                    fill
-                    sizes="200px"
-                    label={e.title}
-                    dark
-                  />
-                </div>
-                <div className="p-4">
-                  <p className="font-bold">{e.title}</p>
-                  <p className="mt-0.5 text-[13px] text-white/50">{e.sub}</p>
-                </div>
-              </Reveal>
-            ))}
-          </ul>
-        </div>
-      </Section>
+      {/* 보유 장비 — SHOW_HOME_FABRICATION 로 여닫습니다 (지금은 닫힘) */}
+      {SHOW_HOME_FABRICATION && (
+        <Section className="bg-ink text-white">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-center">
+            <SectionHeading
+              eyebrow={copy("home-fabrication").eyebrow}
+              title={<Lines text={copy("home-fabrication").title} />}
+              desc={copy("home-fabrication").desc}
+              dark
+            />
+            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {blocks.fabrication.map((e, idx) => (
+                <Reveal
+                  as="li"
+                  key={e.title || idx}
+                  delay={(idx % 3) * 90}
+                  className="overflow-hidden rounded-xl bg-ink-800"
+                >
+                  <div className="relative aspect-square">
+                    <Img
+                      src={e.image}
+                      alt={e.alt || e.title}
+                      width={800}
+                      height={600}
+                      fill
+                      sizes="200px"
+                      label={e.title}
+                      dark
+                    />
+                  </div>
+                  <div className="p-4">
+                    <p className="font-bold">{e.title}</p>
+                    <p className="mt-0.5 text-[13px] text-white/50">{e.sub}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </ul>
+          </div>
+        </Section>
+      )}
 
       {/* 마무리 CTA */}
       <section className="bg-brand py-16 text-white md:py-20">
