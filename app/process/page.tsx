@@ -1,5 +1,4 @@
 ﻿import Link from "next/link";
-import Img from "@/components/Img";
 import { PageHero } from "@/components/Section";
 import { getBlocks } from "@/lib/cms";
 import { pageMetadata } from "@/lib/seo";
@@ -28,22 +27,18 @@ export default async function ProcessPage() {
       <div className="mx-auto max-w-6xl px-6 py-14 md:py-20">
         <ol className="space-y-14 md:space-y-20">
           {steps.map((s, i) => (
-            <li
-              key={s.eyebrow || i}
-              className="grid gap-8 md:grid-cols-[280px_1fr] md:gap-12"
-            >
-              <div className="relative aspect-4/3 overflow-hidden rounded-2xl">
-                <Img
-                  src={s.image}
-                  alt={s.alt || s.title}
-                  width={640}
-                  height={480}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 280px"
-                  label={`${s.eyebrow}. ${s.title}`}
-                />
-              </div>
-              <div>
+            <li key={s.eyebrow || i}>
+              {/*
+                사진 칸을 뺐습니다 (2026-08-07 요청). 다섯 단계 전부 실사진이 0장이라
+                "사진 준비 중" 회색 상자만 다섯 개 늘어서 있었습니다 — 홈의 PROCESS
+                구역을 같은 이유로 먼저 정리했고, 혼자 남아 있던 이 페이지를 맞췄습니다.
+                사진이 빠지면서 글이 1152px 를 다 쓰게 돼 한 줄이 너무 길어지므로
+                본문은 `max-w-3xl` 로 묶습니다.
+                단계 사진(step-1-consult.jpg 등)이 실제로 생기면 되살리세요 —
+                Img 블록은 이 커밋의 부모에 그대로 있습니다.
+                DB·관리자 화면(F19)의 "업무 프로세스 → 사진" 칸은 지우지 않았습니다.
+              */}
+              <div className="max-w-3xl">
                 <p className="text-[13px] font-black tracking-widest text-brand">
                   STEP {s.eyebrow}
                 </p>

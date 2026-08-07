@@ -26,19 +26,27 @@ export default async function AboutPage() {
       <Section>
         <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
           <div>
+            {/*
+              ⚠️ 연차("14년째" · "지난 14여 년")는 이 파일에 손으로 박혀 있습니다.
+              `site.founded`(2012.05.01)에서 자동 계산하지 않는 이유는, 세는 법이
+              사람마다 달라서(설립 연도를 1년째로 볼 것인가) 자동 계산이 대표님이
+              쓰시는 숫자와 어긋날 수 있기 때문입니다. **해가 바뀌면 이 두 곳을
+              같이 올리세요.** 나머지 문구는 전부 "2012년" 이라 손댈 필요 없습니다.
+              (2026-08-07 에 13 → 14 로 올렸습니다.)
+            */}
             <SectionHeading
               eyebrow="GREETING"
               title={
                 <>
                   건물의 이름을 다는 일을
                   <br />
-                  13년째 하고 있습니다
+                  14년째 하고 있습니다
                 </>
               }
             />
             <div className="mt-6 space-y-4 leading-relaxed text-ink-500">
               <p>
-                {site.legalName}은 2012년 설립하여 지난 13여 년 동안 여러 사업 수행
+                {site.legalName}은 2012년 설립하여 지난 14여 년 동안 여러 사업 수행
                 경험을 통한 노하우를 기반으로 사인물 등을 디자인, 제작, 시공, 관리하는
                 기업입니다.
               </p>
@@ -59,12 +67,12 @@ export default async function AboutPage() {
           <div className="relative aspect-4/3 overflow-hidden rounded-2xl">
             <Img
               src="/images/about-office.jpg"
-              alt={`${site.legalName} 사옥`}
-              width={1200}
-              height={900}
+              alt={`${site.legalName} 제작·시공 현장 — 크레인 고소작업으로 건물 외벽 사인을 다는 모습과 자체 공장에서 제작 중인 채널문자`}
+              width={1600}
+              height={1200}
               fill
               sizes="(max-width: 1024px) 100vw, 600px"
-              label="사옥 / 공장 전경"
+              label="제작 · 시공 현장"
             />
           </div>
         </div>
