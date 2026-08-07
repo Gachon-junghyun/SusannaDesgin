@@ -148,12 +148,12 @@ export default async function Home() {
           <Reveal delay={140} className="relative aspect-4/3 overflow-hidden rounded-2xl">
             <Img
               src="/images/about-factory.jpg"
-              alt="수산나디자인 자체 공장 내부 — 채널 사인 LED 배선 작업 중"
-              width={1200}
-              height={900}
+              alt="수산나디자인 제작·시공 현장 — 크레인 고소작업으로 건물 외벽 사인을 다는 모습과 자체 공장에서 제작 중인 채널문자"
+              width={1600}
+              height={1200}
               fill
               sizes="(max-width: 1024px) 100vw, 640px"
-              label="공장 전경 / 작업 현장"
+              label="제작 · 시공 현장"
             />
           </Reveal>
         </div>
