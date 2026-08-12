@@ -173,8 +173,15 @@ function FooterCol({
     <div>
       <h2 className="mb-3 text-sm font-bold text-white">{title}</h2>
       <ul className="space-y-1.5 text-sm">
+        {/*
+          ★ key 를 `href + label` 로 만들면 안 됩니다. React key 는 RSC flight
+          페이로드에 그대로 직렬화돼 HTML 안 스크립트에 남는데, 구글 크롤러가
+          그 문자열(`/about` + `회사소개` 가 붙은 꼴)을 URL 로 긁어가 404 를 만듭니다.
+          2026-08-12 Search Console 에서 이 경로로 404 5건이 실제로 잡혔습니다.
+          href 는 각 칼럼 안에서 유일하므로 그것만 씁니다.
+        */}
         {links.map((l) => (
-          <li key={l.href + l.label}>
+          <li key={l.href}>
             <Link href={l.href} className="hover:text-white">
               {l.label}
             </Link>

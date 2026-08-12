@@ -1135,7 +1135,8 @@ Workers Builds 는 `npx wrangler deploy` 로 배포하고, 그 명령은 `wrangl
 | ⚠️ 법률 | **견적 알림을 켜면 개인정보 위탁 고지가 필요합니다** — 고객 이름·연락처가 Resend·슬랙 등 외부로 나갑니다. 처리방침 위탁 항목에 업체명·위탁업무를 적어야 합니다(개인정보보호법 제26조). 켜기 전에는 해당 없음 | `app/privacy` · F16 |
 | ⚠️ 배포 | **Vercel Hobby 사용 금지** — 상업적 이용 위반이라 사전 통보 없이 중단될 수 있습니다 | [`DEPLOY.md`](DEPLOY.md) |
 | ⚠️ 등록 | **파워링크 확장소재 '웹사이트정보' 켜기** — `/works` 에 캐러셀 구조화 데이터(ItemList)는 2026-08-10 배포됐습니다. 남은 건 `ads.naver.com`(계정 `2570727`) 광고그룹에서 `+새 확장 소재 → 웹사이트정보 → 활용 동의 → 저장`을 누르는 것뿐이고, **사람이 눌러야 합니다**(P5). 켠 뒤 실제로 노출되는지는 며칠 뒤 다시 봐야 합니다(연관도 기반이라 항상 뜨진 않음) | susanna `notes.md`(형제 저장소) |
-| 🔴 확인 | **`site.legalName` 이 `"주식회사 수산나디자인"` 인데, 2026-08-07 사업자등록증 실물로 확인된 정식 표기는 `"(주) 수산나디자인"` 입니다**(susanna `notes.md`). 이 값이 `alternateName` JSON-LD·개인정보처리방침·이용약관·`/about`·푸터에 전부 나갑니다 — NAP 불일치가 법률 문서까지 번진 상태입니다. 이번 작업 범위 밖이라 고치지 않았습니다 | `config/site.ts` · susanna `notes.md` |
+| ~~🔴 확인~~ | ✅ **해결 (2026-08-12)** — `site.legalName` 을 `"(주) 수산나디자인"` 으로 고쳤습니다(사업자등록증 실물 표기). `site.description` 첫 문장도 같이 맞췄습니다. 로컬 빌드로 `/`·`/about`·`/terms`·`/privacy` 를 실제로 렌더해 옛 표기가 **0건**인 것을 확인했습니다 | `config/site.ts` |
+| ~~🔴 SEO~~ | ✅ **해결 (2026-08-12)** — **푸터 React key 가 구글에 404 5건을 만들고 있었습니다.** `<li key={l.href + l.label}>` 의 key 가 **RSC flight 페이로드에 직렬화돼 HTML 안 스크립트에 남고**, 구글이 그 문자열(`/about` + `회사소개` 가 붙은 꼴)을 URL 로 긁어갔습니다. Search Console 의 `찾을 수 없음(404) 5개`가 전부 이것이었고(`/works…`·`/support…`·`/about…`·`/signs…`·`/process…`), **`sitemap.xml` 은 원래부터 깨끗했습니다.** `key={l.href}` 로 바꿔 해결. ⚠️ **교훈: RSC 에서 key 를 URL 처럼 생긴 문자열로 만들지 마세요** | `components/Footer.tsx` |
 
 ### 7.2 코드 부채
 
