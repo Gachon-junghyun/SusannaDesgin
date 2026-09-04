@@ -1,13 +1,26 @@
 import type { Metadata, Viewport } from "next";
+import dynamic from "next/dynamic";
 import Script from "next/script";
 import { Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingBar from "@/components/FloatingBar";
+import PreviewBar from "@/components/PreviewBar";
 import SiteChrome from "@/components/SiteChrome";
+import { SHOW_PRODUCTS } from "@/config/content";
 import { seo, site } from "@/config/site";
+import { getPreview } from "@/lib/preview";
 import { ogImage } from "@/lib/seo";
+
+/**
+ * 관리자가 공개 화면을 돌아다니는 동안 로그인 토큰을 갱신합니다 (F23).
+ *
+ * 🔴 **`next/dynamic` 으로 늦게 부르는 게 요점입니다.** 그냥 `import` 하면
+ * `@supabase/ssr` 이 **모든 공개 페이지의 공용 번들**에 들어갑니다 — 조건부로
+ * 그려도 그렇습니다. 이러면 관리자일 때만 그 조각을 받아 옵니다.
+ */
+const SessionKeeper = dynamic(() => import("@/components/admin/SessionKeeper"));
 
 const notoKr = Noto_Sans_KR({
   variable: "--font-noto-kr",
@@ -72,6 +85,18 @@ export const viewport: Viewport = {
   themeColor: "#10141a",
   width: "device-width",
   initialScale: 1,
+  /**
+   * 아이폰 노치·홈 인디케이터 영역까지 화면을 씁니다.
+   *
+   * ⚠️ **이 값이 없으면 `env(safe-area-inset-*)` 이 항상 0 입니다.** 모바일 하단
+   *    고정바(FloatingBar)가 홈 인디케이터에 물려 버튼 아래쪽이 안 눌리던 문제를
+   *    `globals.css` 와 `FloatingBar.tsx` 에서 그 값으로 막고 있는데, 여기가 빠지면
+   *    **CSS 는 그대로인데 아무 효과가 없습니다.** 둘은 항상 같이 갑니다.
+   *
+   *    대신 가로모드에서 콘텐츠가 노치 밑으로 들어갈 수 있어, `.wrap` 의 좌우 여백을
+   *    `max(고정값, env(safe-area-inset-*))` 로 받아 둡니다 (`globals.css`).
+   */
+  viewportFit: "cover",
 };
 
 /**
@@ -134,11 +159,22 @@ const jsonLd = {
   //    가져다 넣으면 리치 결과 제외 또는 수동 조치 대상이 됩니다.
 };
 
-export default function RootLayout({
+/**
+ * 🔴 **이 레이아웃이 쿠키를 읽습니다 — 원칙 A3 의 예외입니다** (2026-08-17, F23).
+ *
+ * 대가로 **정적이던 페이지들까지 요청 시 SSR** 이 됩니다(`/support` `/quote`
+ * `/privacy` `/terms` `/no-email-collect`). 레이아웃에서 동적 API 를 부르면
+ * 그 아래 전부가 동적이 되기 때문이고, 이건 피할 수 있는 게 아니라 **선택한 값**입니다
+ * — 시안을 «진짜 그 주소에서» 보려면 머리말·꼬리말도 같이 갈려야 합니다.
+ * 근거와 되돌리는 법은 `docs/ARCHITECTURE.md` §0 A3 · §7 에 있습니다.
+ */
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const preview = await getPreview();
+
   return (
     <html lang="ko" className={`${notoKr.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
@@ -146,7 +182,8 @@ export default function RootLayout({
           <a href="#main" className="skip-link">
             본문으로 바로가기
           </a>
-          <Header />
+          {/* 제품 메뉴는 공개 스위치 또는 미리보기로만 섭니다 (F24) */}
+          <Header productsVisible={SHOW_PRODUCTS || preview.on} />
         </SiteChrome>
         <main id="main" className="flex-1">
           {children}
@@ -154,6 +191,9 @@ export default function RootLayout({
         <SiteChrome>
           <Footer />
           <FloatingBar />
+          {/* 관리자 전용. 손님에게는 `null` 이라 마크업도 안 나갑니다 (F23) */}
+          <PreviewBar state={preview} />
+          {(preview.isAdmin || preview.stale) && <SessionKeeper />}
         </SiteChrome>
         <script
           type="application/ld+json"

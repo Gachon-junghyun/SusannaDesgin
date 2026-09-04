@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
 
+/**
+ * 입력칸 공통 클래스.
+ *
+ * ⚠️ placeholder 의 `ink-500/60` 은 흰 배경에서 **2.50:1** 입니다(실측).
+ *    불투명한 `ink-500` 이면 5.61:1 인데, 색 톤을 유지하기로 한 결정이라 그대로 둡니다
+ *    — 근거는 `app/globals.css` 의 `@theme` 머리말·`docs/ARCHITECTURE.md` §7.
+ */
 export const inputCls =
   "w-full rounded-lg border border-line bg-white px-4 py-3 text-[15px] outline-none transition-colors placeholder:text-ink-500/60 focus:border-brand focus:ring-2 focus:ring-brand/20 aria-[invalid=true]:border-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-accent/20";
 

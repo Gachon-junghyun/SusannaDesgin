@@ -9,8 +9,17 @@ import { formatPhone, validateQuick, type Errors } from "@/lib/validate";
  * 히어로 인라인 간편 상담 (3필드).
  * 레퍼런스: 홍간판 — 이름/연락처/설치지역/설치층수만 받고 이메일도 받지 않음.
  * 필드가 적을수록 전환이 오릅니다. 상세 정보는 회신 통화에서 받습니다.
+ *
+ * 🔴 **홈에는 이 폼이 두 벌 들어갑니다** — 데스크톱은 히어로 사진 안(`HeroSlider`),
+ *    모바일은 히어로 아래(`app/page.tsx`). CSS 로 한쪽씩 숨기지만 **숨겨도 DOM 에는
+ *    둘 다 남습니다.** 그래서 `id` 가 통째로 겹쳐 있었고, 브라우저는 `label for=` 를
+ *    **문서에서 처음 만난 칸**에 붙입니다 — 즉 모바일에서 라벨을 눌러도 화면에 없는
+ *    데스크톱 칸에 포커스가 갔고, `aria-describedby` 의 에러 안내도 같은 곳을
+ *    가리켰습니다. 오류가 안 나서 화면만 봐서는 모릅니다.
+ *    **`idPrefix` 를 서로 다르게 주는 것이 이 문제의 해법입니다.** 새 자리에 이 폼을
+ *    또 놓게 되면 접두어를 반드시 새로 주세요.
  */
-export default function QuickQuoteForm() {
+export default function QuickQuoteForm({ idPrefix = "q" }: { idPrefix?: string }) {
   const [form, setForm] = useState({ name: "", phone: "", region: "", trap: "" });
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -79,16 +88,16 @@ export default function QuickQuoteForm() {
 
       <div className="mt-4 space-y-2.5">
         <Input
-          id="q-name"
+          id={`${idPrefix}-name`}
           label="성함"
           value={form.name}
           onChange={set("name")}
-          placeholder="성함을 입력해 주세요"
+          placeholder="홍길동"
           error={errors.name}
           autoComplete="name"
         />
         <Input
-          id="q-phone"
+          id={`${idPrefix}-phone`}
           label="연락처"
           value={form.phone}
           onChange={(v) => set("phone")(formatPhone(v))}
@@ -98,20 +107,20 @@ export default function QuickQuoteForm() {
           autoComplete="tel"
         />
         <Input
-          id="q-region"
+          id={`${idPrefix}-region`}
           label="설치지역"
           value={form.region}
           onChange={set("region")}
-          placeholder="예: 수원시 팔달구"
+          placeholder="예: 대전 서구"
           error={errors.region}
         />
       </div>
 
       {/* 봇 트랩 — 화면에 보이지 않습니다 */}
       <div className="absolute -left-[9999px]" aria-hidden="true">
-        <label htmlFor="q-website">Website</label>
+        <label htmlFor={`${idPrefix}-website`}>Website</label>
         <input
-          id="q-website"
+          id={`${idPrefix}-website`}
           name="company_website"
           tabIndex={-1}
           autoComplete="off"
@@ -126,6 +135,7 @@ export default function QuickQuoteForm() {
           onChange={setAgree}
           error={errors.agree}
           compact
+          idPrefix={`${idPrefix}-agree`}
         />
       </div>
 
@@ -167,8 +177,19 @@ function Input({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="sr-only">
-        {label} (필수)
+      {/*
+        🔴 **라벨을 눈에 보이게 둡니다.** 예전에는 `sr-only` 라 화면에는 안내문
+           (placeholder)뿐이었는데, **타이핑을 시작하면 그 안내문이 사라집니다** —
+           칸을 세 개 채우고 나면 무엇을 적는 칸이었는지 화면에 아무 단서가 없고,
+           자동완성으로 값이 채워진 경우엔 처음부터 없습니다.
+           안내문으로 라벨을 대신하는 것은 널리 기록된 안티패턴입니다.
+      */}
+      <label htmlFor={id} className="mb-1 block text-[12px] font-bold text-ink-500">
+        {label}
+        <span className="ml-1 text-accent" aria-hidden="true">
+          *
+        </span>
+        <span className="sr-only">(필수)</span>
       </label>
       <input
         id={id}
@@ -180,10 +201,20 @@ function Input({
         autoComplete={autoComplete}
         aria-invalid={!!error}
         aria-describedby={error ? `${id}-error` : undefined}
-        className="w-full rounded-lg border border-line px-4 py-3 text-[15px] outline-none transition-colors placeholder:text-ink-500/60 focus:border-brand focus:ring-2 focus:ring-brand/20 aria-[invalid=true]:border-brand"
+        /* ⚠️ 에러 테두리가 원래 `border-brand`(청록)였습니다 — 잘못된 값에 브랜드색이
+              들어와 «정상»처럼 보였습니다. 색 팔레트를 바꾼 게 아니라 **쓰던 자리를
+              고친 것**이라, 색을 되돌린 뒤에도 이건 `accent`(에러색) 그대로 둡니다.
+              `Field.tsx` 의 `inputCls` 와 같은 규칙입니다.
+           placeholder 의 `ink-500/60` 은 흰 배경에서 2.50:1 이라 기준 미달인데,
+              색 톤을 유지하기로 한 결정이라 그대로 둡니다 (globals.css 머리말). */
+        className="w-full rounded-lg border border-line px-4 py-3 text-[15px] outline-none transition-colors placeholder:text-ink-500/60 focus:border-brand focus:ring-2 focus:ring-brand/20 aria-[invalid=true]:border-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-accent/20"
       />
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-[13px] font-medium text-accent">
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="mt-1 text-[13px] font-medium text-accent"
+        >
           {error}
         </p>
       )}

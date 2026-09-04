@@ -17,6 +17,11 @@ export function SectionHeading({
 }) {
   return (
     <div className={`${center ? "text-center" : ""} ${center ? "mx-auto max-w-2xl" : ""}`}>
+      {/*
+        ⚠️ 이 오렌지는 **밝은 배경에서 3.14:1** 로 명암비 기준에 못 미칩니다
+           (어두운 배경에서는 5.65:1 로 통과). 브랜드 색을 지키기로 한 결정이라
+           그대로 둡니다 — 근거는 `app/globals.css` 의 `@theme` 머리말.
+      */}
       {eyebrow && (
         <p className="mb-3 text-[13px] font-black tracking-[0.25em] text-accent">
           {eyebrow}

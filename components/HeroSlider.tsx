@@ -22,9 +22,22 @@ const SNAP_MS = 780;
 
 export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
   const [i, setI] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  /**
+   * 사람이 «정지» 를 눌러서 멈춘 상태.
+   *
+   * 마우스를 올려 멈추는 것(`hovering`)과 **일부러 나눠 둡니다.** 하나로 두면
+   * 정지 버튼을 누른 뒤 마우스가 밖으로 나가는 순간 다시 돌아갑니다 — 사람이
+   * 멈추라고 한 것을 화면이 되돌리는 셈이라, 정지 버튼이 있으나 마나가 됩니다.
+   */
+  const [stopped, setStopped] = useState(false);
   const [p, setP] = useState(0); // 스크롤 진행도 0~1
-  const reduced = useRef(false);
+  /**
+   * 움직임 줄이기 설정. **ref 가 아니라 state 입니다** — 정지 버튼을 보일지 말지가
+   * 이 값에 걸려 있어서, ref 로 두면 값이 바뀌어도 화면이 다시 그려지지 않습니다.
+   * 서버 렌더에는 `false`(자동 넘김 켜짐) 로 나가고 마운트 직후 실제 설정으로 맞춥니다.
+   */
+  const [reduced, setReduced] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const glideRef = useRef<(() => void) | null>(null);
 
@@ -33,13 +46,21 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
     [slides.length]
   );
 
+  // 움직임 줄이기 설정 읽기 (설정을 도중에 바꿔도 따라갑니다)
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   // 자동 넘김
   useEffect(() => {
-    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (paused || reduced.current) return;
+    if (hovering || stopped || reduced) return;
     const t = setInterval(() => setI((v) => (v + 1) % slides.length), INTERVAL);
     return () => clearInterval(t);
-  }, [paused, slides.length]);
+  }, [hovering, stopped, reduced, slides.length]);
 
   // 스크롤 진행도 — 히어로가 위로 흘러가며 다음 섹션에 자리를 내줍니다
   useEffect(() => {
@@ -174,10 +195,10 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
       ref={sectionRef}
       aria-roledescription="carousel"
       aria-label="주요 소개"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      onFocusCapture={() => setHovering(true)}
+      onBlurCapture={() => setHovering(false)}
       className="relative isolate min-h-[640px] overflow-hidden bg-ink md:min-h-[100svh]"
     >
       {/* 배경 — 스크롤하면 아주 살짝 당겨지며 어두워집니다 */}
@@ -240,6 +261,8 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
             className="rise mb-3 text-[15px] font-black tracking-[0.3em] text-accent"
           >
             {current.eyebrow}
+            {/* ⚠️ white/35 는 ink 배경에서 3.21:1 로 기준 미달입니다(장식용 슬라이드 수).
+                색 톤 유지 결정에 따라 그대로 둡니다 — globals.css `@theme` 머리말 */}
             <span className="ml-2 text-white/35">/ 0{slides.length}</span>
           </p>
           <h1
@@ -255,39 +278,74 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
             {current.sub}
           </p>
 
-          {/* 인디케이터 — 막대형 */}
+          {/*
+            인디케이터 — 막대형.
+
+            ⚠️ **막대는 4px 이지만 버튼은 24px 입니다.** 예전에는 `<button>` 자체가
+               `h-1`(4px) 이라 손가락으로 누를 수가 없었습니다(실측 15×5px).
+               WCAG 2.2 «Target Size (Minimum)» 는 24×24 CSS px 를 요구합니다.
+               보이는 막대는 그대로 두고 **버튼에 투명 여백만 붙여** 크기를 만듭니다 —
+               막대를 두껍게 만들면 디자인이 바뀌므로 이 방식이 맞습니다.
+
+            ⚠️ `role="tab"` 을 걷어냈습니다. 탭 역할은 `tabpanel` 과 짝이어야 하는데
+               슬라이드는 패널이 아니라서, 스크린리더에 "탭 4개"라고 잘못 알려 주고
+               있었습니다. 지금은 평범한 버튼 + `aria-current` 입니다.
+          */}
           <div className="mt-10 flex items-center gap-3">
             <button
               type="button"
               onClick={() => go(i - 1)}
               aria-label="이전 슬라이드"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
             >
-              ‹
+              <ChevronIcon dir="left" />
             </button>
-            <div className="flex gap-1.5" role="tablist" aria-label="슬라이드 선택">
+
+            <div className="flex items-center gap-1.5" aria-label="슬라이드 선택">
               {slides.map((s, idx) => (
                 <button
                   key={s.image}
                   type="button"
-                  role="tab"
-                  aria-selected={idx === i}
                   aria-label={`${idx + 1}번 슬라이드`}
+                  aria-current={idx === i ? "true" : undefined}
                   onClick={() => go(idx)}
-                  className={`h-1 rounded-full transition-all ${
-                    idx === i ? "w-10 bg-brand-400" : "w-6 bg-white/30 hover:bg-white/50"
-                  }`}
-                />
+                  className="flex h-6 items-center px-1 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`block h-1 rounded-full transition-all ${
+                      idx === i ? "w-10 bg-brand-400" : "w-6 bg-white/30 hover:bg-white/50"
+                    }`}
+                  />
+                </button>
               ))}
             </div>
+
             <button
               type="button"
               onClick={() => go(i + 1)}
               aria-label="다음 슬라이드"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
             >
-              ›
+              <ChevronIcon dir="right" />
             </button>
+
+            {/*
+              자동 넘김 정지 — 6초마다 스스로 바뀌는 화면에는 멈출 방법이 있어야 합니다.
+              마우스 올리기·포커스로도 멈추지만, 그건 **손을 대고 있는 동안만** 이라
+              읽는 사람이 손을 떼면 다시 움직입니다. 터치 화면에는 hover 가 아예 없습니다.
+              움직임 줄이기(prefers-reduced-motion)면 처음부터 안 도니까 이 버튼도 숨깁니다.
+            */}
+            {!reduced && slides.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setStopped((v) => !v)}
+                aria-label={stopped ? "자동 넘김 시작" : "자동 넘김 정지"}
+                className="ml-1 flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+              >
+                {stopped ? <PlayIcon /> : <PauseIcon />}
+              </button>
+            )}
           </div>
         </div>
 
@@ -299,7 +357,9 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
             opacity: 1 - ease * 0.9,
           }}
         >
-          <QuickQuoteForm />
+          {/* 같은 폼이 홈에 두 벌 들어갑니다(데스크톱=여기, 모바일=히어로 아래).
+              id 가 겹치면 라벨이 엉뚱한 칸을 가리키므로 접두어를 다르게 줍니다. */}
+          <QuickQuoteForm idPrefix="hero" />
         </div>
       </div>
 
@@ -329,9 +389,51 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
         </span>
       </a>
 
-      <p className="sr-only" aria-live="polite">
+      {/*
+        지금 몇 번째 슬라이드인지 스크린리더에 알립니다.
+
+        ⚠️ **자동으로 넘어가는 동안에는 알리지 않습니다**(`aria-live="off"`).
+           6초마다 읽어 주면 페이지 어디를 읽고 있든 낭독이 끊깁니다 — 도움이 아니라
+           방해입니다. 사람이 «이전/다음/막대» 를 눌러 넘긴 그때만 켭니다.
+      */}
+      <p className="sr-only" aria-live={hovering || stopped || reduced ? "polite" : "off"}>
         {i + 1} / {slides.length} — {current.alt}
       </p>
     </section>
+  );
+}
+
+function ChevronIcon({ dir }: { dir: "left" | "right" }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={dir === "left" ? "M15 18l-6-6 6-6" : "M9 18l6-6-6-6"} />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M8 5.5a1 1 0 0 1 1.5-.87l9 6.5a1 1 0 0 1 0 1.74l-9 6.5A1 1 0 0 1 8 18.5z" />
+    </svg>
   );
 }

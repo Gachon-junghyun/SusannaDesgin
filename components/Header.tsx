@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { site } from "@/config/site";
 
-export const NAV = [
+const NAV = [
   { href: "/about", label: "회사소개" },
   { href: "/signs", label: "사업영역" },
   { href: "/works", label: "주요실적" },
@@ -14,13 +14,34 @@ export const NAV = [
   { href: "/support", label: "고객지원" },
 ];
 
+/**
+ * 제품 메뉴는 **아직 손님에게 안 보입니다** (F24).
+ *
+ * 🔴 **여기를 `NAV` 에 그냥 합치지 마세요.** 메뉴에 서는 순간 손님에게 열린 것이고,
+ * 그때는 `SHOW_PRODUCTS` 를 켜는 게 맞습니다 — 페이지는 404 인데 메뉴만 서 있는
+ * 상태가 제일 나쁩니다. 두 곳이 **한 값**(`productsVisible`)에서 갈리는 게 설계입니다.
+ *
+ * 자리는 «사업영역» 다음입니다. 사업영역(무엇을 하는 회사인가) → 제품(무엇을 만드나)
+ * → 주요실적(어디에 했나) 순서라, 넣을 곳이 여기밖에 없습니다.
+ */
+const PRODUCTS_NAV = { href: "/products", label: "제품" };
+
 /** 이 높이만큼 히어로가 헤더 아래로 깔립니다 (HeroSlider 상단 패딩과 맞춤) */
 const SOLID_AT = 40;
 
-export default function Header() {
+export default function Header({
+  /** 제품 메뉴를 세울지. `SHOW_PRODUCTS || 미리보기 켜짐` (F23·F24) */
+  productsVisible = false,
+}: {
+  productsVisible?: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const nav = productsVisible
+    ? [NAV[0], NAV[1], PRODUCTS_NAV, ...NAV.slice(2)]
+    : NAV;
 
   /** 홈은 히어로 사진 위에 헤더가 투명하게 얹힙니다 */
   const overlay = pathname === "/";
@@ -103,7 +124,7 @@ export default function Header() {
 
           <nav aria-label="주 메뉴" className="hidden lg:block">
             <ul className="flex items-center gap-9">
-              {NAV.map((n) => {
+              {nav.map((n) => {
                 const active = pathname.startsWith(n.href);
                 return (
                   <li key={n.href}>
@@ -189,7 +210,7 @@ export default function Header() {
         >
           <nav aria-label="모바일 메뉴" className="wrap py-2">
             <ul className="divide-y divide-line">
-              {NAV.map((n) => (
+              {nav.map((n) => (
                 <li key={n.href}>
                   <Link
                     href={n.href}

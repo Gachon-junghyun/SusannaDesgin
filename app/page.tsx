@@ -70,9 +70,12 @@ export default async function Home() {
       <JsonLd data={websiteJsonLd} />
       <HeroSlider slides={heroSlides} />
 
-      {/* 모바일에서는 히어로 아래에 간편 상담 폼 */}
+      {/* 모바일에서는 히어로 아래에 간편 상담 폼.
+          ⚠️ 데스크톱용 한 벌이 `HeroSlider` 안에 따로 있습니다 — CSS 로 한쪽씩 숨겨도
+             DOM 에는 둘 다 남으므로 `idPrefix` 를 서로 다르게 줘야 라벨이 제 칸을
+             가리킵니다 (`components/QuickQuoteForm.tsx` 머리말). */}
       <div className="bg-ink px-6 pb-14 md:hidden">
-        <QuickQuoteForm />
+        <QuickQuoteForm idPrefix="mobile" />
       </div>
 
       {/* 사업 영역 — 히어로 위로 살짝 올라타며 다음 화면으로 넘어갑니다 */}
@@ -284,6 +287,8 @@ export default async function Home() {
             <h2 className="text-3xl font-black tracking-tight whitespace-pre-line md:text-4xl">
               {copy("home-cta").title}
             </h2>
+            {/* ⚠️ 청록 위의 `white/85` 는 2.55:1 로 기준 미달입니다(불투명 흰색도 2.99).
+                색 톤 유지 결정에 따라 그대로 둡니다 — app/globals.css `@theme` 머리말 */}
             <p className="mt-3 leading-relaxed whitespace-pre-line text-white/85">
               {copy("home-cta").desc}
             </p>

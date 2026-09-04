@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   equipment as fallbackFab,
+  products as fallbackProducts,
   sectionCopy as fallbackCopy,
   signTypes as fallbackSignTypes,
   slides as fallbackSlides,
@@ -106,6 +107,8 @@ export type SiteBlocks = {
   process: Block[];
   fabrication: Block[];
   signTypes: Block[];
+  /** 제품 카탈로그 — `eyebrow` 가 분류(필터 탭), `points` 가 유형 키워드입니다 */
+  products: Block[];
 };
 
 function block(b: Partial<Block>): Block {
@@ -161,6 +164,16 @@ function fallbackBlocks(): SiteBlocks {
         sub: t.desc,
         points: t.points,
         image: t.image,
+      })
+    ),
+    products: fallbackProducts.map((p) =>
+      block({
+        eyebrow: p.group,
+        title: p.name,
+        sub: p.desc,
+        points: p.tags,
+        image: p.image,
+        alt: p.alt,
       })
     ),
   };
@@ -219,6 +232,7 @@ export async function getBlocks(): Promise<SiteBlocks> {
       process: pick("process", fallback.process),
       fabrication: pick("fabrication", fallback.fabrication),
       signTypes: pick("sign_type", fallback.signTypes),
+      products: pick("product", fallback.products),
     };
   } catch (e) {
     console.error("[cms] 페이지 문구를 못 읽어 기본 내용으로 대체합니다.", e);

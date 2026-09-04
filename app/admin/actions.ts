@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { SECTIONS } from "@/config/sections";
 import { requireAdmin } from "@/lib/auth";
+import { PREVIEW_COOKIE } from "@/lib/preview";
 import { removeQuoteFiles } from "@/lib/quote-files";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -387,6 +389,43 @@ export async function deleteQuote(formData: FormData) {
 
   revalidatePath("/admin/quotes");
   revalidatePath("/admin");
+}
+
+// ---------------------------------------------------------------
+// 새 디자인 미리보기 — F23
+// ---------------------------------------------------------------
+
+/**
+ * 공개 화면을 새 디자인으로 볼지 말지 전환합니다 (`lib/preview.ts`).
+ *
+ * 이 액션은 **공개 페이지에 붙은 막대에서 불립니다.** 다른 액션과 달리 DB 를
+ * 안 건드리지만, 그래도 `requireAdmin()` 이 먼저입니다 — 서버 액션은 화면과 별개로
+ * 인터넷에 열려 있는 엔드포인트라, 이게 없으면 아무나 쿠키를 받아 갑니다 [원칙 A2].
+ *
+ * 🔴 **쿠키는 `httpOnly` 여야 합니다.** 브라우저 JS 가 심을 수 있게 되면
+ * `PreviewState.stale`("로그인이 만료됐다") 의 근거가 무너집니다 — 그 판정이
+ * "이 쿠키는 관리자만 받을 수 있다" 에 기대고 있습니다.
+ */
+export async function setPreview(formData: FormData) {
+  await requireAdmin();
+
+  const jar = await cookies();
+
+  if (text(formData, "on") === "1") {
+    jar.set(PREVIEW_COOKIE, "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+      // 일주일. 켜 둔 걸 잊고 몇 달 뒤에 "홈페이지가 왜 이러지" 가 되지 않게 만료를 둡니다.
+      maxAge: 60 * 60 * 24 * 7,
+    });
+  } else {
+    jar.delete(PREVIEW_COOKIE);
+  }
+
+  // 머리말·꼬리말까지 갈리므로 레이아웃째 다시 그립니다(클라이언트 라우터 캐시도 같이 비움).
+  revalidatePath("/", "layout");
 }
 
 // ---------------------------------------------------------------

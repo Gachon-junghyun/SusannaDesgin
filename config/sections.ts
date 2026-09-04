@@ -104,6 +104,26 @@ export const SECTIONS: SectionSpec[] = [
     },
   },
   {
+    key: "product",
+    label: "제품",
+    where:
+      "“제품” 페이지의 카드입니다. 지금은 손님에게 안 보입니다 — 대표님이 새 디자인 미리보기를 켰을 때만 나옵니다(공개는 코드 작업).",
+    fields: {
+      eyebrow: {
+        label: "분류",
+        hint: "이 값으로 페이지 위쪽 필터 단추가 만들어집니다. 같은 말을 쓰세요 (실외 · 실내 · 구조물)",
+        placeholder: "실외",
+      },
+      title: { label: "제품 이름", placeholder: "채널 간판" },
+      sub: { label: "한 줄 설명", placeholder: "글자 하나하나를 입체로 만들어 LED 를 넣습니다." },
+      points: {
+        label: "유형 키워드",
+        hint: "한 줄에 하나씩. 카드에서 가운뎃점으로 이어 붙습니다",
+      },
+      image: { label: "사진", hint: "정사각으로 잘려 나갑니다 (권장 900×900). 10MB 이하." },
+    },
+  },
+  {
     key: "sign_type",
     label: "사업영역",
     where: "홈페이지 맨 위 네 칸 바와 “사업영역” 페이지에 함께 나옵니다.",

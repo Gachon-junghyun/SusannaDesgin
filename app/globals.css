@@ -1,15 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  /* 브랜드 — 회사소개서의 청록. 표지 #00AFA2, 구자료 #00A79D 를 기준으로 잡음 */
+  /*
+   * 브랜드 — 회사소개서의 청록. 표지 #00AFA2, 구자료 #00A79D 를 기준으로 잡음
+   *
+   * ⚠️ **이 값들은 명암비 기준(WCAG AA 4.5:1)을 못 넘깁니다 — 알고 그대로 둔 것입니다.**
+   *    실측: `brand` 는 흰 배경 위 글자로도, 그 색 위에 흰 글씨를 얹어도 **2.99:1**.
+   *    `accent` 는 흰 배경에서 **3.14:1**(어두운 배경에서는 5.65:1 로 통과).
+   *    2026-08-14 에 통과값(`#007e77` / `#c64500`)으로 바꿔 화면까지 만들어 봤지만,
+   *    **브랜드 톤이 눈에 띄게 탁해져 대표님이 원래 색을 선택**했습니다.
+   *    회사 색이 회사소개서에서 온 값이라 접근성보다 우선한다는 판단입니다.
+   *
+   *    🔴 **그러니 "고치려다 만 것"이 아니라 "재보고 남긴 것"입니다.**
+   *       다시 건드리기 전에 `docs/ARCHITECTURE.md` §7 의 해당 줄을 읽으세요 —
+   *       통과값과 그 값을 구한 방법이 거기 적혀 있습니다.
+   *
+   *    `brand-400` 은 **어두운 배경 전용**입니다(ink 위 8.09:1). 흰 배경에 쓰지 마세요.
+   */
   --color-brand-50: #eaf8f7;
   --color-brand-100: #cff0ed;
-  --color-brand-400: #35c2b8;
+  --color-brand-400: #35c2b8; /* 어두운 배경 전용 */
   --color-brand: #00a79d;
   --color-brand-600: #008e86;
   --color-brand-700: #00726c;
 
-  /* 액센트 — 구자료 표지 헤드라인 오렌지. 강조·필수표시·에러에만 */
+  /* 액센트 — 구자료 표지 헤드라인 오렌지. 강조·필수표시·에러에만 (위 경고 참조) */
   --color-accent: #ff5900;
   --color-accent-600: #e04e00;
 
@@ -48,16 +63,24 @@ body {
  * 사이트 전체 폭·좌우 여백을 여기 한 곳에서 조절합니다.
  *   max-width  = 콘텐츠가 최대로 넓어지는 한계
  *   padding-inline = 화면 가장자리와 콘텐츠 사이 최소 여백
+ *
+ * `max(…, env(safe-area-inset-*))` 인 이유: `viewport-fit=cover`(app/layout.tsx) 를
+ * 켜면 아이폰 가로모드에서 노치 밑까지 화면이 넓어집니다. 여백을 고정값으로 두면
+ * 그 상태에서 글이 노치에 잘립니다. 세로모드·PC 에서는 env() 가 0 이라 예전과 같습니다.
  */
 .wrap {
   margin-inline: auto;
   width: 100%;
   max-width: 1520px;
-  padding-inline: 1.25rem; /* 20px — 모바일 */
+  /* 20px — 모바일 */
+  padding-inline: max(1.25rem, env(safe-area-inset-left, 0px))
+    max(1.25rem, env(safe-area-inset-right, 0px));
 }
 @media (min-width: 640px) {
   .wrap {
-    padding-inline: 2rem; /* 32px */
+    /* 32px */
+    padding-inline: max(2rem, env(safe-area-inset-left, 0px))
+      max(2rem, env(safe-area-inset-right, 0px));
   }
 }
 @media (min-width: 1024px) {
@@ -154,9 +177,12 @@ body {
   }
 }
 
-/* 모바일 하단 고정바가 콘텐츠를 가리지 않도록 */
+/* 모바일 하단 고정바가 콘텐츠를 가리지 않도록.
+   아이폰 홈 인디케이터 높이(env(safe-area-inset-bottom))를 더합니다 — 안 더하면
+   고정바 자체가 인디케이터에 물려 버튼 아래쪽이 눌리지 않습니다. 지원 안 하는
+   브라우저에서는 env() 가 0 이라 예전과 같습니다. */
 @media (max-width: 767px) {
   body {
-    padding-bottom: 4.5rem;
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
 }

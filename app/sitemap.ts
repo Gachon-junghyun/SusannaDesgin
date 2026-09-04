@@ -9,6 +9,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       { path: "", priority: 1, freq: "weekly" },
       { path: "/quote", priority: 0.9, freq: "monthly" },
       { path: "/signs", priority: 0.8, freq: "monthly" },
+      // 아직 «안 연» 페이지라 지금은 아래 필터가 걸러 냅니다 (F24).
+      // `SHOW_PRODUCTS` 를 켜면 저절로 들어갑니다 — 여기를 손으로 고칠 일이 없습니다.
+      { path: "/products", priority: 0.8, freq: "monthly" },
       { path: "/works", priority: 0.8, freq: "weekly" },
       { path: "/process", priority: 0.7, freq: "monthly" },
       { path: "/about", priority: 0.7, freq: "monthly" },

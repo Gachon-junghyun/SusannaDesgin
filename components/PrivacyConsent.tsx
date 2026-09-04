@@ -14,14 +14,22 @@ export default function PrivacyConsent({
   error,
   dark = false,
   compact = false,
+  idPrefix = "agree",
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   error?: string;
   dark?: boolean;
   compact?: boolean;
+  /**
+   * 한 화면에 이 컴포넌트가 두 벌 이상 놓일 때 `id` 가 겹치지 않게 하는 접두어.
+   * 홈이 그런 화면입니다 — 간편 견적 폼이 데스크톱·모바일 두 벌 들어갑니다
+   * (`QuickQuoteForm` 머리말 참조).
+   */
+  idPrefix?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const errorId = `${idPrefix}-error`;
 
   const muted = dark ? "text-white/55" : "text-ink-500";
   const box = dark
@@ -31,19 +39,27 @@ export default function PrivacyConsent({
   return (
     <div>
       <div className="flex items-start gap-2">
+        {/*
+          체크박스는 20px 입니다. WCAG 2.2 «Target Size» 의 24px 에는 못 미치지만,
+          바로 옆 라벨(`htmlFor`)이 같은 동작을 하는 충분히 큰 대체 수단이라
+          «Equivalent» 예외에 해당합니다. **라벨 연결을 끊으면 이 예외가 사라집니다.**
+          체크 색은 토큰(`accent-brand`)으로 받습니다 — 예전에는 `#00a79d` 를 손으로
+          박아 두어서, 팔레트를 고쳐도 **여기만 옛 색으로 남는** 자리였습니다.
+          (지금 값은 같습니다. 다음에 팔레트를 만질 때 갈라지지 않게 하려는 것입니다)
+        */}
         <input
-          id="agree"
+          id={idPrefix}
           name="agree"
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
           aria-invalid={!!error}
-          aria-describedby={error ? "agree-error" : undefined}
-          className="mt-0.5 h-4 w-4 shrink-0 accent-[#00a79d]"
+          aria-describedby={error ? errorId : undefined}
+          className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
         />
         <div className="min-w-0 flex-1">
           <label
-            htmlFor="agree"
+            htmlFor={idPrefix}
             className={`cursor-pointer text-[13px] leading-snug ${
               dark ? "text-white/80" : ""
             }`}
@@ -85,7 +101,7 @@ export default function PrivacyConsent({
       )}
 
       {error && (
-        <p id="agree-error" role="alert" className="mt-1.5 pl-6 text-[13px] font-medium text-accent">
+        <p id={errorId} role="alert" className="mt-1.5 pl-6 text-[13px] font-medium text-accent">
           {error}
         </p>
       )}

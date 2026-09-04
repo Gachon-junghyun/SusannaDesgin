@@ -4,6 +4,10 @@
  * TODO 로 남은 것만 확인해서 채우면 됩니다.
  */
 
+// 아래 `noindexPaths` 가 제품 페이지의 공개 여부를 이 스위치 하나로 판단합니다.
+// ⚠️ `content.ts` 는 이 파일을 import 하지 않습니다 — 이 방향으로만 두세요(순환 방지).
+import { SHOW_PRODUCTS } from "./content";
+
 /**
  * 최종 확정 도메인. 이 주소 위에서 돌 때만 검색엔진에 노출됩니다.
  *
@@ -241,6 +245,15 @@ export const seo = {
       description:
         "대전 간판제작 사업영역 — 옥상 광고탑·외벽 사인, 채널·돌출간판, 캐노피·파사드 철구조물, 옥내광고물.",
     },
+    /**
+     * 아직 «안 연» 페이지입니다 (F24). `SHOW_PRODUCTS` 가 꺼져 있는 동안은
+     * `noindexPaths` 에 자동으로 들어가 있어 이 문구가 검색에 나가지 않습니다.
+     */
+    "/products": {
+      title: "대전 간판 제품 종류",
+      description:
+        "대전 간판 제품 — 채널 간판, 옥상 광고탑·외벽 사인, 사옥 CI 사인, 로비 사인·이미지월, 층별 안내 사인, 캐노피·파사드 철구조물.",
+    },
     "/works": {
       title: "대전 간판 시공사례",
       description:
@@ -289,11 +302,17 @@ export const seo = {
  * "수집해라 + 노출하지 마라" 를 동시에 보내고 있었습니다. 서치어드바이저에서
  * 제출한 10건 중 3건이 영구 실패로 남습니다. 두 곳을 따로 관리하면 반드시 어긋납니다.
  */
-export const noindexPaths = [
+export const noindexPaths: readonly string[] = [
   "/privacy",
   "/terms",
   "/no-email-collect",
-] as const;
+  /**
+   * 제품 페이지는 아직 **안 연** 상태입니다 (2026-08-17, F24).
+   * `SHOW_PRODUCTS` 를 켜면 이 줄이 저절로 빠지고 사이트맵에도 자동으로 들어갑니다 —
+   * 위 경고("두 곳을 따로 관리하면 반드시 어긋납니다")를 지키려고 스위치 하나에 묶었습니다.
+   */
+  ...(SHOW_PRODUCTS ? [] : ["/products"]),
+];
 
 /** 보유 인증·등록 (회사소개서 03. 인증 및 등록 현황) */
 export const certifications = [

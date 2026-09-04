@@ -41,7 +41,9 @@ export type ContentSection =
   | "stat"
   | "process"
   | "fabrication"
-  | "sign_type";
+  | "sign_type"
+  /** 제품(간판 유형) 카탈로그 — `0008_product.sql`. 칸의 뜻은 그 파일 머리말에 있습니다 */
+  | "product";
 
 export type ContentBlockRow = {
   id: string;
