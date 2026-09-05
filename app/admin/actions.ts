@@ -34,10 +34,11 @@ async function adminClient() {
 function refreshPublicPages() {
   revalidatePath("/");
   revalidatePath("/works");
-  // 문구 블록(F19)은 이 세 곳에도 같이 나갑니다
+  // 문구 블록(F19)은 이 네 곳에도 같이 나갑니다
   revalidatePath("/signs");
   revalidatePath("/process");
   revalidatePath("/about");
+  revalidatePath("/products");
 }
 
 function text(formData: FormData, key: string): string {
@@ -297,6 +298,41 @@ export async function saveBlock(
   refreshPublicPages();
   revalidatePath("/admin/content");
   redirect(`/admin/content?section=${spec.key}&saved=1`);
+}
+
+/**
+ * 간판 종류 9가지 — 가격대 일괄 저장 (2026-09-05, 사람 지시).
+ *
+ * `saveBlock` 은 한 번에 한 항목만 저장합니다 — 9칸을 다 채우고 "한 방에" 저장하고
+ * 싶다는 요청이라 별도 액션을 만들었습니다. `price-<id>` 형태의 입력만 읽습니다
+ * (`components/admin/SignModelPricesForm.tsx` 가 그 모양으로 보냅니다).
+ *
+ * ⚠️ **`sign_model` 구역에만 씁니다.** 업데이트가 9건을 넘는 목록(예: `material`
+ * 58종)에 이 패턴을 그대로 쓰면 한 번의 폼 제출에 필드가 수십 개가 되어
+ * 관리하기 어려워집니다 — 늘었다 줄었다 하는 목록은 `saveBlock` 개별 저장이 맞습니다.
+ */
+export async function saveSignModelPrices(formData: FormData): Promise<void> {
+  const supabase = await adminClient();
+
+  const updates: { id: string; sub: string }[] = [];
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith("price-")) {
+      updates.push({ id: key.slice("price-".length), sub: String(value).trim() });
+    }
+  }
+
+  for (const u of updates) {
+    if (!u.id) continue;
+    await supabase
+      .from("content_blocks")
+      .update({ sub: u.sub })
+      .eq("id", u.id)
+      .eq("section", "sign_model");
+  }
+
+  refreshPublicPages();
+  revalidatePath("/admin/content");
+  redirect("/admin/content?section=sign_model&saved=1");
 }
 
 export async function deleteBlock(formData: FormData) {

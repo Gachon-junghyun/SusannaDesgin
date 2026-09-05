@@ -131,7 +131,7 @@ export default function Header({
                     <Link
                       href={n.href}
                       aria-current={active ? "page" : undefined}
-                      className={`relative text-[15px] font-semibold transition-colors ${
+                      className={`relative text-[16px] font-semibold transition-colors ${
                         clear
                           ? "text-white/90 hover:text-white"
                           : active

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { deleteBlock, moveBlock } from "@/app/admin/actions";
 import AdminShell from "@/components/admin/AdminShell";
 import BlockForm from "@/components/admin/BlockForm";
+import SignModelPricesForm from "@/components/admin/SignModelPricesForm";
 import SubmitButton from "@/components/admin/SubmitButton";
 import { SECTIONS, sectionSpec } from "@/config/sections";
 import { requireAdmin } from "@/lib/auth";
@@ -79,6 +80,15 @@ export default async function AdminContentPage({
             그때까지 홈페이지에는 예전 문구가 그대로 나갑니다. 화면이 비지는 않습니다.
           </span>
         </p>
+      )}
+
+      {spec.key === "sign_model" && blocks.length > 0 && (
+        <div className="mt-6">
+          <SignModelPricesForm blocks={blocks} />
+          <p className="mt-6 text-[13px] font-bold text-ink-500">
+            사진·이름처럼 가격 말고 다른 걸 바꾸려면 아래에서 항목을 하나씩 여세요.
+          </p>
+        </div>
       )}
 
       <ul className="mt-6 space-y-4">

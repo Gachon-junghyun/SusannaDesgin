@@ -2,9 +2,11 @@ import "server-only";
 
 import {
   equipment as fallbackFab,
+  materials as fallbackMaterials,
   products as fallbackProducts,
   sectionCopy as fallbackCopy,
   signTypes as fallbackSignTypes,
+  signTypes9 as fallbackSignModels,
   slides as fallbackSlides,
   steps as fallbackSteps,
   whyPoints as fallbackWhy,
@@ -109,6 +111,10 @@ export type SiteBlocks = {
   signTypes: Block[];
   /** 제품 카탈로그 — `eyebrow` 가 분류(필터 탭), `points` 가 유형 키워드입니다 */
   products: Block[];
+  /** 재질 58종 — `eyebrow` 가 대분류(화면 표시용), `title` 은 관리자 구별용(화면 미표시) */
+  materials: Block[];
+  /** 간판 종류 9가지 — `eyebrow` 가 T1~T9, `sub` 가 가격대, `points[0]` 이 제작 사양(참고) */
+  signModels: Block[];
 };
 
 function block(b: Partial<Block>): Block {
@@ -176,6 +182,25 @@ function fallbackBlocks(): SiteBlocks {
         alt: p.alt,
       })
     ),
+    materials: fallbackMaterials.map((m) =>
+      block({
+        slug: m.key,
+        eyebrow: m.name,
+        title: m.desc,
+        image: m.image,
+        alt: m.alt,
+      })
+    ),
+    signModels: fallbackSignModels.map((t) =>
+      block({
+        slug: t.key,
+        eyebrow: t.code,
+        title: t.name,
+        points: [t.spec],
+        image: t.image,
+        alt: `${t.name} 3D 렌더`,
+      })
+    ),
   };
 }
 
@@ -233,6 +258,8 @@ export async function getBlocks(): Promise<SiteBlocks> {
       fabrication: pick("fabrication", fallback.fabrication),
       signTypes: pick("sign_type", fallback.signTypes),
       products: pick("product", fallback.products),
+      materials: pick("material", fallback.materials),
+      signModels: pick("sign_model", fallback.signModels),
     };
   } catch (e) {
     console.error("[cms] 페이지 문구를 못 읽어 기본 내용으로 대체합니다.", e);

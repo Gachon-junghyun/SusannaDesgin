@@ -178,6 +178,198 @@ export const products: Product[] = [
   },
 ];
 
+export type Material = {
+  /** 화면 표시 안 함. 파일명 대응용 키 (`material-<key>.jpg`) */
+  key: string;
+  name: string;
+  desc: string;
+  image: string;
+  alt: string;
+};
+
+/**
+ * 재질 — **DB(`content_blocks` `section='material'`)가 죽었을 때 쓰는 폴백입니다** [A1].
+ *
+ * 🔴 **원본은 DB 입니다** (2026-09-05, `0009_material_signmodel.sql`). 처음엔 이
+ * 배열이 유일한 원본이었는데, "관리자 화면에서 직접 추가·삭제하고 싶다"는 지시로
+ * `product`(F19)와 같은 방식의 CMS 구역이 됐습니다. **이 배열을 고쳐서 재질을
+ * 늘리려 하지 마세요** — `/admin/content?section=material` 에서 하세요(배포 불필요).
+ * 이 배열은 그 화면·DB 가 전부 죽었을 때만 나가는 최소 세트(7종)입니다.
+ *
+ * 🔴 **재질끼리 묶을 분류축이 아직 없어 그룹·필터 탭을 안 만들었습니다** — 있는 재질을
+ * 그대로 다 보여주는 것으로 시작합니다(`components/MaterialsGrid.tsx` 참고).
+ * 제품(간판 유형)과 묶어 "이 재질 위의 이 간판" 조합까지 보여주는 건 다음 단계입니다.
+ *
+ * 🔴 **사진은 간판을 얹은 렌더가 아니라 재질 애셋의 원본 표면(diffuse 텍스처)입니다**
+ * (2026-09-05, 사람이 정정했습니다 — 처음엔 T1 채널 간판을 얹은 렌더를 썼다가,
+ * "이름·설명 대신 표면 자체를 보여달라"는 지시로 바꿨습니다). 형제 저장소
+ * `DeGaJa_Agent` 의 `users/hanjeonghyun/domains/susanna/blender/assets/materials`
+ * (ambientCG CC0, 2K 원본)에서 재질당 `<이름>_diff_2k.jpg` 하나를 골라 가운데
+ * 정사각으로 잘라 900×900 로 앉혔습니다. **실사진이 아니라 텍스처 스캔입니다** [P6].
+ *
+ * 🔴 **10종에서 7종으로 줄었습니다** (2026-09-05, 사람이 화면을 보고 지시).
+ * `metal`(Metal007)·`rust`(Metal022)·`tile`(Tiles098, 이끼 낀 포장석)는 사진만 보고
+ * 무슨 재질인지 못 알아봤습니다 — 이름표를 안 쓰는 화면이라(위 "글자를 아예 안 씁니다"
+ * 참고) 사진 자체가 재질을 설명해야 하는데, 이 셋은 그 역할을 못 했습니다.
+ * `paint` 슬롯은 같은 날 `PaintedPlaster017`(이끼·얼룩진 외벽)에서 `Plaster001`
+ * (매끈한 흰 미장벽)로 바꿨습니다 — 사람이 원하는 "평면"의 실제 예시가 이미
+ * assets 폴더 안에 있었습니다. **더 애매한 재질을 새로 추가하기 전에 "사진만 보고
+ * 알아볼 수 있나"부터 확인하세요.**
+ */
+export const materials: Material[] = [
+  {
+    key: "granite",
+    name: "화강석",
+    desc: "한국 상가 저층 마감의 기본입니다.",
+    image: "/images/material-granite.jpg",
+    alt: "화강석 재질 표면",
+  },
+  {
+    key: "brick",
+    name: "벽돌",
+    desc: "상가 외벽에 가장 흔한 재질입니다.",
+    image: "/images/material-brick.jpg",
+    alt: "벽돌 재질 표면",
+  },
+  {
+    key: "concrete",
+    name: "콘크리트",
+    desc: "노출 콘크리트, 시멘트 외벽입니다.",
+    image: "/images/material-concrete.jpg",
+    alt: "콘크리트 재질 표면",
+  },
+  {
+    key: "facade",
+    name: "파사드 통짜",
+    desc: "지저분한 외벽을 통째로 가리는 통판입니다.",
+    image: "/images/material-facade.jpg",
+    alt: "파사드 통판 재질 표면",
+  },
+  {
+    key: "marble",
+    name: "대리석",
+    desc: "고급 매장·로비 톤에 어울립니다.",
+    image: "/images/material-marble.jpg",
+    alt: "대리석 재질 표면",
+  },
+  {
+    key: "paint",
+    name: "도장·미장",
+    desc: "매끈하게 마감한 도장 벽입니다.",
+    image: "/images/material-paint.jpg",
+    alt: "도장 마감 재질 표면",
+  },
+  {
+    key: "wood",
+    name: "목재",
+    desc: "따뜻한 톤입니다. 시공 여부는 매장에 맞춰 확인합니다.",
+    image: "/images/material-wood.jpg",
+    alt: "목재 재질 표면",
+  },
+];
+
+/**
+ * ⚠️ **위 `SignType`(사업영역, `/signs`)과 이름이 겹치지 않게 `SignModel`로 지었습니다.**
+ * 사업영역은 "무엇을 하는 회사인가"(업종 단위)이고, 이건 "어떻게 만드는가"(제작 방식
+ * 단위)라 데이터 모양 자체가 다릅니다 — 하나로 합치면 두 화면 중 하나가 어긋납니다.
+ */
+export type SignModel = {
+  /** 파일명 대응용 키 (`type-<key>.jpg`) */
+  key: string;
+  /** T1~T9 — `SIGNTYPES.md` 의 조합 번호와 그대로 맞춥니다 */
+  code: string;
+  name: string;
+  spec: string;
+  image: string;
+};
+
+/**
+ * 간판 종류 9가지 — **DB(`content_blocks` `section='sign_model'`)가 죽었을 때 쓰는
+ * 폴백입니다** [A1]. 원본은 DB 이고, **가격대(`sub`)는 관리자 화면에서 고칩니다**
+ * (`0009_material_signmodel.sql`). 이 배열의 `spec` 은 화면에 안 나가는 참고용
+ * 사양이라, 여기 가격 칸이 없는 게 정상입니다 — 가격을 지어내 넣지 마세요 [P6].
+ *
+ * 🔴 **사진 없이 "간판 있어요"만 말로 파는 게 아니라, 9가지를 전부 3D 로 지어
+ * 렌더로 보여줍니다** (2026-09-05, 사람 지시 — "간판을 9개로 모델링한 걸 가져오라").
+ * 형제 저장소 `DeGaJa_Agent` 의
+ * `users/hanjeonghyun/domains/susanna/blender/_lab/03_signtypes/_catalog`
+ * (재질 58종 × 간판 9종 = 522장) 중 **화강석(Granite002B) 한 재질로 고정**한 9장을
+ * 골랐습니다 — 재질을 하나로 고정해야 "무엇이 다른가"가 제작 방식(축③·①)으로만
+ * 읽힙니다(재질까지 같이 바뀌면 두 변수가 섞입니다, `RENDER.md` 의 규칙과 같습니다).
+ *
+ * 🔴 **여기 9종은 `SIGNTYPES.md` §9 "수산나가 실제로 하는 것" 목록입니다.**
+ * 업계 일반의 나머지 방식은 안 냅니다 — 문의가 왔을 때 "그건 안 합니다"가 되는 게
+ * 제일 큰 손해라서입니다.
+ *
+ * ⚠️ **치수는 전부 가정값입니다.** 실측이 아니라 3D 씬의 기본값입니다 — 견적·발주에
+ * 그대로 쓰지 마세요(카탈로그 머리말과 같은 경고) [P6].
+ */
+export const signTypes9: SignModel[] = [
+  {
+    key: "channel-front",
+    code: "T1",
+    name: "전면발광 채널",
+    spec: "알루미늄 80mm · 직부착 · 앞면만 빛남",
+    image: "/images/type-channel-front.jpg",
+  },
+  {
+    key: "channel-halo",
+    code: "T2",
+    name: "후광 채널",
+    spec: "60mm · 벽 이격 60mm · 빛이 벽으로 샘",
+    image: "/images/type-channel-halo.jpg",
+  },
+  {
+    key: "channel-both",
+    code: "T3",
+    name: "전후면 발광",
+    spec: "90mm · 벽 이격 50mm · 앞뒤로 빛남",
+    image: "/images/type-channel-both.jpg",
+  },
+  {
+    key: "scasi",
+    code: "T4",
+    name: "무점등 스카시",
+    spec: "20mm · 벽 이격 30mm · 그림자로 읽힘",
+    image: "/images/type-scasi.jpg",
+  },
+  {
+    key: "facade",
+    code: "T5",
+    name: "외벽사인 · 파사드",
+    spec: "갈바 통판 위에 전광 채널",
+    image: "/images/type-facade.jpg",
+  },
+  {
+    key: "projecting",
+    code: "T6",
+    name: "돌출간판",
+    spec: "벽에서 1.15m 직각으로",
+    image: "/images/type-projecting.jpg",
+  },
+  {
+    key: "rooftop",
+    code: "T7",
+    name: "옥상광고탑",
+    spec: "옥상 철골 구조 · 사전 심의 대상",
+    image: "/images/type-rooftop.jpg",
+  },
+  {
+    key: "hanging",
+    code: "T8",
+    name: "행잉형",
+    spec: "처마에서 봉 2개로 매닮",
+    image: "/images/type-hanging.jpg",
+  },
+  {
+    key: "bracket",
+    code: "T9",
+    name: "까치발 철문자",
+    spec: "철판 5mm + 환봉 80mm · 무점등",
+    image: "/images/type-bracket.jpg",
+  },
+];
+
 /**
  * `/products`(제품) 를 **손님에게도 보일지** — 지금은 꺼져 있습니다.
  *

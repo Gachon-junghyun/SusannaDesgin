@@ -158,6 +158,18 @@
 > 홈·`/about` 두 자리에 돌려쓰던 상태.
 > 되돌리려면 `git log -- public/images/about-factory.jpg` 에서 꺼내면 됩니다.
 
+## 제품 — 재질 (`/products`) — 정사각 1:1 권장
+
+`material-<key>.jpg` — `config/content.ts` 의 `materials` 배열과 파일명이 짝입니다
+(`granite`·`brick`·`concrete`·`facade`·`marble`·`metal`·`rust`·`paint`·`tile`·`wood`).
+
+> ✅ **열 장 다 있습니다** (2026-09-05). **실사진이 아니라 3D 렌더**입니다 — 형제 저장소
+> `DeGaJa_Agent`(`users/hanjeonghyun/domains/susanna/blender/_lab/03_signtypes/_catalog`)의
+> 522장 렌더 카탈로그(재질 58종 × 간판 9종, 벽·조명·카메라 고정)에서 대표 10장을 골라
+> 복사했습니다. 화면(`/products`)에 렌더라고 밝히고 있으니 **실적 사진과 섞어 쓰지 마세요.**
+> 원본은 1400×1050(4:3)이고 `MaterialsGrid` 가 `aspect-square`로 가운데를 잘라 씁니다.
+> 나머지 48종 재질 사진이 필요해지면 같은 카탈로그 폴더에서 더 고르면 됩니다.
+
 ## 공유용 (이미 생성됨)
 
 | 파일명 | 크기 | 비고 |

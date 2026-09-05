@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import ProductsGrid from "@/components/ProductsGrid";
+import MaterialsGrid from "@/components/MaterialsGrid";
 import { PageHero } from "@/components/Section";
+import SignTypesGrid from "@/components/SignTypesGrid";
 import { SHOW_PRODUCTS } from "@/config/content";
 import { getBlocks } from "@/lib/cms";
 import { imageExists } from "@/lib/images";
@@ -24,15 +25,24 @@ export const dynamic = "force-dynamic";
  *
  * 켜는 법은 `config/content.ts` 의 `SHOW_PRODUCTS` 주석에 있습니다 (대표님 결정).
  *
- * 화면의 근거(정사각 썸네일·가격 없음·필터 축)는 전부 실측에서 나왔습니다 —
- * `reference/reference.md` 부록 A.
+ * 🔴 **실적 사진 6장짜리 `ProductsGrid`(구 "제품" 카드)는 2026-09-05 에 화면에서
+ * 뺐습니다** — 대표님이 "간판 종류 9가지(3D 모델링) 로 대신 보여달라" 고 정했습니다.
+ * `product` 구역·컴포넌트·관리자 탭은 **지우지 않고 그대로 둡니다** — FABRICATION
+ * 을 껐을 때와 같은 처방입니다(코드에서만 안 그리고, DB·관리자 화면은 살려 둡니다).
+ * 다시 켤 일이 생기면 `git log -- app/products/page.tsx` 에서 `<ProductsGrid>` 줄을
+ * 되살리면 됩니다.
+ *
+ * 재질·간판 종류 화면의 근거(정사각 썸네일·필터 축)는 `reference/reference.md`
+ * 부록 A. **가격대 표기(간판 종류)만은 그 문서의 결론과 다릅니다** — 이유는
+ * `0009_material_signmodel.sql` 머리말.
  */
 export default async function ProductsPage() {
   const preview = await getPreview();
   if (!SHOW_PRODUCTS && !preview.on) notFound();
 
-  const { products } = await getBlocks();
-  const list = products.map((p) => ({ ...p, available: imageExists(p.image) }));
+  const { materials, signModels } = await getBlocks();
+  const materialList = materials.map((m) => ({ ...m, available: imageExists(m.image) }));
+  const signTypeList = signModels.map((t) => ({ ...t, available: imageExists(t.image) }));
 
   return (
     <>
@@ -57,7 +67,28 @@ export default async function ProductsPage() {
           </p>
         )}
 
-        <ProductsGrid products={list} />
+        {/*
+          간판 종류 9가지 — 실제로 모델링해서 낸 제작 방식 (`sign_model` 구역).
+          가격대는 관리자 화면(F19, "간판 종류" 탭)에서 고칩니다.
+        */}
+        <div>
+          <h2 className="text-2xl font-black tracking-tight md:text-3xl">간판 종류</h2>
+
+          <div className="mt-8">
+            <SignTypesGrid signTypes={signTypeList} />
+          </div>
+        </div>
+
+        {/*
+          재질 — `material` 구역(58종 후보). 관리자 화면에서 직접 추가·삭제합니다.
+        */}
+        <div className="mt-20 md:mt-28">
+          <h2 className="text-2xl font-black tracking-tight md:text-3xl">재질</h2>
+
+          <div className="mt-8">
+            <MaterialsGrid materials={materialList} />
+          </div>
+        </div>
 
         {/*
           가격표 대신 두는 자리입니다. 조사한 네 곳 중 맞춤 제작을 파는 곳은

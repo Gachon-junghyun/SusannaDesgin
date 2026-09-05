@@ -135,6 +135,46 @@ export const SECTIONS: SectionSpec[] = [
       image: { label: "사진", hint: "가로로 넓은 사진 (권장 800×600). 10MB 이하." },
     },
   },
+  {
+    key: "material",
+    label: "재질",
+    where:
+      "“제품” 페이지의 재질 목록입니다. 지금은 손님에게 안 보입니다 — 대표님이 새 디자인 미리보기를 켰을 때만 나옵니다(공개는 코드 작업). 화면엔 사진 + 대분류 이름만 나갑니다 — 글자를 더 안 씁니다.",
+    fields: {
+      eyebrow: {
+        label: "대분류",
+        hint: "화면에 그대로 나가는 이름입니다 (화강석 · 벽돌 · 콘크리트 등)",
+        placeholder: "화강석",
+      },
+      title: {
+        label: "구분용 설명",
+        hint: "관리자 화면에서 같은 대분류끼리 구별하는 용도입니다. 손님 화면엔 안 나갑니다",
+        placeholder: "오래된 벽",
+      },
+      image: { label: "사진", hint: "정사각으로 잘려 나갑니다 (권장 900×900). 10MB 이하." },
+    },
+  },
+  {
+    key: "sign_model",
+    label: "간판 종류",
+    where:
+      "“제품” 페이지의 간판 종류 9가지(3D 렌더)입니다. 지금은 손님에게 안 보입니다 — 대표님이 새 디자인 미리보기를 켰을 때만 나옵니다(공개는 코드 작업).",
+    fixed: true,
+    fields: {
+      eyebrow: { label: "조합 번호", hint: "SIGNTYPES.md 의 T1~T9 번호입니다. 바꾸지 마세요" },
+      title: { label: "방식 이름", placeholder: "전면발광 채널" },
+      sub: {
+        label: "가격대",
+        hint: "자유 문장입니다. 예: “150만원 ~ 300만원”, “상담 후 안내”. 비워 두면 손님 화면에 “가격 확인 필요”로 나갑니다",
+        placeholder: "150만원 ~ 300만원",
+      },
+      points: {
+        label: "제작 사양 (참고)",
+        hint: "손님 화면엔 안 나갑니다. SIGNTYPES.md 대조용으로만 남겨 둡니다",
+      },
+      image: { label: "사진", hint: "3D 렌더 (권장 4:3). 10MB 이하." },
+    },
+  },
 ];
 
 export function sectionSpec(key: string): SectionSpec {
