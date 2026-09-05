@@ -307,9 +307,9 @@ export async function saveBlock(
  * 싶다는 요청이라 별도 액션을 만들었습니다. `price-<id>` 형태의 입력만 읽습니다
  * (`components/admin/SignModelPricesForm.tsx` 가 그 모양으로 보냅니다).
  *
- * ⚠️ **`sign_model` 구역에만 씁니다.** 업데이트가 9건을 넘는 목록(예: `material`
- * 58종)에 이 패턴을 그대로 쓰면 한 번의 폼 제출에 필드가 수십 개가 되어
- * 관리하기 어려워집니다 — 늘었다 줄었다 하는 목록은 `saveBlock` 개별 저장이 맞습니다.
+ * `material`(재질)에도 같은 패턴을 원해서 `saveMaterialLabels` 를 아래에 따로
+ * 만들었습니다 — 항목 수가 고정(9)이 아니라 늘었다 줄었다 하므로 액션을 하나로
+ * 합치지 않았습니다(추가·삭제는 여전히 `saveBlock`·`deleteBlock` 개별 처리).
  */
 export async function saveSignModelPrices(formData: FormData): Promise<void> {
   const supabase = await adminClient();
@@ -333,6 +333,41 @@ export async function saveSignModelPrices(formData: FormData): Promise<void> {
   refreshPublicPages();
   revalidatePath("/admin/content");
   redirect("/admin/content?section=sign_model&saved=1");
+}
+
+/**
+ * 재질 — 대분류·구분용 설명 일괄 저장 (2026-09-05, 사람 지시 — "재질도?").
+ *
+ * `eyebrow-<id>`·`title-<id>` 형태의 입력만 읽어 저장합니다
+ * (`components/admin/MaterialLabelsForm.tsx` 가 그 모양으로 보냅니다).
+ * 추가·삭제는 이 액션이 안 건드립니다 — 목록 위쪽 "+ 재질 항목 추가" 폼과
+ * 각 항목의 "삭제" 버튼(둘 다 `saveBlock`/`deleteBlock`)을 그대로 씁니다.
+ * 사진(`image_url`)도 여기서 안 바꿉니다 — 사진 교체는 항목을 열어
+ * `BlockForm` 으로 합니다(파일 선택 UI를 표 안에 욱여넣지 않으려는 것입니다).
+ */
+export async function saveMaterialLabels(formData: FormData): Promise<void> {
+  const supabase = await adminClient();
+
+  const byId = new Map<string, { eyebrow?: string; title?: string }>();
+  for (const [key, value] of formData.entries()) {
+    const v = String(value).trim();
+    if (key.startsWith("eyebrow-")) {
+      const id = key.slice("eyebrow-".length);
+      byId.set(id, { ...byId.get(id), eyebrow: v });
+    } else if (key.startsWith("title-")) {
+      const id = key.slice("title-".length);
+      byId.set(id, { ...byId.get(id), title: v });
+    }
+  }
+
+  for (const [id, patch] of byId) {
+    if (!id) continue;
+    await supabase.from("content_blocks").update(patch).eq("id", id).eq("section", "material");
+  }
+
+  refreshPublicPages();
+  revalidatePath("/admin/content");
+  redirect("/admin/content?section=material&saved=1");
 }
 
 export async function deleteBlock(formData: FormData) {

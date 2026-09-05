@@ -3,6 +3,7 @@ import Link from "next/link";
 import { deleteBlock, moveBlock } from "@/app/admin/actions";
 import AdminShell from "@/components/admin/AdminShell";
 import BlockForm from "@/components/admin/BlockForm";
+import MaterialLabelsForm from "@/components/admin/MaterialLabelsForm";
 import SignModelPricesForm from "@/components/admin/SignModelPricesForm";
 import SubmitButton from "@/components/admin/SubmitButton";
 import { SECTIONS, sectionSpec } from "@/config/sections";
@@ -87,6 +88,16 @@ export default async function AdminContentPage({
           <SignModelPricesForm blocks={blocks} />
           <p className="mt-6 text-[13px] font-bold text-ink-500">
             사진·이름처럼 가격 말고 다른 걸 바꾸려면 아래에서 항목을 하나씩 여세요.
+          </p>
+        </div>
+      )}
+
+      {spec.key === "material" && blocks.length > 0 && (
+        <div className="mt-6">
+          <MaterialLabelsForm blocks={blocks} />
+          <p className="mt-6 text-[13px] font-bold text-ink-500">
+            사진을 바꾸거나 항목을 지우려면 아래에서 항목을 하나씩 여세요. 새 재질을
+            추가하는 폼은 맨 아래에 있습니다.
           </p>
         </div>
       )}
