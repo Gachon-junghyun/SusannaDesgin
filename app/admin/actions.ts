@@ -336,33 +336,43 @@ export async function saveSignModelPrices(formData: FormData): Promise<void> {
 }
 
 /**
- * 재질 — 대분류·구분용 설명 일괄 저장 (2026-09-05, 사람 지시 — "재질도?").
+ * 재질 — 대분류·설명·숨기기·삭제를 한 번에 저장 (2026-09-05, 사람 지시).
  *
- * `eyebrow-<id>`·`title-<id>` 형태의 입력만 읽어 저장합니다
- * (`components/admin/MaterialLabelsForm.tsx` 가 그 모양으로 보냅니다).
- * 추가·삭제는 이 액션이 안 건드립니다 — 목록 위쪽 "+ 재질 항목 추가" 폼과
- * 각 항목의 "삭제" 버튼(둘 다 `saveBlock`/`deleteBlock`)을 그대로 씁니다.
- * 사진(`image_url`)도 여기서 안 바꿉니다 — 사진 교체는 항목을 열어
- * `BlockForm` 으로 합니다(파일 선택 UI를 표 안에 욱여넣지 않으려는 것입니다).
+ * 🔴 **처음엔 글자만 일괄 저장이었는데, "숨기기·삭제도 한 화면에서" 로 넓혔습니다**
+ * — 저장이랑 삭제가 따로 있어서 매번 화면을 오가야 했던 게 세 번째 불편이라고
+ * 해서 합쳤습니다. `eyebrow-<id>`·`title-<id>`·`hide-<id>`·`delete-<id>`
+ * (체크박스 둘)를 읽습니다(`components/admin/MaterialLabelsForm.tsx` 참고).
+ * **삭제 체크가 있으면 그 항목은 글자 저장 없이 바로 지웁니다** — 되돌릴 수
+ * 없으니 화면 쪽 라벨을 분명히 해 두세요.
+ * 사진(`image_url`) 교체만 여기서 안 됩니다 — 그건 항목을 열어 `BlockForm` 으로
+ * 합니다(파일 선택 UI를 표 안에 욱여넣지 않으려는 것입니다). 추가도 기존
+ * "+ 재질 항목 추가" 폼 그대로입니다.
  */
 export async function saveMaterialLabels(formData: FormData): Promise<void> {
   const supabase = await adminClient();
 
-  const byId = new Map<string, { eyebrow?: string; title?: string }>();
-  for (const [key, value] of formData.entries()) {
-    const v = String(value).trim();
-    if (key.startsWith("eyebrow-")) {
-      const id = key.slice("eyebrow-".length);
-      byId.set(id, { ...byId.get(id), eyebrow: v });
-    } else if (key.startsWith("title-")) {
-      const id = key.slice("title-".length);
-      byId.set(id, { ...byId.get(id), title: v });
-    }
+  const ids = new Set<string>();
+  for (const key of formData.keys()) {
+    if (key.startsWith("eyebrow-")) ids.add(key.slice("eyebrow-".length));
   }
 
-  for (const [id, patch] of byId) {
+  for (const id of ids) {
     if (!id) continue;
-    await supabase.from("content_blocks").update(patch).eq("id", id).eq("section", "material");
+
+    if (formData.get(`delete-${id}`) === "on") {
+      await supabase.from("content_blocks").delete().eq("id", id).eq("section", "material");
+      continue;
+    }
+
+    const eyebrow = String(formData.get(`eyebrow-${id}`) ?? "").trim();
+    const title = String(formData.get(`title-${id}`) ?? "").trim();
+    const published = formData.get(`hide-${id}`) !== "on";
+
+    await supabase
+      .from("content_blocks")
+      .update({ eyebrow, title, published })
+      .eq("id", id)
+      .eq("section", "material");
   }
 
   refreshPublicPages();
