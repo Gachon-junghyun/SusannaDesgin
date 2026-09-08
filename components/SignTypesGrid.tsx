@@ -29,12 +29,14 @@ type SignModelWithFlag = Block & { available: boolean };
  * 그때는 청록(가격 색)을 안 씁니다** — 빈 칸을 숫자 자리처럼 보여주면 "0원" 으로
  * 읽힙니다 [P6].
  *
- * ⚠️ **사양 칩(`points[0]`)을 2026-09-08 에 화면으로 되돌렸습니다.** 2026-09-05 에
- * "사양 문구 «대신» 가격대" 로 내렸던 것인데, 참고 화면의 카드는 **가격과 사양이
- * 각자 자리를 갖는** 배치라 둘이 안 부딪힙니다(가격이 여전히 더 큽니다).
- * 🔴 **치수는 3D 씬의 가정값이라** 격자 아래에 그 사실을 적어 뒀습니다
- * (`app/products/page.tsx`) — 그 줄을 지우면 이 칩들은 실측 약속이 됩니다 [P6].
- * 되돌리려면 `<SpecChips>` 한 줄만 빼면 됩니다.
+ * 🔴 **사양 칩(`points[0]`)은 화면에 안 나갑니다 — 두 번 내린 결정입니다.**
+ * 2026-09-05 에 "사양 문구 «대신» 가격대" 로 한 번 내렸고, 2026-09-08 에 새 카드가
+ * «가격과 사양이 각자 자리를 갖는» 배치라 잠깐 되살렸다가 **같은 날 사람이 보고
+ * 다시 빼라고 했습니다**(`60mm · 벽 이격 60mm · 빛이 벽으로 샘` 같은 줄이 손님에게
+ * 쓸모없다는 판단). **세 번째로 되살리지 마세요** — 되살릴 거면 그 전에 «이 문장이
+ * 손님의 무슨 결정을 돕나» 부터 답이 있어야 합니다.
+ * ⚠️ 값 자체는 `points[0]` 에 그대로 살아 있습니다(`SIGNTYPES.md` 대조용). 치수는
+ * 3D 씬의 가정값이라 **화면에 내면 실측 약속이 됩니다** [P6].
  */
 export default function SignTypesGrid({ signTypes }: { signTypes: SignModelWithFlag[] }) {
   return (
@@ -86,59 +88,24 @@ export default function SignTypesGrid({ signTypes }: { signTypes: SignModelWithF
                 </div>
               </div>
 
-              <SpecChips spec={t.points[0]} />
-
               {/*
                 상세 페이지가 아직 없어서 실제로 일어나는 일(견적 문의)로 보냅니다.
-                `mt-auto` — 사양 줄 길이가 카드마다 달라도 버튼이 한 줄로 정렬됩니다.
+                🔴 `mt-auto` 는 «남는 공간이 있을 때만» 밉니다 — 사양 칩을 뺀 뒤에는 남는
+                공간이 0 이라 버튼이 이름 줄에 딱 붙었습니다. 그래서 바깥 `div` 에
+                `pt-4` 를 따로 줍니다(버튼 자체에 주면 버튼이 두꺼워집니다).
               */}
-              <Link
-                href="/quote"
-                className="mt-auto block rounded-xl bg-brand px-4 py-3 text-center text-[14px] font-black text-white transition-colors hover:bg-brand-600"
-              >
-                이 간판 견적 받기
-              </Link>
+              <div className="mt-auto pt-4">
+                <Link
+                  href="/quote"
+                  className="block rounded-xl bg-brand px-4 py-3 text-center text-[14px] font-black text-white transition-colors hover:bg-brand-600"
+                >
+                  이 간판 견적 받기
+                </Link>
+              </div>
             </div>
           </li>
         );
       })}
-    </ul>
-  );
-}
-
-/**
- * 참고 화면의 «아이콘 + 낱말» 사양 줄. 우리 데이터는 `"알루미늄 80mm · 직부착 ·
- * 앞면만 빛남"` 처럼 가운뎃점으로 이어 붙인 한 문장이라 그대로 쪼갭니다.
- *
- * ⚠️ **칸을 세 개로 맞추려고 없는 항목을 채우지 않습니다** — 종류에 따라 1~3개고,
- * 참고 화면처럼 항상 세 개가 서지는 않습니다. 빈 칸을 지어내면 재질 사진 때와
- * 같은 실패입니다 [P6].
- */
-function SpecChips({ spec }: { spec?: string }) {
-  const items = (spec ?? "")
-    .split("·")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (items.length === 0) return null;
-
-  return (
-    <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-4">
-      {items.map((s) => (
-        <li key={s} className="flex items-center gap-1.5 text-[12px] text-ink-500">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            fill="none"
-            aria-hidden="true"
-            className="shrink-0 text-brand"
-          >
-            <rect x="1.5" y="1.5" width="9" height="9" rx="2" stroke="currentColor" strokeWidth="1.4" />
-            <circle cx="6" cy="6" r="1.6" fill="currentColor" />
-          </svg>
-          {s}
-        </li>
-      ))}
     </ul>
   );
 }
