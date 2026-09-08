@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import CatalogTabs from "@/components/CatalogTabs";
 import MaterialsGrid from "@/components/MaterialsGrid";
 import { PageHero } from "@/components/Section";
 import SignTypesGrid from "@/components/SignTypesGrid";
 import { SHOW_PRODUCTS } from "@/config/content";
+import { site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 import { imageExists } from "@/lib/images";
 import { getPreview } from "@/lib/preview";
@@ -24,6 +26,18 @@ export const dynamic = "force-dynamic";
  * «보여주지 말라» 가 아닙니다.
  *
  * 켜는 법은 `config/content.ts` 의 `SHOW_PRODUCTS` 주석에 있습니다 (대표님 결정).
+ *
+ * 🔴 **2026-09-08 — 배치를 다시 짰습니다.** 대표님이 렌터카 템플릿 화면을 주며
+ * "레이아웃만 저 느낌으로, 색이랑 디자인은 수산나 그대로" 라고 정했습니다.
+ * 가져온 것은 **배치 넷**뿐입니다 — ①가운데 정렬 큰 제목 ②그 밑 알약 탭 줄
+ * ③테두리 있는 3열 카드(사진 → 이름·가격 → 사양 칩 → 가로 꽉 찬 버튼)
+ * ④맨 아래 가로 띠. **팔레트·타이포·정사각 썸네일은 하나도 안 바꿨습니다** —
+ * 참고 화면의 보라(`#5B36F2`)는 브랜드 청록(`#00a79d`)으로, 카드 바탕은
+ * `paper`, 띠는 `ink` 로 앉혔습니다.
+ *
+ * ⚠️ **탭 축이 참고 화면과 다릅니다.** 저기는 «세단·SUV» 같은 제품 속성인데
+ * 우리 데이터에는 그 자리에 넣을 축이 아직 없습니다 — 근거와 그때 할 일은
+ * `components/CatalogTabs.tsx` 머리말에 적어 뒀습니다. **축을 지어내지 마세요** [P6].
  *
  * 🔴 **실적 사진 6장짜리 `ProductsGrid`(구 "제품" 카드)는 2026-09-05 에 화면에서
  * 뺐습니다** — 대표님이 "간판 종류 9가지(3D 모델링) 로 대신 보여달라" 고 정했습니다.
@@ -60,54 +74,85 @@ export default async function ProductsPage() {
           «이미 공개된 것» 으로 읽습니다.
         */}
         {!SHOW_PRODUCTS && (
-          <p className="mb-8 rounded-xl border-2 border-accent bg-white px-4 py-3 text-[14px] leading-relaxed text-ink">
+          <p className="mb-10 rounded-xl border-2 border-accent bg-white px-4 py-3 text-[14px] leading-relaxed text-ink">
             <strong className="font-black">아직 손님에게 안 보이는 페이지입니다.</strong>{" "}
             주 메뉴의 “제품” 도 미리보기를 켠 동안에만 섭니다. 공개하려면 개발자에게
             말씀해 주세요.
           </p>
         )}
 
-        {/*
-          간판 종류 9가지 — 실제로 모델링해서 낸 제작 방식 (`sign_model` 구역).
-          가격대는 관리자 화면(F19, "간판 종류" 탭)에서 고칩니다.
-        */}
-        <div>
-          <h2 className="text-2xl font-black tracking-tight md:text-3xl">간판 종류</h2>
+        {/* 참고 화면의 «가운데 큰 제목» 자리 */}
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl leading-tight font-black tracking-tight md:text-[42px]">
+            무엇을 만드시나요
+          </h2>
+          <p className="mt-4 leading-relaxed text-ink-500 md:text-lg">
+            간판 9종과 마감 재질을 사진으로 먼저 고르세요. 정확한 사양과 금액은 현장을
+            보고 정합니다.
+          </p>
+        </div>
 
-          <div className="mt-8">
-            <SignTypesGrid signTypes={signTypeList} />
-          </div>
+        <div className="mt-10 md:mt-12">
+          <CatalogTabs
+            tabs={[
+              { key: "signs", label: "간판 종류", count: signTypeList.length },
+              { key: "materials", label: "재질", count: materialList.length },
+            ]}
+            panels={{
+              signs: (
+                <>
+                  <SignTypesGrid signTypes={signTypeList} />
+                  {/*
+                    🔴 사양 칩의 치수는 3D 씬의 가정값입니다 — 이 줄이 없으면 카드에
+                    적힌 "80mm" 가 실측 약속이 됩니다 [P6]. `SignTypesGrid` 의
+                    `<SpecChips>` 를 지우기 전에는 이 줄도 남겨 두세요.
+                  */}
+                  <p className="mt-6 text-[13px] leading-relaxed text-ink-500">
+                    사진은 3D 렌더이고, 카드에 적힌 치수는 모델 기준값입니다. 실제 제작
+                    치수와 금액은 현장 실측 후에 정합니다.
+                  </p>
+                </>
+              ),
+              materials: <MaterialsGrid materials={materialList} />,
+            }}
+          />
         </div>
 
         {/*
-          재질 — `material` 구역(58종 후보). 관리자 화면에서 직접 추가·삭제합니다.
-        */}
-        <div className="mt-20 md:mt-28">
-          <h2 className="text-2xl font-black tracking-tight md:text-3xl">재질</h2>
-
-          <div className="mt-8">
-            <MaterialsGrid materials={materialList} />
-          </div>
-        </div>
-
-        {/*
-          가격표 대신 두는 자리입니다. 조사한 네 곳 중 맞춤 제작을 파는 곳은
+          참고 화면 맨 아래 가로 띠(로고 · 메뉴 · 전화번호) 자리입니다.
+          ⚠️ **먹색으로 짰다가 되돌렸습니다** — 사이트 공통 푸터가 이미 먹색이라
+          두 덩이가 붙어 서면 띠가 푸터의 일부로 읽힙니다. 참고 화면의 그 띠도
+          밝은 바탕입니다.
+          가격표 대신 두는 자리이기도 합니다 — 조사한 네 곳 중 맞춤 제작을 파는 곳은
           목록에 가격을 안 띄우고 전부 상담으로 보냅니다 (reference/reference.md 부록 A).
         */}
-        <div className="mt-16 rounded-2xl bg-paper px-6 py-12 text-center">
-          <h2 className="text-2xl font-black tracking-tight">
-            어떤 간판이 맞는지 모르겠다면
-          </h2>
-          <p className="mt-3 leading-relaxed text-ink-500">
-            건물 형태와 업종만 알려주셔도 됩니다. 현장을 보고 맞는 종류부터 골라
-            시안과 견적을 함께 보내드립니다.
-          </p>
-          <Link
-            href="/quote"
-            className="mt-6 inline-block rounded-xl bg-brand px-8 py-4 font-black text-white transition-colors hover:bg-brand-600"
-          >
-            무료 견적 신청
-          </Link>
+        <div className="mt-20 rounded-2xl border border-line bg-paper px-6 py-10 md:mt-28 md:px-10 md:py-12">
+          <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-2xl font-black tracking-tight md:text-3xl">
+                어떤 간판이 맞는지 모르겠다면
+              </h2>
+              <p className="mt-3 leading-relaxed text-ink-500">
+                건물 형태와 업종만 알려주셔도 됩니다. 현장을 보고 맞는 종류부터 골라
+                시안과 견적을 함께 보내드립니다.
+              </p>
+            </div>
+
+            <div className="flex shrink-0 flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <a
+                href={site.phoneHref}
+                className="text-[17px] font-black tracking-tight transition-colors hover:text-brand-700"
+              >
+                {site.phone}
+              </a>
+              <Link
+                href="/quote"
+                className="rounded-xl bg-brand px-8 py-4 font-black text-white transition-colors hover:bg-brand-600"
+              >
+                무료 견적 신청
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </>
