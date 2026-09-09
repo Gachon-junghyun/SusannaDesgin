@@ -45,6 +45,8 @@ export type SectionSpec = {
     sub?: FieldSpec;
     /** 손님용 설명(여러 문단). 지금은 `sign_model` 만 씁니다 — F24-d */
     body?: FieldSpec;
+    /** 실제 시공 사진 여러 장 — 상세페이지 슬라이더. `sign_model` 만 — F24-e */
+    photos?: FieldSpec;
     points?: FieldSpec;
     image?: FieldSpec;
   };
@@ -180,7 +182,11 @@ export const SECTIONS: SectionSpec[] = [
         label: "제작 사양 (참고)",
         hint: "손님 화면엔 안 나갑니다. SIGNTYPES.md 대조용으로만 남겨 둡니다",
       },
-      image: { label: "사진", hint: "3D 렌더 (권장 4:3). 10MB 이하." },
+      photos: {
+        label: "실제 시공 사진",
+        hint: "이 방식으로 시공한 현장 사진입니다. 상세페이지에서 좌우로 넘겨 봅니다. 맨 앞에 3D 렌더가 자동으로 붙으니 위 «사진»과 같은 것을 또 넣지 마세요. 순서는 화살표로 바꿉니다",
+      },
+      image: { label: "사진 (3D 렌더)", hint: "슬라이더 맨 앞에 서는 대표 사진입니다. 권장 4:3, 10MB 이하." },
     },
   },
 ];

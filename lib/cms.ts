@@ -99,6 +99,8 @@ export type Block = {
   sub: string;
   /** 손님용 설명 — 지금은 `sign_model` 만 씁니다 (F24-d). 비면 상세페이지가 noindex */
   body: string;
+  /** 실제 시공 사진 여러 장 — 상세페이지 슬라이더 (F24-e). 대표 렌더는 안 들어갑니다 */
+  photos: string[];
   points: string[];
   image: string;
   alt: string;
@@ -126,6 +128,7 @@ function block(b: Partial<Block>): Block {
     title: "",
     sub: "",
     body: "",
+    photos: [],
     points: [],
     image: "",
     alt: "",
@@ -142,6 +145,8 @@ function rowToBlock(r: ContentBlockRow): Block {
     // `0011` 을 아직 안 돌린 DB 에서는 이 칸이 통째로 안 옵니다 — 빈 문자열로 받습니다
     // (그러면 상세페이지가 «설명 없음» 으로 서고, 색인에서 빠집니다).
     body: r.body ?? "",
+    // `0012` 를 안 돌린 DB 에서는 이 칸이 안 옵니다 — 그때는 슬라이더 없이 렌더 한 장입니다
+    photos: r.photos ?? [],
     points: r.points ?? [],
     image: r.image_url,
     alt: r.alt,
@@ -203,6 +208,7 @@ function fallbackBlocks(): SiteBlocks {
         eyebrow: t.code,
         title: t.name,
         body: t.desc,
+        photos: t.photos,
         points: [t.spec],
         image: t.image,
         alt: `${t.name} 3D 렌더`,

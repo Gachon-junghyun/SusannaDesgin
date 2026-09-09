@@ -6,7 +6,11 @@ import { saveBlock, type ActionState } from "@/app/admin/actions";
 import type { FieldSpec, SectionSpec } from "@/config/sections";
 import type { ContentBlockRow } from "@/lib/supabase/types";
 import ImageField from "./ImageField";
+import PhotosField from "./PhotosField";
 import SubmitButton from "./SubmitButton";
+
+/** 숨은 칸에 넣을 줄바꿈 — JSX 속성 안에서 이스케이프가 헷갈리지 않게 상수로 뺍니다 */
+const NEWLINE = String.fromCharCode(10);
 
 const empty: ActionState = {};
 
@@ -137,6 +141,20 @@ export default function BlockForm({
         </div>
       ) : (
         <input type="hidden" name="body" value={block?.body ?? ""} />
+      )}
+
+      {/*
+        실제 시공 사진 여러 장 (F24-e). `body` 와 같은 이유로, 명세에 `photos` 가 없는
+        구역에서는 **숨은 칸으로 원래 값을 돌려보냅니다** — 안 그러면 그 구역을 저장할
+        때마다 사진 목록이 빈 값으로 덮여 사라집니다.
+      */}
+      {f.photos ? (
+        <div>
+          <Label spec={f.photos} />
+          <PhotosField defaultValue={block?.photos ?? []} hint={undefined} />
+        </div>
+      ) : (
+        <input type="hidden" name="photos" value={(block?.photos ?? []).join(NEWLINE)} />
       )}
 
       {f.points ? (

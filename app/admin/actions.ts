@@ -272,7 +272,11 @@ export async function saveBlock(
     alt: text(formData, "alt"),
     published: formData.get("published") === "on",
   };
-  const payload = { ...withoutBody, body: text(formData, "body") };
+  const payload = {
+    ...withoutBody,
+    body: text(formData, "body"),
+    photos: toLines(text(formData, "photos")),
+  };
 
   /**
    * 🔴 **`0011_signmodel_body.sql` 을 아직 안 돌린 DB 도 저장은 되게 합니다.**
@@ -282,10 +286,10 @@ export async function saveBlock(
    * 안 되므로, 그 칸만 빼고 한 번 더 보냅니다. 대신 **화면에 그 사실을 말합니다** —
    * 조용히 성공하면 「설명을 적었는데 안 나온다」의 원인을 아무도 못 찾습니다.
    */
-  const missingBody = (msg: string) => /body/i.test(msg);
+  const missingBody = (msg: string) => /body|photos/i.test(msg);
   const BODY_HINT =
-    "설명 칸을 뺀 나머지는 저장했습니다. 설명을 쓰시려면 개발자에게 " +
-    "0011_signmodel_body.sql 을 실행해 달라고 말씀해 주세요.";
+    "설명·사진 칸을 뺀 나머지는 저장했습니다. 그 둘을 쓰시려면 개발자에게 " +
+    "0011·0012 마이그레이션을 실행해 달라고 말씀해 주세요.";
 
   if (id) {
     // slug 는 코드가 이름으로 집어 오는 값이라 화면에서 바꾸지 않습니다.

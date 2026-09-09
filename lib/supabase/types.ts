@@ -62,6 +62,12 @@ export type ContentBlockRow = {
    * 이 칸이 비면 제품 상세페이지가 색인 대상에서 빠집니다 — 얇은 중복 페이지 방지.
    */
   body: string;
+  /**
+   * 실제 시공 사진 여러 장 (`0012_signmodel_photos.sql`). 순서가 곧 화면 순서입니다.
+   * 🔴 대표 사진(`image_url`, 3D 렌더)은 여기 «안» 넣습니다 — 화면이 이어 붙이므로
+   * 넣으면 같은 사진이 두 번 나옵니다.
+   */
+  photos: string[];
   image_url: string;
   alt: string;
   sort_order: number;

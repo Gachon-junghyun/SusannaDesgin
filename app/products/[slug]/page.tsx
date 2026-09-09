@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import PhotoCarousel, { type CarouselPhoto } from "@/components/PhotoCarousel";
 import Placeholder from "@/components/Placeholder";
 import QuickQuoteForm from "@/components/QuickQuoteForm";
 import { SHOW_PRODUCTS } from "@/config/content";
@@ -110,6 +111,29 @@ export default async function ProductDetailPage({
   const priced = Boolean(model.sub);
   const others = signModels.filter((b) => b.slug !== slug);
 
+  /**
+   * 슬라이더에 들어가는 사진 = **3D 렌더 한 장 + 실제 시공 사진들** (F24-e).
+   *
+   * 🔴 렌더를 «맨 앞» 에 둡니다. 이 페이지가 파는 것은 «이 제작 방식» 이고, 렌더는
+   * 그 방식만 남기고 나머지 변수(벽·조명·글자)를 전부 고정한 그림입니다 — 첫 장이
+   * 실제 현장이면 그 현장의 업종·간판 내용이 먼저 읽힙니다.
+   * ⚠️ 그래서 **렌더에는 «3D 렌더» 딱지를 답니다** — 시공 사진과 섞이는 순간
+   * 어느 게 실제인지 구분이 안 됩니다 [P6]. 아래 문구 하나로는 부족합니다.
+   *
+   * 실제 사진이 하나도 없는 종류(T3·T6·T8)는 렌더 한 장뿐이라 **슬라이더를 안 세웁니다**
+   * — 넘길 게 없는데 화살표가 있으면 «더 있나» 하고 누르게 됩니다.
+   */
+  const shots: CarouselPhoto[] = [
+    ...(available
+      ? [{ src: model.image, alt: model.alt || `${model.title} 3D 렌더`, badge: "3D 렌더" }]
+      : []),
+    ...model.photos.map((src, i) => ({
+      src,
+      alt: `${model.title} 시공 사례 ${i + 1}`,
+      badge: "시공 사진",
+    })),
+  ];
+
   return (
     <div className="wrap py-8 md:py-12">
       {/*
@@ -137,23 +161,30 @@ export default async function ProductDetailPage({
 
       <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-14">
         {/* 사진 — 목록과 같은 정사각(1:1). 실적(4:3)과 일부러 다릅니다 */}
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-paper">
-          {available ? (
-            <Image
-              src={model.image}
-              alt={model.alt || `${model.title} 3D 렌더`}
-              fill
-              sizes="(max-width: 1024px) 100vw, 600px"
-              className="object-cover"
-              priority
-            />
+        <div>
+          {shots.length > 1 ? (
+            <PhotoCarousel photos={shots} />
+          ) : shots.length === 1 ? (
+            <div className="relative aspect-square overflow-hidden rounded-2xl bg-paper">
+              <Image
+                src={shots[0].src}
+                alt={shots[0].alt}
+                fill
+                sizes="(max-width: 1024px) 100vw, 600px"
+                className="object-cover"
+                priority
+              />
+              <span className="absolute top-3 left-3 rounded-full bg-ink/75 px-3 py-1 text-[12px] font-bold text-white backdrop-blur">
+                {shots[0].badge}
+              </span>
+            </div>
           ) : (
             <Placeholder
               src={model.image}
               width={1200}
               height={1200}
               label={model.title}
-              className="h-full w-full"
+              className="aspect-square w-full rounded-2xl"
             />
           )}
         </div>
@@ -206,9 +237,15 @@ export default async function ProductDetailPage({
             </a>
           </div>
 
+          {/*
+            🔴 고지 문구가 «사진이 섞였는지» 에 따라 갈립니다. 시공 사진이 같이 있는데
+            "사진은 3D 렌더입니다" 라고 적으면 **실제 실적을 렌더라고 말하는** 셈이라
+            거꾸로 틀린 말이 됩니다 [P6]. 딱지(3D 렌더 / 시공 사진)가 장마다 붙습니다.
+          */}
           <p className="mt-4 text-[13px] leading-relaxed text-ink-500">
-            사진은 실제 시공 사진이 아니라 3D 렌더입니다. 정확한 사양과 금액은 현장
-            실측 후에 정합니다.
+            {model.photos.length > 0
+              ? "첫 장은 제작 방식을 보여주는 3D 렌더이고, 나머지는 실제 시공 현장 사진입니다. 정확한 사양과 금액은 현장 실측 후에 정합니다."
+              : "사진은 실제 시공 사진이 아니라 3D 렌더입니다. 정확한 사양과 금액은 현장 실측 후에 정합니다."}
           </p>
 
           {/* 참고 화면의 접히는 목록 자리 — 우리가 실제로 말할 수 있는 것은 «절차» 입니다 */}

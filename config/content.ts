@@ -286,6 +286,13 @@ export type SignModel = {
    * 🔴 여기 글을 고쳐도 화면은 안 바뀝니다(DB 값이 이깁니다) — 관리자 화면에서 고치세요.
    */
   desc: string;
+  /**
+   * 실제 시공 사진 (상세페이지 슬라이더, F24-e) — **DB 가 죽었을 때의 폴백입니다** [A1].
+   * 🔴 **여긴 로컬 `public/images/` 파일만 적습니다.** 원본은 DB 이고 거기엔
+   * 스토리지에 올린 사진(라온카페·청춘예찬 등)도 함께 들어 있습니다 — 폴백까지
+   * 그 주소를 베껴 두면 DB 를 못 읽는 상황에서 «남의 서버에 의존하는 폴백» 이 됩니다.
+   */
+  photos: string[];
   image: string;
 };
 
@@ -318,6 +325,13 @@ export const signTypes9: SignModel[] = [
     spec: "알루미늄 80mm · 직부착 · 앞면만 빛남",
     desc:
       "글자 앞면이 빛나는 가장 대중적인 방식입니다. 알루미늄 채널 옆면에 전면 아크릴을 끼워 만들고, 야간 시인성이 아홉 가지 중 가장 좋습니다.\n\n글자 뒤에 전기선을 가리는 바가 들어갑니다. 정면이 잘 보이는 1층 상가에서 가장 많이 쓰는 구성입니다.",
+    photos: [
+      "/images/work-16.jpg",
+      "/images/work-10.jpg",
+      "/images/work-13.jpg",
+      "/images/work-18.jpg",
+      "/images/work-14.jpg",
+    ],
     image: "/images/type-channel-front.jpg",
   },
   {
@@ -327,6 +341,9 @@ export const signTypes9: SignModel[] = [
     spec: "60mm · 벽 이격 60mm · 빛이 벽으로 샘",
     desc:
       "빛이 글자 뒤로 나와 벽을 밝힙니다. 벽에서 띄워 달기 때문에 피스가 겉으로 보이지 않고, 눈부심이 적어 차분하게 읽힙니다.\n\n배선을 인테리어 단계부터 같이 잡아야 합니다. 나중에 손대면 전선이 겉으로 지저분하게 남습니다.",
+    photos: [
+      "/images/work-19.jpg",
+    ],
     image: "/images/type-channel-halo.jpg",
   },
   {
@@ -336,6 +353,7 @@ export const signTypes9: SignModel[] = [
     spec: "90mm · 벽 이격 50mm · 앞뒤로 빛남",
     desc:
       "앞면과 뒷면이 함께 빛납니다. 글자 자체의 밝기와 벽에 번지는 빛을 한 번에 씁니다.\n\n전면발광보다 두껍게 만들고 벽에서도 띄웁니다.",
+    photos: [],
     image: "/images/type-channel-both.jpg",
   },
   {
@@ -345,6 +363,11 @@ export const signTypes9: SignModel[] = [
     spec: "20mm · 벽 이격 30mm · 그림자로 읽힘",
     desc:
       "빛 없이 입체감만으로 읽는 글자입니다. 그림자로 읽혀 차분하고, 조명 부품이 없어 아홉 가지 중 수명이 가장 깁니다(7~10년).\n\n아크릴·포멕스·목재·금속 등 재료 선택의 폭이 넓습니다.",
+    photos: [
+      "/images/work-05.jpg",
+      "/images/work-06.jpg",
+      "/images/work-21.jpg",
+    ],
     image: "/images/type-scasi.jpg",
   },
   {
@@ -354,6 +377,11 @@ export const signTypes9: SignModel[] = [
     spec: "갈바 통판 위에 전광 채널",
     desc:
       "벽에 갈바 통판을 먼저 세우고 그 위에 글자를 얹습니다.\n\n벽면이 고르지 않거나 타일·벽돌이라 글자를 직접 붙이기 어려울 때, 또는 면 전체를 브랜드 색으로 덮고 싶을 때 씁니다.",
+    photos: [
+      "/images/work-17.jpg",
+      "/images/work-09.jpg",
+      "/images/work-15.jpg",
+    ],
     image: "/images/type-facade.jpg",
   },
   {
@@ -363,6 +391,7 @@ export const signTypes9: SignModel[] = [
     spec: "벽에서 1.15m 직각으로",
     desc:
       "벽에서 직각으로 튀어나오게 답니다.\n\n정면이 아니라 길을 따라 걸어오는 사람에게 보이는 것이 목적이라, 골목이나 상가 통로에서 정면 간판이 안 보이는 자리에 씁니다.",
+    photos: [],
     image: "/images/type-projecting.jpg",
   },
   {
@@ -372,6 +401,9 @@ export const signTypes9: SignModel[] = [
     spec: "옥상 철골 구조 · 사전 심의 대상",
     desc:
       "건물 옥상에 철골 구조를 세워 올립니다. 멀리서 보이는 것이 목적입니다.\n\n구조 검토와 사전 심의 대상이고 고소작업 장비가 들어갑니다. 그래서 다른 종류보다 준비 기간이 깁니다 — 일정이 정해져 있으면 미리 알려 주세요.",
+    photos: [
+      "/images/work-01.jpg",
+    ],
     image: "/images/type-rooftop.jpg",
   },
   {
@@ -381,6 +413,7 @@ export const signTypes9: SignModel[] = [
     spec: "처마에서 봉 2개로 매닮",
     desc:
       "처마나 캐노피 아래에 봉 두 개로 매답니다.\n\n벽에 구멍을 내기 어렵거나 이미 처마가 있는 자리에서 씁니다. 판과 글자는 외벽사인과 같은 방식으로 만들고 거는 방법만 다릅니다.",
+    photos: [],
     image: "/images/type-hanging.jpg",
   },
   {
@@ -390,6 +423,9 @@ export const signTypes9: SignModel[] = [
     spec: "철판 5mm + 환봉 80mm · 무점등",
     desc:
       "레이저로 자른 철판을 환봉으로 벽에서 띄워 답니다. 무점등입니다.\n\n낮에는 햇빛이, 밤에는 외부 조명이 만드는 그림자로 읽힙니다. 띄워서 생기는 그림자 자체가 이 방식의 인상입니다.",
+    photos: [
+      "/images/work-20.jpg",
+    ],
     image: "/images/type-bracket.jpg",
   },
 ];
