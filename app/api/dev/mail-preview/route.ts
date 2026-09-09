@@ -21,7 +21,9 @@ const SAMPLE = {
   phone: "010-1234-5678",
   email: "customer@example.com",
   region: "대전 서구 둔산동",
-  signType: "LED 채널간판",
+  // 제품 카탈로그 카드를 눌러 들어온 경우 (`?item=channel-front`) — F24-c
+  product: "전면발광 채널 (T1)",
+  signType: "간판디자인",
   timing: "1개월 이내",
   address: "대전광역시 서구 둔산로 100 3층",
   message:

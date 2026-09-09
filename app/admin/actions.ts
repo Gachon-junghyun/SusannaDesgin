@@ -261,7 +261,8 @@ export async function saveBlock(
     return { error: `${spec.fields.title?.label ?? "제목"}을(를) 넣어 주세요.` };
   }
 
-  const payload = {
+  /** `body` 를 뺀 나머지 — 아래 «칸이 없는 DB» 폴백이 이걸 그대로 씁니다 */
+  const withoutBody = {
     section: spec.key,
     eyebrow: text(formData, "eyebrow"),
     title,
@@ -271,10 +272,29 @@ export async function saveBlock(
     alt: text(formData, "alt"),
     published: formData.get("published") === "on",
   };
+  const payload = { ...withoutBody, body: text(formData, "body") };
+
+  /**
+   * 🔴 **`0011_signmodel_body.sql` 을 아직 안 돌린 DB 도 저장은 되게 합니다.**
+   *
+   * 없는 칸(`body`)을 보내면 요청이 통째로 거절되어 **가격 한 줄을 고치려던 저장도
+   * 같이 죽습니다.** 설명을 못 남기는 것과 화면 편집이 통째로 막히는 것은 비교가
+   * 안 되므로, 그 칸만 빼고 한 번 더 보냅니다. 대신 **화면에 그 사실을 말합니다** —
+   * 조용히 성공하면 「설명을 적었는데 안 나온다」의 원인을 아무도 못 찾습니다.
+   */
+  const missingBody = (msg: string) => /body/i.test(msg);
+  const BODY_HINT =
+    "설명 칸을 뺀 나머지는 저장했습니다. 설명을 쓰시려면 개발자에게 " +
+    "0011_signmodel_body.sql 을 실행해 달라고 말씀해 주세요.";
 
   if (id) {
     // slug 는 코드가 이름으로 집어 오는 값이라 화면에서 바꾸지 않습니다.
-    const { error } = await supabase.from("content_blocks").update(payload).eq("id", id);
+    let { error } = await supabase.from("content_blocks").update(payload).eq("id", id);
+    if (error && missingBody(error.message)) {
+      console.error("[관리자] content_blocks.body 칸이 없습니다 (0011 미실행):", error.message);
+      ({ error } = await supabase.from("content_blocks").update(withoutBody).eq("id", id));
+      if (!error) return { error: BODY_HINT };
+    }
     if (error) return { error: error.message };
   } else {
     if (spec.fixed) {
@@ -289,9 +309,17 @@ export async function saveBlock(
       .limit(1)
       .maybeSingle<Pick<ContentBlockRow, "sort_order">>();
 
-    const { error } = await supabase
+    const sort_order = (last?.sort_order ?? 0) + 10;
+    let { error } = await supabase
       .from("content_blocks")
-      .insert({ ...payload, sort_order: (last?.sort_order ?? 0) + 10 });
+      .insert({ ...payload, sort_order });
+    if (error && missingBody(error.message)) {
+      console.error("[관리자] content_blocks.body 칸이 없습니다 (0011 미실행):", error.message);
+      ({ error } = await supabase
+        .from("content_blocks")
+        .insert({ ...withoutBody, sort_order }));
+      if (!error) return { error: BODY_HINT };
+    }
     if (error) return { error: error.message };
   }
 

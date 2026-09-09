@@ -43,6 +43,8 @@ export type SectionSpec = {
     eyebrow?: FieldSpec;
     title?: FieldSpec;
     sub?: FieldSpec;
+    /** 손님용 설명(여러 문단). 지금은 `sign_model` 만 씁니다 — F24-d */
+    body?: FieldSpec;
     points?: FieldSpec;
     image?: FieldSpec;
   };
@@ -167,6 +169,12 @@ export const SECTIONS: SectionSpec[] = [
         label: "가격대",
         hint: "자유 문장입니다. 예: “150만원 ~ 300만원”, “상담 후 안내”. 비워 두면 손님 화면에 “가격 확인 필요”로 나갑니다",
         placeholder: "150만원 ~ 300만원",
+      },
+      body: {
+        label: "손님용 설명",
+        hint: "제품 상세페이지에 나가는 글입니다. 빈 줄을 넣으면 문단이 나뉩니다. 🔴 비워 두면 그 간판의 상세페이지가 검색에 안 잡힙니다(내용 없는 페이지를 색인시키지 않으려는 것입니다). 가격·기간을 약속하는 문장은 넣지 마세요 — 현장마다 갈립니다",
+        placeholder: "이 간판이 어떻게 만들어지고 어떤 자리에 맞는지 두세 문단으로 적어 주세요.",
+        multiline: true,
       },
       points: {
         label: "제작 사양 (참고)",

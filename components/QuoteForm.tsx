@@ -39,6 +39,8 @@ const POSTCODE_SRC =
 const initial = {
   name: "",
   phone: "",
+  /** `/products` 에서 누른 카드 이름. 카드를 안 거치고 들어오면 계속 빈 값입니다 */
+  product: "",
   email: "",
   zip: "",
   address: "",
@@ -50,8 +52,22 @@ const initial = {
   trap: "",
 };
 
-export default function QuoteForm() {
-  const [form, setForm] = useState(initial);
+/**
+ * 전체 견적 폼.
+ *
+ * 🔴 **`interest` 는 «손님이 무엇을 보고 왔나» 입니다** (2026-09-09 신설). `/products`
+ * 카드의 「이 간판 견적 받기」가 `?item=<슬러그>` 로 넘기고, **페이지가 실제 카드
+ * 목록과 대조한 뒤** 이름만 여기로 내려옵니다(`app/quote/page.tsx`). 그래서 이 값은
+ * 이미 검증된 글자입니다 — 여기서 다시 목록을 읽지 마세요.
+ *
+ * ⚠️ **«문의 분야»(`signType`) 를 자동으로 골라 주지 않습니다.** 축이 다릅니다 —
+ * T7(옥상광고탑)은 «옥외광고물» 이고 T1(전면발광 채널)은 «간판디자인» 이라, 카드에서
+ * 분야를 유추하면 **틀린 값이 미리 찍혀 있는** 폼이 됩니다. 빈 칸보다 나쁩니다 [P6].
+ */
+export default function QuoteForm({ interest = "" }: { interest?: string }) {
+  // 넘어온 제품은 **상태의 초깃값**입니다 — 손님이 지울 수 있어야 하기 때문입니다
+  // (다른 걸 보러 왔다가 마음이 바뀌는 경우). 읽기 전용으로 박아 두면 못 지웁니다.
+  const [form, setForm] = useState({ ...initial, product: interest });
   const [agree, setAgree] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");
@@ -173,6 +189,33 @@ export default function QuoteForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
+      {/*
+        🔴 **어느 제품을 보고 왔는지 손님에게도 보여 줍니다.** 숨은 칸으로만 보내면
+        손님은 «그냥 견적 폼» 으로 읽고, 다른 제품 얘기를 적어 놓고도 카드 이름이
+        같이 가는 걸 모릅니다. 그래서 화면에 세우고 **지울 수 있게** 했습니다.
+        값 자체는 `form.product` 로 전송에 실립니다(숨은 input 이 따로 없습니다 —
+        `onSubmit` 이 상태를 통째로 FormData 로 옮깁니다).
+      */}
+      {form.product && (
+        <div className="flex items-start justify-between gap-4 rounded-xl border border-brand bg-brand-50 px-4 py-3.5">
+          <p className="min-w-0">
+            <span className="block text-[13px] font-bold text-ink-500">
+              보고 계신 제품
+            </span>
+            <b className="mt-0.5 block text-[16px] leading-snug font-black break-words text-brand-700">
+              {form.product}
+            </b>
+          </p>
+          <button
+            type="button"
+            onClick={() => set("product", "")}
+            className="shrink-0 text-[13px] font-bold text-ink-500 underline underline-offset-4 hover:text-ink"
+          >
+            지우기
+          </button>
+        </div>
+      )}
+
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="상호 / 담당자명" htmlFor="name" required error={errors.name}>
           <input

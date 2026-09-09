@@ -180,11 +180,14 @@ export default async function AdminQuotesPage() {
 
             <dl className="grid gap-x-6 gap-y-2 border-t border-line px-5 py-4 text-[14px] sm:grid-cols-2">
               {[
+                // 🔴 맨 앞입니다 — 「무엇을 보고 전화하는지」가 통화 전에 제일 먼저
+                //    필요한 값입니다. 없으면(카드를 안 거친 문의) 줄 자체가 안 섭니다.
+                ["보고 온 제품", q.product],
                 ["이메일", q.email],
                 ["지역", q.region],
                 ["설치 주소", [q.zip && `(${q.zip})`, q.address, q.address_detail].filter(Boolean).join(" ")],
                 ["설치 층수", q.floor],
-                ["사인물 종류", q.sign_type],
+                ["문의 분야", q.sign_type],
                 ["희망 시기", q.timing],
               ]
                 .filter(([, v]) => v)

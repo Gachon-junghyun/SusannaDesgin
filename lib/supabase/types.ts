@@ -56,6 +56,12 @@ export type ContentBlockRow = {
   title: string;
   sub: string;
   points: string[];
+  /**
+   * 손님이 읽는 설명 (`0011_signmodel_body.sql`). 지금은 `sign_model` 구역만 씁니다.
+   * 문단은 빈 줄로 나뉘고, **마크다운을 안 그립니다**(있는 그대로 나갑니다).
+   * 이 칸이 비면 제품 상세페이지가 색인 대상에서 빠집니다 — 얇은 중복 페이지 방지.
+   */
+  body: string;
   image_url: string;
   alt: string;
   sort_order: number;
@@ -86,6 +92,13 @@ export type QuoteRow = {
   region: string;
   floor: string;
   sign_type: string;
+  /**
+   * 손님이 `/products` 에서 **실제로 누른 카드**의 이름 (`0010_quote_product.sql`).
+   *
+   * 🔴 `sign_type`(폼에서 고른 문의 분야)과 축이 다릅니다 — 합치지 마세요.
+   * 마이그레이션을 아직 안 돌린 DB 에서는 이 칸이 아예 안 옵니다(화면은 빈 값으로 취급).
+   */
+  product: string;
   timing: string;
   message: string;
   files: QuoteFile[];

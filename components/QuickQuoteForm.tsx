@@ -19,7 +19,19 @@ import { formatPhone, validateQuick, type Errors } from "@/lib/validate";
  *    **`idPrefix` 를 서로 다르게 주는 것이 이 문제의 해법입니다.** 새 자리에 이 폼을
  *    또 놓게 되면 접두어를 반드시 새로 주세요.
  */
-export default function QuickQuoteForm({ idPrefix = "q" }: { idPrefix?: string }) {
+export default function QuickQuoteForm({
+  idPrefix = "q",
+  product = "",
+}: {
+  idPrefix?: string;
+  /**
+   * 「보고 온 제품」 (F24-c·d). 제품 상세페이지가 채워 넣습니다 — 홈에서는 빈 값입니다.
+   * 🔴 **화면에 입력칸으로 세우지 않습니다.** 이 폼의 존재 이유가 «칸이 적다» 라서,
+   * 칸을 하나 늘리면 그 이유가 깎입니다. 대신 폼 위에 «어느 간판인지» 를 한 줄로
+   * 적어 두고(상세페이지의 제목이 이미 그 말을 합니다) 값만 조용히 실어 보냅니다.
+   */
+  product?: string;
+}) {
   const [form, setForm] = useState({ name: "", phone: "", region: "", trap: "" });
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -41,6 +53,7 @@ export default function QuickQuoteForm({ idPrefix = "q" }: { idPrefix?: string }
       fd.set("name", form.name);
       fd.set("phone", form.phone);
       fd.set("region", form.region);
+      if (product) fd.set("product", product);
       fd.set("agree", "true");
       fd.set("company_website", form.trap);
 

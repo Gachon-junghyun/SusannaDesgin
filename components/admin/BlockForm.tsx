@@ -119,6 +119,26 @@ export default function BlockForm({
         </div>
       )}
 
+      {/*
+        손님용 설명 (F24-d). 명세에 `body` 가 없는 구역에서는 **숨은 칸으로 원래 값을
+        그대로 돌려보냅니다** — 안 그러면 그 구역을 저장할 때마다 설명이 빈 값으로
+        덮여 사라집니다(`points` 가 같은 이유로 아래에 숨은 칸을 둡니다).
+      */}
+      {f.body ? (
+        <div>
+          <Label spec={f.body} />
+          <textarea
+            name="body"
+            rows={8}
+            defaultValue={block?.body ?? ""}
+            placeholder={f.body.placeholder}
+            className={`${inputClass} resize-y leading-relaxed`}
+          />
+        </div>
+      ) : (
+        <input type="hidden" name="body" value={block?.body ?? ""} />
+      )}
+
       {f.points ? (
         <div>
           <Label spec={f.points} />

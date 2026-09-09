@@ -2,8 +2,13 @@ import Link from "next/link";
 import { site } from "@/config/site";
 
 /**
- * 모바일 하단 고정바 (전화 / 카톡 / 견적) + 데스크톱 우측 톡상담 플로팅.
+ * 모바일 하단 고정바 (전화 / 견적) + 데스크톱 우측 톡상담 플로팅.
  * 레퍼런스: 홍간판 상단 상시 전화, 비스퀘어 우하단 '톡상담'.
+ *
+ * 🔴 **모바일 띠에서 «카톡상담» 을 뺐습니다** (2026-09-09, 대표님 지시). 세 칸이
+ * 두 칸이 됐고, 남은 것은 **전화 · 무료견적** 입니다. **데스크톱 우측 «톡상담» 은
+ * 그대로 둡니다** — 지시가 모바일에 한정됐습니다. 카톡 링크 자체를 없앤 게 아니라
+ * (`site.kakaoChannelUrl` · `/quote` 옆 카드는 그대로) 이 띠에서만 뺐습니다.
  */
 export default function FloatingBar() {
   return (
@@ -13,22 +18,13 @@ export default function FloatingBar() {
         안 띄우면 버튼의 아래 절반이 인디케이터 띠에 물려 스와이프로 먹힙니다.
         ⚠️ `app/layout.tsx` 의 `viewportFit: "cover"` 가 있어야 이 값이 0 이 아닙니다.
       */}
-      <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-line bg-white pb-[env(safe-area-inset-bottom,0px)] md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-line bg-white pb-[env(safe-area-inset-bottom,0px)] md:hidden">
         <a
           href={site.phoneHref}
           className="flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px] font-bold"
         >
           <PhoneIcon />
           전화문의
-        </a>
-        <a
-          href={site.kakaoChannelUrl || "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-col items-center justify-center gap-0.5 border-x border-line py-2.5 text-[11px] font-bold"
-        >
-          <ChatIcon />
-          카톡상담
         </a>
         <Link
           href="/quote"

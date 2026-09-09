@@ -48,32 +48,48 @@ export default function SignTypesGrid({ signTypes }: { signTypes: SignModelWithF
             key={t.slug}
             className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-white transition-colors hover:border-brand"
           >
-            {/* 🔴 정사각. 위 머리말의 실측 근거를 읽기 전에 바꾸지 마세요 */}
-            <div className="relative aspect-square overflow-hidden bg-paper">
-              {t.available ? (
-                <Image
-                  src={t.image}
-                  alt={t.alt || `${t.title} 3D 렌더`}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              ) : (
-                <Placeholder
-                  src={t.image}
-                  width={900}
-                  height={900}
-                  label={t.title}
-                  className="h-full w-full"
-                />
-              )}
-            </div>
+            {/*
+              🔴 **사진과 이름은 상세페이지로, 버튼은 견적으로 갑니다** (2026-09-09, F24-d).
+              한 카드에 목적지가 둘인 게 일부러입니다 — 「어떤 건지 더 볼 사람」과
+              「바로 견적 낼 사람」이 갈립니다. 카드 «전체»를 링크로 감싸면 안 됩니다:
+              링크 안에 링크(버튼)를 넣는 마크업이 되어 브라우저마다 다르게 동작합니다.
+            */}
+            <Link
+              href={`/products/${t.slug}`}
+              className="block"
+              aria-label={`${t.title} 자세히 보기`}
+            >
+              {/* 🔴 정사각. 위 머리말의 실측 근거를 읽기 전에 바꾸지 마세요 */}
+              <div className="relative aspect-square overflow-hidden bg-paper">
+                {t.available ? (
+                  <Image
+                    src={t.image}
+                    alt={t.alt || `${t.title} 3D 렌더`}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <Placeholder
+                    src={t.image}
+                    width={900}
+                    height={900}
+                    label={t.title}
+                    className="h-full w-full"
+                  />
+                )}
+              </div>
+            </Link>
 
             <div className="flex flex-1 flex-col p-5">
               {/* 참고 화면의 «이름 + 오른쪽 가격» 줄 */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="text-[17px] font-black tracking-tight">{t.title}</h3>
+                  <h3 className="text-[17px] font-black tracking-tight">
+                    <Link href={`/products/${t.slug}`} className="hover:text-brand-700">
+                      {t.title}
+                    </Link>
+                  </h3>
                   <p className="mt-0.5 font-mono text-[11px] text-ink-500">{t.eyebrow}</p>
                 </div>
                 <div className="shrink-0 text-right">
@@ -89,14 +105,21 @@ export default function SignTypesGrid({ signTypes }: { signTypes: SignModelWithF
               </div>
 
               {/*
-                상세 페이지가 아직 없어서 실제로 일어나는 일(견적 문의)로 보냅니다.
+                ⚠️ 이 버튼은 **상세페이지가 아니라 견적으로** 갑니다. 상세는 사진·이름이
+                맡습니다(위 주석) — 「바로 견적」 경로를 한 번 더 누르게 만들지 않습니다.
                 🔴 `mt-auto` 는 «남는 공간이 있을 때만» 밉니다 — 사양 칩을 뺀 뒤에는 남는
                 공간이 0 이라 버튼이 이름 줄에 딱 붙었습니다. 그래서 바깥 `div` 에
                 `pt-4` 를 따로 줍니다(버튼 자체에 주면 버튼이 두꺼워집니다).
               */}
               <div className="mt-auto pt-4">
+                {/*
+                  🔴 **`?item=` 에 슬러그를 실어 보냅니다** (2026-09-09). 그냥 `/quote` 로
+                  보내면 «어느 카드를 눌러서 온 문의인지» 가 아무 데도 안 남아 전화로
+                  다시 물어야 했습니다. 받는 쪽(`app/quote/page.tsx`)이 이 값을 **실제
+                  카드 목록과 대조**해서 이름으로 바꿉니다 — 목록에 없으면 무시합니다 [P6].
+                */}
                 <Link
-                  href="/quote"
+                  href={`/quote?item=${encodeURIComponent(t.slug)}`}
                   className="block rounded-xl bg-brand px-4 py-3 text-center text-[14px] font-black text-white transition-colors hover:bg-brand-600"
                 >
                   이 간판 견적 받기

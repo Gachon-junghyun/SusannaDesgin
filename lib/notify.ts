@@ -44,6 +44,11 @@ export type QuoteNotice = {
   email?: string;
   region?: string;
   signType?: string;
+  /**
+   * 손님이 `/products` 에서 **누르고 온 카드** (`0010_quote_product.sql`).
+   * 🔴 `signType`(폼에서 고른 문의 분야)과 축이 다릅니다 — 둘 다 보여 줍니다.
+   */
+  product?: string;
   timing?: string;
   address?: string;
   message?: string;
@@ -154,8 +159,9 @@ function asText(q: QuoteNotice): string {
     line("이름", q.name) +
     line("연락처", q.phone) +
     line("이메일", q.email) +
+    line("보고 온 제품", q.product) +
     line("지역", q.region) +
-    line("간판 종류", q.signType) +
+    line("문의 분야", q.signType) +
     line("희망 시기", q.timing) +
     line("주소", q.address) +
     (q.files.length
@@ -223,8 +229,9 @@ export function asHtml(q: QuoteNotice): string {
   </a>
 
   <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+    ${row("보고 온 제품", q.product)}
     ${row("지역", q.region)}
-    ${row("간판 종류", q.signType)}
+    ${row("문의 분야", q.signType)}
     ${row("희망 시기", q.timing)}
     ${row("주소", q.address)}
     ${row("이메일", q.email)}

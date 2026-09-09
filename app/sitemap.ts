@@ -1,7 +1,17 @@
 import type { MetadataRoute } from "next";
+import { SHOW_PRODUCTS } from "@/config/content";
 import { noindexPaths, site } from "@/config/site";
+import { getBlocks } from "@/lib/cms";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+/**
+ * 🔴 **요청 시 생성입니다.** 예전에는 빌드 때 한 번 구워졌는데, 이제 이 목록이
+ * DB(간판 종류의 «손님용 설명» 유무)에 따라 달라집니다 — 구워 두면 대표님이 설명을
+ * 채워도 **다음 배포 전까지 사이트맵에 안 들어옵니다.** 사이트맵은 검색엔진이 가끔
+ * 한 번 가져가는 주소라 매번 만들어도 부담이 없습니다.
+ */
+export const dynamic = "force-dynamic";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const routes: { path: string; priority: number; freq: "weekly" | "monthly" | "yearly" }[] =
@@ -33,10 +43,35 @@ export default function sitemap(): MetadataRoute.Sitemap {
     (r) => !(noindexPaths as readonly string[]).includes(r.path),
   );
 
-  return publicRoutes.map((r) => ({
+  const base = publicRoutes.map((r) => ({
     url: `${site.url}${r.path}`,
     lastModified: now,
     changeFrequency: r.freq,
     priority: r.priority,
   }));
+
+  /**
+   * 제품 상세페이지 — **설명이 채워진 것만** 넣습니다 (F24-d).
+   *
+   * 🔴 이 규칙은 `app/products/[slug]/page.tsx` 의 `robots` 판정과 **같은 값**을 봅니다.
+   * 둘이 갈리면 «사이트맵으로는 색인해 달라 하고 페이지로는 하지 말라 하는» 모순
+   * 신호가 됩니다 — 위 `noindexPaths` 주석의 그 실패(제출 10건 중 3건 영구 실패)와
+   * 같은 종류입니다. 한쪽만 고치지 마세요.
+   *
+   * 설명이 없는 간판은 이름·번호·가격대뿐이라 아홉 장이 거의 같은 페이지가 됩니다.
+   * 대표님이 관리자 화면에서 설명을 채우면 저절로 들어옵니다.
+   */
+  if (!SHOW_PRODUCTS) return base;
+
+  const { signModels } = await getBlocks();
+  const details = signModels
+    .filter((m) => m.slug && m.body)
+    .map((m) => ({
+      url: `${site.url}/products/${m.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }));
+
+  return [...base, ...details];
 }
