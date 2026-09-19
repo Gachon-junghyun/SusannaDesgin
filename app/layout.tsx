@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import Script from "next/script";
-import { Noto_Sans_KR } from "next/font/google";
+import { Gowun_Batang } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -22,10 +22,23 @@ import { ogImage } from "@/lib/seo";
  */
 const SessionKeeper = dynamic(() => import("@/components/admin/SessionKeeper"));
 
-const notoKr = Noto_Sans_KR({
-  variable: "--font-noto-kr",
+/**
+ * 사이트 글꼴 — 고운바탕(류양희 · OFL · 400·700) 하나로 제목·본문을 다 씁니다 (2026-09-19).
+ *
+ * 대표님이 눈누(noonnu.cc/font_page/733)에서 골랐고, 같은 글꼴이 구글 폰트에 있어
+ * `next/font/google` 로 붙였습니다 — 빌드 때 받아 자체 호스팅하고 글자 범위별로 잘게
+ * 쪼개져 화면에 있는 조각만 내려갑니다. 눈누 CDN 의 woff 는 굵기당 1.6~1.8MB 통파일입니다.
+ * 이날 관리자 미리보기(F23)로 페이퍼로지·프리텐다드·고운바탕을 차례로 보고 정했습니다 —
+ * 경위는 `docs/ARCHITECTURE.md` F23-b.
+ *
+ * ⚠️ 굵기가 400·700 뿐이라 `font-black`(900) 자리도 700 으로 그려집니다. 알고 둔 것입니다.
+ * ⚠️ 자간: `tracking-tight` 의 값은 `globals.css` `@theme` 에서 `-0.01em` 으로 풀어 뒀습니다 —
+ *    Tailwind 기본 -0.025em 은 자폭이 좁은 고딕 기준이라 바탕체에선 글자가 닿습니다.
+ */
+const gowunBatang = Gowun_Batang({
+  variable: "--font-gowun-batang",
   subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
+  weight: ["400", "700"],
   display: "swap",
 });
 
@@ -176,7 +189,7 @@ export default async function RootLayout({
   const preview = await getPreview();
 
   return (
-    <html lang="ko" className={`${notoKr.variable} h-full antialiased`}>
+    <html lang="ko" className={`${gowunBatang.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <SiteChrome>
           <a href="#main" className="skip-link">
