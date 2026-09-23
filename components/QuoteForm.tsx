@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { CUSTOM_FONT_STORAGE_KEY } from "@/config/fonts";
 import Field, { inputCls } from "./Field";
 import PrivacyConsent from "./PrivacyConsent";
 import { floorOptions, signTypeOptions, timingOptions } from "@/config/content";
@@ -68,6 +70,25 @@ export default function QuoteForm({ interest = "" }: { interest?: string }) {
   // 넘어온 제품은 **상태의 초깃값**입니다 — 손님이 지울 수 있어야 하기 때문입니다
   // (다른 걸 보러 왔다가 마음이 바뀌는 경우). 읽기 전용으로 박아 두면 못 지웁니다.
   const [form, setForm] = useState({ ...initial, product: interest });
+
+  /**
+   * `/fonts` «커스텀 글꼴» 카드에서 적은 글씨 정보를 문의 내용에 옮겨 둡니다 (F25, 2026-09-23).
+   * 주소가 아니라 `sessionStorage` 로 받습니다(F24-c — 주소의 글자를 폼에 그대로 넣지 않는다).
+   * 한 번 읽으면 지웁니다. 서버에는 저장소가 없어 첫 그림 뒤에 채웁니다.
+   */
+  useEffect(() => {
+    if (!interest.startsWith("글꼴: 커스텀")) return;
+    try {
+      const note = sessionStorage.getItem(CUSTOM_FONT_STORAGE_KEY);
+      if (!note) return;
+      sessionStorage.removeItem(CUSTOM_FONT_STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 브라우저 저장소는 첫 그림 뒤에만 읽힙니다
+      setForm((f) => (f.message ? f : { ...f, message: `[원하는 글씨]
+${note}` }));
+    } catch {
+      /* 저장소가 막힌 브라우저 — 손님이 문의 내용에 다시 적으면 됩니다 */
+    }
+  }, [interest]);
   const [agree, setAgree] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");

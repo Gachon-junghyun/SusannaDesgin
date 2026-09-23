@@ -22,20 +22,8 @@ import { formatPhone, validateQuick, type Errors } from "@/lib/validate";
 export default function QuickQuoteForm({
   idPrefix = "q",
   product = "",
-  heading,
-  messageLabel,
 }: {
   idPrefix?: string;
-  /**
-   * 머리 세 줄과 버튼 글자를 바꿀 때만 줍니다 (F25 커스텀 글꼴 문의, 2026-09-23).
-   * 안 주면 원래 «FREE ESTIMATE / 1분 만에 무료 견적» 그대로입니다.
-   */
-  heading?: { eyebrow: string; title: string; desc: string; submit: string };
-  /**
-   * 주면 «적는 칸»(선택 입력)이 하나 붙고 `message` 로 보냅니다 — 칸이 적다는 이 폼의
-   * 성격을 깎는 대신 **필수로는 안 만듭니다.** API 는 간편 문의에서도 `message` 를 받습니다.
-   */
-  messageLabel?: { label: string; placeholder: string };
   /**
    * 「보고 온 제품」 (F24-c·d). 제품 상세페이지가 채워 넣습니다 — 홈에서는 빈 값입니다.
    * 🔴 **화면에 입력칸으로 세우지 않습니다.** 이 폼의 존재 이유가 «칸이 적다» 라서,
@@ -44,7 +32,7 @@ export default function QuickQuoteForm({
    */
   product?: string;
 }) {
-  const [form, setForm] = useState({ name: "", phone: "", region: "", message: "", trap: "" });
+  const [form, setForm] = useState({ name: "", phone: "", region: "", trap: "" });
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
@@ -66,7 +54,6 @@ export default function QuickQuoteForm({
       fd.set("phone", form.phone);
       fd.set("region", form.region);
       if (product) fd.set("product", product);
-      if (form.message.trim()) fd.set("message", form.message.trim());
       fd.set("agree", "true");
       fd.set("company_website", form.trap);
 
@@ -106,12 +93,10 @@ export default function QuickQuoteForm({
       noValidate
       className="rounded-2xl bg-white/95 p-6 shadow-2xl backdrop-blur"
     >
-      <p className="text-[13px] font-bold tracking-wide text-accent">
-        {heading?.eyebrow ?? "FREE ESTIMATE"}
-      </p>
-      <h2 className="mt-1 text-xl font-black">{heading?.title ?? "1분 만에 무료 견적"}</h2>
+      <p className="text-[13px] font-bold tracking-wide text-accent">FREE ESTIMATE</p>
+      <h2 className="mt-1 text-xl font-black">1분 만에 무료 견적</h2>
       <p className="mt-1 text-[13px] text-ink-500">
-        {heading?.desc ?? "연락처만 남겨주시면 담당자가 바로 연락드립니다."}
+        연락처만 남겨주시면 담당자가 바로 연락드립니다.
       </p>
 
       <div className="mt-4 space-y-2.5">
@@ -142,26 +127,6 @@ export default function QuickQuoteForm({
           placeholder="예: 대전 서구"
           error={errors.region}
         />
-        {messageLabel && (
-          <div>
-            <label
-              htmlFor={`${idPrefix}-message`}
-              className="mb-1 block text-[12px] font-bold text-ink-500"
-            >
-              {messageLabel.label}
-            </label>
-            <textarea
-              id={`${idPrefix}-message`}
-              name={`${idPrefix}-message`}
-              rows={4}
-              maxLength={1000}
-              value={form.message}
-              onChange={(e) => set("message")(e.target.value)}
-              placeholder={messageLabel.placeholder}
-              className="w-full resize-y rounded-lg border border-line px-4 py-3 text-[15px] outline-none transition-colors placeholder:text-ink-500/60 focus:border-brand focus:ring-2 focus:ring-brand/20"
-            />
-          </div>
-        )}
       </div>
 
       {/* 봇 트랩 — 화면에 보이지 않습니다 */}
@@ -192,7 +157,7 @@ export default function QuickQuoteForm({
         disabled={state === "sending"}
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3.5 text-[16px] font-black text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
       >
-        {state === "sending" ? "전송 중…" : (heading?.submit ?? "무료 견적 신청")}
+        {state === "sending" ? "전송 중…" : "무료 견적 신청"}
       </button>
 
       {state === "error" && (

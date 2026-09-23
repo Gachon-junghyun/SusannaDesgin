@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { fontGroups, type FontGroup, type SpecimenFont } from "@/config/fonts";
+import {
+  CUSTOM_FONT_SLUG,
+  CUSTOM_FONT_STORAGE_KEY,
+  fontGroups,
+  type FontGroup,
+  type SpecimenFont,
+} from "@/config/fonts";
 
 /**
  * `/fonts` 의 견본 격자 (F25, 2026-09-23).
@@ -221,5 +228,57 @@ export default function FontSpecimens({
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * 맨 아래 «커스텀 글꼴» 카드 (2026-09-23, 사람 지시 — *"커스텀 글씨 정보만 적어서 견적 넣기로"*).
+ * 이름·연락처는 여기서 안 받습니다. 적은 글씨 정보만 들고 `/quote?font=custom` 으로 가고,
+ * 견적 폼이 그걸 «문의 내용»에 채워 둡니다(`QuoteForm` 의 같은 열쇠).
+ */
+export function CustomFontCard() {
+  const router = useRouter();
+  const [note, setNote] = useState("");
+
+  function go(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      if (note.trim()) sessionStorage.setItem(CUSTOM_FONT_STORAGE_KEY, note.trim());
+    } catch {
+      /* 저장소가 막혀 있어도 견적 페이지로는 갑니다 */
+    }
+    router.push(`/quote?font=${CUSTOM_FONT_SLUG}`);
+  }
+
+  return (
+    <form onSubmit={go} className="rounded-lg bg-brand-700 p-6 text-white md:p-7">
+      <div className="flex items-baseline justify-between gap-4">
+        <h3 className="text-[26px] leading-tight font-black md:text-[30px]">커스텀 글꼴</h3>
+        <span className="text-[12px] text-white/70">CUSTOM</span>
+      </div>
+      <p className="mt-2 border-b border-white/20 pb-3 text-[12px] text-white/70">
+        목록에 없는 글꼴 · 우리 가게만의 글자
+      </p>
+
+      <label htmlFor="custom-font-note" className="mt-6 block text-[13px] text-white/70">
+        원하는 글씨를 적어 주세요
+      </label>
+      <textarea
+        id="custom-font-note"
+        rows={5}
+        maxLength={500}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="예: 붓글씨 느낌으로 가게 이름을 크게, 글꼴 이름을 알면 같이 적어 주세요"
+        className="mt-2 w-full resize-y border-0 border-b border-white/40 bg-transparent py-2 text-[16px] leading-relaxed text-white outline-none placeholder:text-white/45 focus:border-white"
+      />
+
+      <button
+        type="submit"
+        className="mt-6 flex w-full items-center justify-center rounded-xl bg-white px-5 py-3.5 text-[16px] font-black text-brand-700 transition-colors hover:bg-brand-50"
+      >
+        이걸로 견적 넣기 →
+      </button>
+    </form>
   );
 }

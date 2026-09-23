@@ -1,6 +1,6 @@
 ﻿import QuoteForm from "@/components/QuoteForm";
 import { PageHero } from "@/components/Section";
-import { specimenFonts } from "@/config/fonts";
+import { CUSTOM_FONT_SLUG, specimenFonts } from "@/config/fonts";
 import { site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 import { pageMetadata } from "@/lib/seo";
@@ -40,6 +40,7 @@ async function resolveItem(slug: string | undefined): Promise<string> {
  * 둘 다 «손님이 어느 카드를 보고 왔나» 이고, 둘이 한꺼번에 오는 경로가 없습니다.
  */
 function resolveFont(slug: string | undefined): string {
+  if (slug?.trim() === CUSTOM_FONT_SLUG) return "글꼴: 커스텀 글꼴";
   const hit = specimenFonts.find((f) => f.slug === slug?.trim());
   return hit ? `글꼴: ${hit.name}` : "";
 }

@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { Black_Han_Sans, Nanum_Brush_Script } from "next/font/google";
 
-import FontSpecimens from "@/components/FontSpecimens";
-import QuickQuoteForm from "@/components/QuickQuoteForm";
+import FontSpecimens, { CustomFontCard } from "@/components/FontSpecimens";
 import { PageHero } from "@/components/Section";
 import { SHOW_FONTS, specimenFonts } from "@/config/fonts";
 import { site } from "@/config/site";
@@ -77,8 +76,8 @@ export default async function FontsPage() {
       {/*
         커스텀 글꼴 문의 (2026-09-23, 사람 지시). 원래 여기 있던 라이선스 고지 문단과
         전화·견적 띠는 같은 날 사람 지시로 뺐습니다 — 라이선스 근거는 `config/fonts.ts` 머리말에 남아 있습니다.
-        폼은 홈의 간편 폼(F5)을 그대로 쓰고 «적는 칸» 하나만 붙였습니다. 폼을 새로 지으면 고장도 두 벌입니다.
-        문의에는 「보고 온 제품」 = `글꼴: 커스텀 글꼴 문의` 가 붙습니다(F24-c 와 같은 칸).
+        오른쪽은 «글씨 정보만 적는 카드»입니다(사람 지시). 연락처는 견적 페이지에서 받습니다 —
+        폼을 새로 지으면 고장도 두 벌입니다. 문의에는 「보고 온 제품」 = `글꼴: 커스텀 글꼴` 이 붙습니다.
       */}
       <section className="wrap py-16 md:py-24">
         <div className="grid gap-10 lg:grid-cols-[1fr_420px] lg:items-start lg:gap-16">
@@ -100,22 +99,7 @@ export default async function FontsPage() {
             </ul>
           </div>
 
-          <div>
-            <QuickQuoteForm
-              idPrefix="font-custom"
-              product="글꼴: 커스텀 글꼴 문의"
-              heading={{
-                eyebrow: "CUSTOM FONT",
-                title: "원하는 글자를 적어 주세요",
-                desc: "연락처를 남겨 주시면 담당자가 확인 후 연락드립니다.",
-                submit: "커스텀 글꼴 문의하기",
-              }}
-              messageLabel={{
-                label: "원하는 글꼴·느낌",
-                placeholder: "예: 붓글씨 느낌으로 가게 이름을 만들고 싶어요",
-              }}
-            />
-          </div>
+          <CustomFontCard />
         </div>
       </section>
     </div>

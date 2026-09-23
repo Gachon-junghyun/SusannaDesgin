@@ -63,6 +63,14 @@ export const specimenFonts: SpecimenFont[] = [
   { slug: "cafe24-surround", name: "카페24 써라운드", group: "round", family: "'SpecSurround'", weight: 400, noonnu: 669, seen: "쇼핑몰 배너, 아동 교육물", fits: "키즈카페, 디저트 가게" },
 ];
 
+/**
+ * 맨 아래 «커스텀 글꼴» 카드 (2026-09-23). 손님이 적은 글씨 정보는 **주소에 안 싣고**
+ * `sessionStorage` 이 열쇠로 견적 폼에 건넵니다 — 주소에서 온 글자를 폼에 그대로 넣지 않는다는
+ * F24-c 규칙 때문입니다. 주소엔 `?font=custom` 만 가고, 견적 페이지가 그걸 목록처럼 대조합니다.
+ */
+export const CUSTOM_FONT_SLUG = "custom";
+export const CUSTOM_FONT_STORAGE_KEY = "susanna-custom-font";
+
 /** 라이선스 표를 마지막으로 연 날 [P6] — 화면에서는 뺐고(2026-09-23) 기록으로만 둡니다 */
 export const FONTS_CHECKED_AT = "2026-09-23";
 
