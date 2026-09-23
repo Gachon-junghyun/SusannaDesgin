@@ -1,5 +1,6 @@
 ﻿import QuoteForm from "@/components/QuoteForm";
 import { PageHero } from "@/components/Section";
+import { specimenFonts } from "@/config/fonts";
 import { site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 import { pageMetadata } from "@/lib/seo";
@@ -32,14 +33,25 @@ async function resolveItem(slug: string | undefined): Promise<string> {
   return hit.eyebrow ? `${hit.title} (${hit.eyebrow})` : hit.title;
 }
 
+/**
+ * `/fonts` 카드에서 넘어온 글꼴 (F25, 2026-09-23). `resolveItem` 과 같은 규칙입니다 —
+ * **주소의 글자를 그대로 쓰지 않고** `config/fonts.ts` 목록과 대조해 이름으로 바꿉니다.
+ * 칸을 새로 파지 않고 「보고 온 제품」(`product`)에 `글꼴: 이름` 으로 싣습니다 —
+ * 둘 다 «손님이 어느 카드를 보고 왔나» 이고, 둘이 한꺼번에 오는 경로가 없습니다.
+ */
+function resolveFont(slug: string | undefined): string {
+  const hit = specimenFonts.find((f) => f.slug === slug?.trim());
+  return hit ? `글꼴: ${hit.name}` : "";
+}
+
 export default async function QuotePage({
   searchParams,
 }: {
   /** `/products` 카드에서 넘어올 때만 붙습니다 — 직접 들어오면 비어 있습니다 */
-  searchParams: Promise<{ item?: string }>;
+  searchParams: Promise<{ item?: string; font?: string }>;
 }) {
-  const { item } = await searchParams;
-  const interest = await resolveItem(item);
+  const { item, font } = await searchParams;
+  const interest = (await resolveItem(item)) || resolveFont(font);
 
   return (
     <>

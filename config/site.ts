@@ -7,6 +7,7 @@
 // 아래 `noindexPaths` 가 제품 페이지의 공개 여부를 이 스위치 하나로 판단합니다.
 // ⚠️ `content.ts` 는 이 파일을 import 하지 않습니다 — 이 방향으로만 두세요(순환 방지).
 import { SHOW_PRODUCTS } from "./content";
+import { SHOW_FONTS } from "./fonts";
 
 /**
  * 최종 확정 도메인. 이 주소 위에서 돌 때만 검색엔진에 노출됩니다.
@@ -254,6 +255,12 @@ export const seo = {
       description:
         "대전 간판 제품 — 채널 간판, 옥상 광고탑·외벽 사인, 사옥 CI 사인, 로비 사인·이미지월, 층별 안내 사인, 캐노피·파사드 철구조물.",
     },
+    /** 아직 «안 연» 페이지입니다 (F25). `SHOW_FONTS` 가 꺼져 있으면 `noindexPaths` 에 들어갑니다. */
+    "/fonts": {
+      title: "간판 글꼴 고르기",
+      description:
+        "간판에 쓸 수 있는 상업용 무료 한글 글꼴 14종. 가게 이름을 적어 보고 마음에 드는 글꼴로 대전 간판 견적을 받으세요.",
+    },
     "/works": {
       title: "대전 간판 시공사례",
       description:
@@ -312,6 +319,8 @@ export const noindexPaths: readonly string[] = [
    * 위 경고("두 곳을 따로 관리하면 반드시 어긋납니다")를 지키려고 스위치 하나에 묶었습니다.
    */
   ...(SHOW_PRODUCTS ? [] : ["/products"]),
+  /** 글꼴 견본(F25) — 같은 이유로 `SHOW_FONTS` 한 값에 묶었습니다 */
+  ...(SHOW_FONTS ? [] : ["/fonts"]),
 ];
 
 /** 보유 인증·등록 (회사소개서 03. 인증 및 등록 현황) */
