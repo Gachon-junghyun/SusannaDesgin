@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Black_Han_Sans, Nanum_Brush_Script } from "next/font/google";
 
 import FontSpecimens from "@/components/FontSpecimens";
+import QuickQuoteForm from "@/components/QuickQuoteForm";
 import { PageHero } from "@/components/Section";
-import { FONTS_CHECKED_AT, SHOW_FONTS, specimenFonts } from "@/config/fonts";
+import { SHOW_FONTS, specimenFonts } from "@/config/fonts";
 import { site } from "@/config/site";
 import { getPreview } from "@/lib/preview";
 import { pageMetadata } from "@/lib/seo";
@@ -41,6 +41,7 @@ const nanumBrush = Nanum_Brush_Script({
  * 🔴 **`SHOW_FONTS` 가 꺼져 있으면 관리자 말고는 404 입니다** — `/products` 와 같은 규칙입니다.
  * 목록과 고른 기준(라이선스)은 `config/fonts.ts`, 카드 배치의 출처는 `components/FontSpecimens.tsx`.
  *
+ * 메뉴 「글꼴」은 `SHOW_FONTS || 미리보기` 에서 섭니다(`components/Header.tsx`).
  * 카드의 「이 글꼴로 견적」은 `/quote?font=<slug>` 로 갑니다. 견적 폼은 그 값을
  * **목록과 대조해** 「보고 온 제품」 칸에 `글꼴: 이름` 으로 싣습니다(F24-c 와 같은 칸).
  * 손님이 적은 견본 글자는 **주소에 안 싣습니다** — 주소에서 온 글자를 그대로 폼에 넣지
@@ -70,45 +71,53 @@ export default async function FontsPage() {
 
       <FontSpecimens
         fonts={specimenFonts}
-        info={{ name: site.name, nameEn: site.nameEn, phone: site.phone }}
+        info={{ name: site.name, nameEn: site.nameEn }}
       />
 
-      <div className="wrap pb-16 md:pb-24">
-        {/*
-          🔴 라이선스 고지는 지우지 마세요 [P6]. 눈누 요약표는 «참고용» 이고,
-          눈누 스스로 그렇게 적어 둡니다 — 그 문장을 그대로 옮긴 자리입니다.
-        */}
-        <p className="mt-6 max-w-3xl text-[13px] leading-relaxed text-ink-500">
-          모두 눈누(noonnu.cc)에서 인쇄와 로고(BI/CI) 사용이 «사용 가능»으로 표시된 무료
-          글꼴입니다({FONTS_CHECKED_AT} 확인). 눈누 안내대로 이 사용범위는 참고용이며, 정확한
-          사용범위는 이용 전 폰트 저작권자에게 확인해야 합니다.
-        </p>
-
-        <div className="mt-16 flex flex-col gap-8 border-t border-line pt-10 md:mt-20 md:flex-row md:items-center md:justify-between">
+      {/*
+        커스텀 글꼴 문의 (2026-09-23, 사람 지시). 원래 여기 있던 라이선스 고지 문단과
+        전화·견적 띠는 같은 날 사람 지시로 뺐습니다 — 라이선스 근거는 `config/fonts.ts` 머리말에 남아 있습니다.
+        폼은 홈의 간편 폼(F5)을 그대로 쓰고 «적는 칸» 하나만 붙였습니다. 폼을 새로 지으면 고장도 두 벌입니다.
+        문의에는 「보고 온 제품」 = `글꼴: 커스텀 글꼴 문의` 가 붙습니다(F24-c 와 같은 칸).
+      */}
+      <section className="wrap py-16 md:py-24">
+        <div className="grid gap-10 lg:grid-cols-[1fr_420px] lg:items-start lg:gap-16">
           <div>
-            <h2 className="text-2xl font-black tracking-tight md:text-3xl">
-              어울리는 글꼴을 모르겠다면
-            </h2>
-            <p className="mt-3 leading-relaxed text-ink-500">
-              업종과 간판 종류만 알려주세요. 시안에 글꼴 두세 가지를 같이 얹어 보내드립니다.
+            <p className="mb-3 text-[13px] font-black tracking-[0.25em] text-brand-700">
+              CUSTOM LETTERING
             </p>
+            <h2 className="text-3xl leading-tight font-black tracking-tight md:text-[42px]">
+              커스텀 글꼴 문의
+            </h2>
+            <p className="mt-5 max-w-xl leading-relaxed text-ink-500 md:text-lg">
+              목록에 없는 글꼴을 쓰고 싶거나, 우리 가게 이름만의 글자가 필요하다면 원하는
+              느낌을 적어 주세요. 참고할 간판 사진이나 로고가 있으면 함께 알려 주셔도 됩니다.
+            </p>
+            <ul className="mt-8 space-y-3 border-t border-line pt-6 text-[15px] leading-relaxed">
+              <li>쓰고 싶은 글꼴 이름이나 비슷한 느낌의 글꼴</li>
+              <li>간판에 들어갈 글자와 대략의 크기</li>
+              <li>가게 분위기 (예: 오래된 노포 느낌, 깔끔한 카페 느낌)</li>
+            </ul>
           </div>
-          <div className="flex shrink-0 flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <a
-              href={site.phoneHref}
-              className="text-[17px] font-black tracking-tight transition-colors hover:text-brand-700"
-            >
-              {site.phone}
-            </a>
-            <Link
-              href="/quote"
-              className="rounded-xl bg-brand px-8 py-4 font-black text-white transition-colors hover:bg-brand-600"
-            >
-              무료 견적 신청
-            </Link>
+
+          <div>
+            <QuickQuoteForm
+              idPrefix="font-custom"
+              product="글꼴: 커스텀 글꼴 문의"
+              heading={{
+                eyebrow: "CUSTOM FONT",
+                title: "원하는 글자를 적어 주세요",
+                desc: "연락처를 남겨 주시면 담당자가 확인 후 연락드립니다.",
+                submit: "커스텀 글꼴 문의하기",
+              }}
+              messageLabel={{
+                label: "원하는 글꼴·느낌",
+                placeholder: "예: 붓글씨 느낌으로 가게 이름을 만들고 싶어요",
+              }}
+            />
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import FloatingBar from "@/components/FloatingBar";
 import PreviewBar from "@/components/PreviewBar";
 import SiteChrome from "@/components/SiteChrome";
 import { SHOW_PRODUCTS } from "@/config/content";
+import { SHOW_FONTS } from "@/config/fonts";
 import { seo, site } from "@/config/site";
 import { getPreview } from "@/lib/preview";
 import { ogImage } from "@/lib/seo";
@@ -196,7 +197,10 @@ export default async function RootLayout({
             본문으로 바로가기
           </a>
           {/* 제품 메뉴는 공개 스위치 또는 미리보기로만 섭니다 (F24) */}
-          <Header productsVisible={SHOW_PRODUCTS || preview.on} />
+          <Header
+            productsVisible={SHOW_PRODUCTS || preview.on}
+            fontsVisible={SHOW_FONTS || preview.on}
+          />
         </SiteChrome>
         <main id="main" className="flex-1">
           {children}

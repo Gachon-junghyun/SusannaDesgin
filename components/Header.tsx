@@ -26,22 +26,35 @@ const NAV = [
  */
 const PRODUCTS_NAV = { href: "/products", label: "제품" };
 
+/**
+ * 글꼴 견본 메뉴 (F25, 2026-09-23). 제품 메뉴와 같은 규칙 — `SHOW_FONTS || 미리보기` 한 값에서 갈립니다.
+ * 자리는 제품 바로 뒤(제품이 없으면 사업영역 뒤)입니다. «무엇을 만드나 → 어떤 글자로» 순서입니다.
+ */
+const FONTS_NAV = { href: "/fonts", label: "글꼴" };
+
 /** 이 높이만큼 히어로가 헤더 아래로 깔립니다 (HeroSlider 상단 패딩과 맞춤) */
 const SOLID_AT = 40;
 
 export default function Header({
   /** 제품 메뉴를 세울지. `SHOW_PRODUCTS || 미리보기 켜짐` (F23·F24) */
   productsVisible = false,
+  /** 글꼴 메뉴를 세울지. `SHOW_FONTS || 미리보기 켜짐` (F25) */
+  fontsVisible = false,
 }: {
   productsVisible?: boolean;
+  fontsVisible?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const nav = productsVisible
-    ? [NAV[0], NAV[1], PRODUCTS_NAV, ...NAV.slice(2)]
-    : NAV;
+  const nav = [
+    NAV[0],
+    NAV[1],
+    ...(productsVisible ? [PRODUCTS_NAV] : []),
+    ...(fontsVisible ? [FONTS_NAV] : []),
+    ...NAV.slice(2),
+  ];
 
   /** 홈은 히어로 사진 위에 헤더가 투명하게 얹힙니다 */
   const overlay = pathname === "/";

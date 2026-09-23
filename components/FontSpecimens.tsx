@@ -17,7 +17,7 @@ import { fontGroups, type FontGroup, type SpecimenFont } from "@/config/fonts";
  * 그 위의 작은 청록 글자는 `brand-400` 이 안 보여서 `brand-100` 으로 뺐습니다.
  * 카드 안에 상자를 또 두지 않고 선으로만 나눴습니다.
  *
- * 🔴 **견본은 우리 회사 정보로 시작합니다** — 상호·영문 상호·전화번호(사람 지시, 2026-09-23).
+ * 🔴 **견본은 우리 상호로 시작합니다** — 상호·영문 상호(사람 지시, 2026-09-23. 전화번호는 같은 날 뺐습니다).
  * 손님이 입력칸에 자기 가게 이름을 적으면 큰 견본만 그 글자로 바뀝니다.
  * 🔴 **견본 문장은 손님이 적은 글자입니다** — 간판은 결국 «우리 가게 이름이 어떻게 보이나»
  * 라서, 영문 pangram 대신 입력칸 하나를 모든 카드가 같이 씁니다.
@@ -28,7 +28,7 @@ import { fontGroups, type FontGroup, type SpecimenFont } from "@/config/fonts";
  */
 
 /** 견본에 넣는 우리 회사 정보 — 페이지가 `config/site.ts` 에서 넘깁니다 [A5] */
-export type SampleInfo = { name: string; nameEn: string; phone: string };
+export type SampleInfo = { name: string; nameEn: string };
 const MAX = 20;
 
 function useSeen<T extends Element>() {
@@ -95,17 +95,7 @@ function Specimen({
         </span>
       </div>
 
-      <p className={`mt-2 flex justify-between border-b pb-3 text-[12px] ${rule} ${sub}`}>
-        <span>{group}</span>
-        <a
-          href={`https://noonnu.cc/font_page/${font.noonnu}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline-offset-2 hover:underline"
-        >
-          눈누에서 보기
-        </a>
-      </p>
+      <p className={`mt-2 border-b pb-3 text-[12px] ${rule} ${sub}`}>{group}</p>
 
       <p
         className={`mt-8 mb-6 min-h-[2.4em] leading-[1.15] break-keep ${sampleSize(text)}`}
@@ -129,8 +119,6 @@ function Specimen({
       <div className={`mt-auto grid grid-cols-[1fr_auto] items-end gap-4 border-t pt-4 ${rule}`}>
         <p className={`text-[14px] leading-relaxed ${sub}`} style={face}>
           {info.nameEn}
-          <br />
-          {info.phone}
         </p>
         <span className="text-[64px] leading-none" style={face} aria-hidden>
           {[...info.name][0]}
