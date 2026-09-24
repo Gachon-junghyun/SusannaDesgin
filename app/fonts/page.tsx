@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Black_Han_Sans, Nanum_Brush_Script } from "next/font/google";
+import { Black_Han_Sans, Nanum_Brush_Script, Noto_Sans_KR } from "next/font/google";
 
 import FontSpecimens, { CustomFontCard } from "@/components/FontSpecimens";
 import { PageHero } from "@/components/Section";
@@ -33,6 +33,15 @@ const nanumBrush = Nanum_Brush_Script({
   display: "swap",
   preload: false,
 });
+/** 본문용 고딕이지만 «꾸미지 않은» 간판을 원하는 손님이 고를 자리가 없어 넣었습니다 (2026-09-23).
+ *  900(Black)만 받습니다 — 간판에 쓸 굵기는 한 벌이면 됩니다. SIL OFL 이라 BI/CI 도 자유입니다. */
+const notoSansKr = Noto_Sans_KR({
+  variable: "--font-noto-sans-kr",
+  weight: "900",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
 
 /**
  * 글꼴 견본 — «이 글꼴로 만들어 주세요» 를 고르는 페이지 (F25, 2026-09-23).
@@ -51,7 +60,7 @@ export default async function FontsPage() {
   if (!SHOW_FONTS && !preview.on) notFound();
 
   return (
-    <div className={`${blackHanSans.variable} ${nanumBrush.variable}`}>
+    <div className={`${blackHanSans.variable} ${nanumBrush.variable} ${notoSansKr.variable}`}>
       <PageHero
         eyebrow="FONTS"
         title="글꼴"

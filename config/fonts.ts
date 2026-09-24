@@ -53,6 +53,8 @@ export const specimenFonts: SpecimenFont[] = [
   { slug: "aggro", name: "어그로체", group: "gothic", family: "'SpecAggro'", weight: 700, noonnu: 738, seen: "유튜브 썸네일, 예능 자막", fits: "분식집, 주점, 오락실" },
   { slug: "isamanru", name: "이사만루", group: "gothic", family: "'SpecIsamanru'", weight: 700, noonnu: 463, seen: "스포츠와 게임 홍보물", fits: "치킨집, 호프, 체육관" },
   { slug: "a2z", name: "에이투지체", group: "gothic", family: "'SpecA2z'", weight: 800, noonnu: 1778, seen: "회사 홈페이지, 안내문", fits: "병원, 사무실, 부동산" },
+  { slug: "kcc-ganpan", name: "KCC간판체", group: "gothic", family: "'SpecKccGanpan'", weight: 400, noonnu: 1095, seen: "관공서 안내판, 소상공인 간판", fits: "어느 업종에나 (간판용으로 만든 글꼴)" },
+  { slug: "noto-sans-kr", name: "본고딕 (Noto Sans KR)", group: "gothic", family: "var(--font-noto-sans-kr)", weight: 900, noonnu: 34, seen: "안내문, 기업 문서, 웹사이트", fits: "병원, 약국, 관공서, 사무실" },
   { slug: "gowun-batang", name: "고운바탕", group: "serif", family: "var(--font-gowun-batang)", weight: 700, noonnu: 733, seen: "책 표지, 청첩장", fits: "한식당, 찻집, 공방" },
   { slug: "maru-buri", name: "마루 부리", group: "serif", family: "'SpecMaruBuri'", weight: 700, noonnu: 487, seen: "책과 잡지, 전시 포스터", fits: "서점, 갤러리, 꽃집" },
   { slug: "chosun-gungseo", name: "조선궁서체", group: "serif", family: "'SpecChosunGs'", weight: 400, noonnu: 416, seen: "신문 제목, 상장, 현판", fits: "한정식, 한의원, 전통 가게" },
@@ -75,9 +77,15 @@ export const CUSTOM_FONT_STORAGE_KEY = "susanna-custom-font";
 export const FONTS_CHECKED_AT = "2026-09-23";
 
 /**
- * 🔴 **아직 손님에게 안 연 페이지입니다.** `SHOW_PRODUCTS` 와 같은 모양의 스위치입니다 —
- * 꺼져 있으면 `/fonts` 는 관리자(새 디자인 미리보기, F23) 말고는 404 이고,
- * `noindexPaths` 에 들어가 사이트맵에서도 빠집니다. **켜는 것은 대표님 결정입니다.**
- * 주 메뉴에는 아직 안 붙였습니다 — 켤 때 어디에 둘지(제품 옆? 견적 안?)부터 정합니다.
+ * 🔴 **손님에게 연 페이지입니다** (2026-09-24, 대표님 결정으로 켬). `SHOW_PRODUCTS` 와 같은
+ * 모양의 스위치입니다 — 꺼면 `/fonts` 는 관리자(새 디자인 미리보기, F23) 말고는 404 이고,
+ * `noindexPaths` 에 들어가 사이트맵에서도 빠집니다.
+ *
+ * ⚠️ **`SHOW_PRODUCTS`(제품) 는 여전히 꺼져 있습니다** — 이번에 «이것만» 열라는 지시였습니다.
+ * 두 스위치를 같이 켜지 마세요.
+ *
+ * 켜면 한 값에서 셋이 같이 갈립니다: 페이지 공개(`app/fonts/page.tsx`) ·
+ * 주 메뉴 「글꼴」(`components/Header.tsx` 의 `fontsVisible`) ·
+ * 사이트맵 등재(`noindexPaths` 에서 빠짐 → `app/sitemap.ts` 가 저절로 싣습니다).
  */
-export const SHOW_FONTS: boolean = false;
+export const SHOW_FONTS: boolean = true;

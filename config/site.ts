@@ -255,7 +255,7 @@ export const seo = {
       description:
         "대전 간판 제품 — 채널 간판, 옥상 광고탑·외벽 사인, 사옥 CI 사인, 로비 사인·이미지월, 층별 안내 사인, 캐노피·파사드 철구조물.",
     },
-    /** 아직 «안 연» 페이지입니다 (F25). `SHOW_FONTS` 가 꺼져 있으면 `noindexPaths` 에 들어갑니다. */
+    /** 손님에게 연 페이지입니다 (F25, 2026-09-24). `SHOW_FONTS` 를 끄면 `noindexPaths` 로 돌아갑니다. */
     "/fonts": {
       title: "간판 글꼴 고르기",
       description:
