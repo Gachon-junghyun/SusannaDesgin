@@ -171,7 +171,11 @@ export default function FontSpecimens({
     <>
       <div className="wrap pt-14 md:pt-20">
       <div className="mx-auto max-w-2xl">
-        <label htmlFor="font-sample" className="block text-[14px] font-bold text-ink-500">
+        {/* 2026-09-24 사람 지시로 라벨 글자와 아래 안내문을 화면에서 뺐습니다 — 무슨 말인지
+            안 읽힌다는 지적이고, 같은 내용을 PageHero 설명이 이미 말합니다. 🔴 라벨 자체는
+            지우지 말고 `sr-only` 로 두세요 — 지우면 낭독기에서 이 칸이 이름 없는 입력칸이
+            됩니다(F12). 화면에는 회사 이름이 안내문(placeholder)으로 대신 섭니다. */}
+        <label htmlFor="font-sample" className="sr-only">
           간판에 들어갈 글자
         </label>
         <input
@@ -182,9 +186,6 @@ export default function FontSpecimens({
           placeholder={info.name}
           className="mt-2 w-full border-0 border-b-2 border-ink bg-transparent pb-3 text-center text-3xl font-bold tracking-tight outline-none placeholder:text-ink-500/40 focus:border-brand md:text-4xl"
         />
-        <p className="mt-2 text-center text-[13px] text-ink-500">
-          가게 이름을 적으면 아래 글꼴 {fonts.length}종에 한 번에 들어갑니다.
-        </p>
       </div>
 
       <div className="mt-10 flex flex-wrap justify-center gap-2">
