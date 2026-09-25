@@ -68,6 +68,23 @@ function supabaseImageHost() {
   }
 }
 
+/**
+ * 주소 뒤에 한글이 붙은 채 퍼진 링크를 원래 페이지로 보냅니다 (2026-09-26).
+ *
+ * Search Console 에 `/works주요실적` · `/about회사소개` 같은 404 가 5건 잡혔습니다.
+ * 어딘가(소개글·게시물)에 주소와 메뉴 이름이 띄어쓰기 없이 붙어 적혀, 거기서 링크가 만들어진 것으로 보입니다.
+ * 404 자체는 순위에 해가 없지만, 그 링크를 누른 사람과 링크의 힘을 버리지 않으려고 넘깁니다.
+ * 꼬리가 영문·숫자·`/` 로 시작하면 건드리지 않아 진짜 하위 주소와 안 겹칩니다.
+ */
+const TOP_PAGES = ["works", "about", "signs", "process", "support", "quote", "fonts"];
+function trailingHangulRedirect() {
+  return TOP_PAGES.map((p) => ({
+    source: `/${p}:tail([^/a-zA-Z0-9_-].*)`,
+    destination: `/${p}`,
+    statusCode: 301 as const,
+  }));
+}
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: supabaseImageHost(),
@@ -90,7 +107,7 @@ const nextConfig: NextConfig = {
    * 라우트 핸들러(`/rss.xml`)는 정상 적용됩니다.
    */
   async redirects() {
-    return wwwRedirect();
+    return [...wwwRedirect(), ...trailingHangulRedirect()];
   },
 
   async headers() {

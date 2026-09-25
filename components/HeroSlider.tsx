@@ -220,7 +220,8 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
             {s.available ? (
               <Image
                 src={s.image}
-                alt=""
+                // 배경이어도 alt 를 채웁니다 — 이미지 검색·AI 요약이 이 문구로 사진을 읽습니다 (2026-09-26)
+                alt={s.alt}
                 fill
                 priority={idx === 0}
                 sizes="100vw"
