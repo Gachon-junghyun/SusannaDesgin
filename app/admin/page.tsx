@@ -56,6 +56,13 @@ export default async function AdminHome() {
       unit: "",
       desc: "상호·로고로 간판 시안을 만들고, 만들 수 있는지(획·글자 높이)를 판정합니다. 이 PC 의 글꼴도 쓸 수 있습니다.",
     },
+    {
+      href: "/admin/usage",
+      title: "사용량",
+      count: null,
+      unit: "",
+      desc: "Supabase 무료 요금제 한도(DB 500MB·파일 1GB …) 대비 지금 얼마나 쓰는지 봅니다.",
+    },
   ];
 
   return (
