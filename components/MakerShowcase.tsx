@@ -205,7 +205,7 @@ export default function MakerShowcase({
           className="mk-motion-only mr-auto rounded-full px-3 py-2 text-[13px] font-bold text-white/60 underline-offset-4 hover:text-white hover:underline"
           aria-pressed={paused}
         >
-          {paused ? "▶ 다시 흐르기" : "❚❚ 멈춤"}
+          {paused ? "▶ 재생" : "❚❚ 일시정지"}
         </button>
         <RoundBtn label="이전 카드" onClick={() => step(-1)}>
           ←
