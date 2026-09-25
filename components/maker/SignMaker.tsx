@@ -9,11 +9,16 @@ import {
   faceColors,
   INCOMING_LOGO_KEY,
   ledColors,
+  MAKER_HELP_EVENT,
   MAKER_STORAGE_KEY,
   makerKinds,
+  MAKER_SHARE_MAX_BYTES,
+  makerTourKey,
   sideColors,
   trimColors,
+  wallColors,
   walls,
+  type TourStep,
 } from "@/config/maker";
 import {
   composeJpeg,
@@ -21,11 +26,14 @@ import {
   download,
   fabricationSvg,
   fmtMm,
+  inkOn,
   judgeItem,
   kindOf,
   LEVEL_LABEL,
   newId,
   summarize,
+  wallFill,
+  wallLabel,
   worst,
   type Design,
   type FontRef,
@@ -51,7 +59,9 @@ import {
 } from "@/lib/maker/fonts";
 import { apply, homography, mapPath, mul, rotateAt, scaleAt, translate, type Affine, type Pt } from "@/lib/maker/geom";
 import { bbox, imageDataOf, layersFromImage, toPathD, traceGray, type Contour } from "@/lib/maker/trace";
+import { createMakerShare, deleteMakerShare, listMakerShares, type ShareItem } from "@/app/admin/maker/actions";
 
+import MakerTour from "./MakerTour";
 import Stage, { type Calib, type RItem, type RPath, type View } from "./Stage";
 
 /**
@@ -69,18 +79,26 @@ import Stage, { type Calib, type RItem, type RPath, type View } from "./Stage";
  * 🔴 **손님이 올린 가게 사진·로고는 이 브라우저 밖으로 안 나갑니다** — 견적을 «보낼 때» 미리보기 그림으로 첨부될 뿐입니다.
  */
 
-type Mode = "admin" | "customer";
+/** `view` = 공유 링크(F26-b)로 받은 디자인을 «보기 전용»으로 엽니다 — 옮기기·고치기·초안 저장이 없습니다 */
+type Mode = "admin" | "customer" | "view";
 type TextOut = { key: string; outline: Outline; fontName: string };
 
-const STORE = (mode: Mode) => `susanna-maker-draft-v2-${mode}`;
+/** 공유 링크 한 건의 정보 — `app/maker/s/[token]/page.tsx` 가 넘깁니다 */
+export type ShareInfo = { token: string; title: string; expiresAt: string; canEdit: boolean };
 
-function loadDraft(mode: Mode): Design {
+const STORE = (mode: "admin" | "customer") => `susanna-maker-draft-v2-${mode}`;
+
+/** 저장소·공유 링크에서 온 디자인을 지금 모양에 맞춥니다. 사진은 저장하지 않으므로 사진 벽은 흰 벽으로 */
+function normalize(raw: unknown): Design | null {
+  const d = raw as Design | null;
+  if (!d || !Array.isArray(d.items)) return null;
+  return { ...defaultDesign(), ...d, wall: d.wall === "color" || walls.some((w) => w.key === d.wall) ? d.wall : "white" };
+}
+
+function loadDraft(mode: "admin" | "customer"): Design {
   try {
     const raw = localStorage.getItem(STORE(mode));
-    if (raw) {
-      const d = JSON.parse(raw) as Design;
-      if (d && Array.isArray(d.items)) return { ...defaultDesign(), ...d, wall: d.wall === "photo" || !walls.some((w) => w.key === d.wall) ? "white" : d.wall };
-    }
+    if (raw) return normalize(JSON.parse(raw)) ?? defaultDesign();
   } catch {
     /* 저장소가 막힌 브라우저 — 기본값으로 */
   }
@@ -94,12 +112,17 @@ function glyphAffine(g: { x0: number; y0: number; w: number; h: number }, ov?: G
   return mul(translate(ov.dx ?? 0, ov.dy ?? 0), mul(rotateAt(ov.rot ?? 0, cx, cy), scaleAt(ov.scale ?? 1, cx, cy)));
 }
 
-export default function SignMaker({ mode }: { mode: Mode }) {
+export default function SignMaker({ mode, initial, share }: { mode: Mode; initial?: unknown; share?: ShareInfo }) {
   const router = useRouter();
   const admin = mode === "admin";
+  const viewOnly = mode === "view";
 
   /* ---------------------------------------------------------- 디자인 + 되돌리기 */
-  const [hist, setHist] = useState(() => ({ past: [] as Design[], now: loadDraft(mode), future: [] as Design[] }));
+  const [hist, setHist] = useState(() => ({
+    past: [] as Design[],
+    now: mode === "view" ? (normalize(initial) ?? defaultDesign()) : loadDraft(mode),
+    future: [] as Design[],
+  }));
   const d = hist.now;
   const dragBase = useRef<Design | null>(null);
 
@@ -123,6 +146,8 @@ export default function SignMaker({ mode }: { mode: Mode }) {
   const patchDesign = (patch: Partial<Design>) => commit((p) => ({ ...p, ...patch }));
 
   useEffect(() => {
+    // 보기 전용은 초안을 안 남깁니다 — 받은 디자인이 손님의 «만들던 것»을 덮으면 안 됩니다
+    if (mode === "view") return;
     const t = setTimeout(() => {
       try {
         localStorage.setItem(STORE(mode), JSON.stringify(d));
@@ -140,7 +165,7 @@ export default function SignMaker({ mode }: { mode: Mode }) {
   };
 
   /* ---------------------------------------------------------- 화면 상태 */
-  const [selected, setSelected] = useState<string | null>(d.items[0]?.id ?? null);
+  const [selected, setSelected] = useState<string | null>(viewOnly ? null : (d.items[0]?.id ?? null));
   const [glyph, setGlyph] = useState<number | null>(null);
   const [warpMode, setWarpMode] = useState(false);
   const [night, setNight] = useState(false);
@@ -158,9 +183,48 @@ export default function SignMaker({ mode }: { mode: Mode }) {
   const kind = kindOf(d);
 
   const select = (id: string | null) => {
+    if (viewOnly) return;
     setSelected(id);
     setGlyph(null);
     if (!id) setWarpMode(false);
+  };
+
+  /* ---------------------------------------------------------- 처음 온 사람 안내 (F26-a) */
+  const [tour, setTour] = useState(false);
+  useEffect(() => {
+    // 본 적 없으면 화면이 자리 잡은 뒤 한 번 띄웁니다. 상단 막대 «도움말»은 언제든 다시 엽니다
+    // 보기 전용(공유 링크)엔 안 띄웁니다 — 안내가 가리키는 편집 칸들이 없습니다
+    if (mode === "view") return;
+    let t = 0;
+    try {
+      if (!localStorage.getItem(makerTourKey(mode))) t = window.setTimeout(() => setTour(true), 700);
+    } catch {
+      /* 저장소가 막힌 브라우저 — 매번 띄우면 귀찮으니 안 띄웁니다. «도움말»로 봅니다 */
+    }
+    const open = () => setTour(true);
+    window.addEventListener(MAKER_HELP_EVENT, open);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener(MAKER_HELP_EVENT, open);
+    };
+  }, [mode]);
+  const endTour = () => {
+    setTour(false);
+    if (mode === "view") return;
+    try {
+      localStorage.setItem(makerTourKey(mode), new Date().toISOString());
+    } catch {
+      /* 저장소가 막힘 — 다음에 또 뜨지 않게 할 방법이 없을 뿐입니다 */
+    }
+  };
+  /** 단계마다 화면 준비 — 오른쪽 «글자» 칸이 있어야 보이는 단계는 첫 글자를 골라 둡니다 */
+  const prepareTour = (s: TourStep) => {
+    setWarpMode(false);
+    if (!s.needsText) return;
+    const cur = d.items.find((x) => x.id === selected);
+    if (cur?.type === "text") return;
+    const t = d.items.find((x) => x.type === "text");
+    if (t) select(t.id);
   };
 
   const fit = useCallback(
@@ -236,7 +300,7 @@ export default function SignMaker({ mode }: { mode: Mode }) {
           size: { w: it.w, h: it.srcH * k },
           paths: it.layers.map((l) => ({ d: mapPath(l.d, (p) => [p[0] * k, p[1] * k]), color: l.color })),
           glyphBoxes: {},
-          letterH: it.srcH * k,
+          letterH: it.letterMm ?? it.srcH * k,
         });
       } else {
         const t = texts.get(it.id);
@@ -347,7 +411,7 @@ export default function SignMaker({ mode }: { mode: Mode }) {
     for (const it of d.items) {
       if (it.type === "patch") continue;
       const t = it.type === "text" ? texts.get(it.id) : null;
-      const minLetter = it.type === "text" ? Math.min(...it.lines.map((l) => l.heightMm)) : locals.get(it.id)?.size.h;
+      const minLetter = it.type === "text" ? Math.min(...it.lines.map((l) => l.heightMm)) : (it.letterMm ?? locals.get(it.id)?.size.h);
       const n = judgeItem(it, kind, fabs.get(it.id) ?? null, { minLetterMm: minLetter, missing: t?.outline.missing });
       const fe = fontErr.get(it.id);
       if (fe) n.unshift({ level: "no", text: fe });
@@ -361,11 +425,12 @@ export default function SignMaker({ mode }: { mode: Mode }) {
   const verdict: Level = allNotes.length ? worst(allNotes) : "ok";
 
   /* ---------------------------------------------------------- 벽 */
-  const wallDef = walls.find((w) => w.key === d.wall) ?? walls[0];
-  const wall = d.wall === "photo" && photo ? { color: "#d9d9d6", ink: "#ffffff", photo: photo.url } : { color: wallDef.color, ink: wallDef.ink };
+  // 치수선·눈금·격자 색(ink)은 벽 밝기로 가릅니다 — 벽 색을 손님이 고르면서 «흰 벽엔 먹, 어두운 벽엔 흰색»을 표로 둘 수 없게 됐습니다
+  const wall =
+    d.wall === "photo" && photo ? { color: wallFill(d), ink: "#ffffff", photo: photo.url } : { color: wallFill(d), ink: inkOn(wallFill(d)) };
 
-  function pickWall(key: string) {
-    commit((p) => ({ ...p, wall: key, ...(p.wall === "photo" ? { wallW: 8000, wallH: 4000 } : {}) }));
+  function pickWall(key: string, color?: string) {
+    commit((p) => ({ ...p, wall: key, ...(color ? { wallColor: color } : {}), ...(p.wall === "photo" ? { wallW: 8000, wallH: 4000 } : {}) }));
     if (d.wall === "photo") fit(8000, 4000);
   }
 
@@ -528,6 +593,7 @@ export default function SignMaker({ mode }: { mode: Mode }) {
   /* ---------------------------------------------------------- 키보드 */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (viewOnly) return; // 보기 전용 — 되돌리기·지우기·옮기기 단축키가 없습니다
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       const mod = e.ctrlKey || e.metaKey;
@@ -619,7 +685,7 @@ export default function SignMaker({ mode }: { mode: Mode }) {
   /* ---------------------------------------------------------- 내보내기 · 견적 */
   const sizes = useMemo(() => new Map(ritems.map((s) => [s.id, s.size])), [ritems]);
   const ledName = ledColors.find((l) => l.hex === d.led)?.name ?? d.led;
-  const wallName = d.wall === "photo" ? "가게 사진" : wallDef.name;
+  const wallName = wallLabel(d);
   const summary = () =>
     summarize(d, {
       fontName: (it) => texts.get(it.id)?.fontName ?? fontLabel(it.font),
@@ -666,11 +732,117 @@ export default function SignMaker({ mode }: { mode: Mode }) {
     setBusy("견적서에 붙일 그림을 만드는 중…");
     try {
       const jpg = await snapshot(1400);
-      sessionStorage.setItem(MAKER_STORAGE_KEY, JSON.stringify({ summary: summary(), svg: fabricationSvg(placed()), jpg }));
+      // 공유 링크로 받은 디자인이면 어느 링크인지 요약에 붙입니다 — 대표님이 문의를 받고 그 링크를 바로 엽니다
+      // (맨 앞에 둡니다 — 폼이 긴 요약을 뒤에서 자릅니다)
+      const from = share ? `공유 링크: ${location.origin}/maker/s/${share.token}
+` : "";
+      sessionStorage.setItem(MAKER_STORAGE_KEY, JSON.stringify({ summary: from + summary(), svg: fabricationSvg(placed()), jpg }));
       router.push("/quote?maker=1");
     } catch (e) {
       setErr(`견적 폼으로 넘기지 못했습니다: ${(e as Error).message}`);
       setBusy("");
+    }
+  }
+
+  /* ---------------------------------------------------------- 공유 링크 (F26-b) */
+  const [shareOut, setShareOut] = useState<{ url: string; expires: string; notes: string[] } | null>(null);
+  const [shares, setShares] = useState<{ items: ShareItem[]; at: number } | null>(null);
+  const [shareTitle, setShareTitle] = useState("");
+  const firstText = d.items.find((x): x is TextItem => x.type === "text")?.lines[0]?.text ?? "";
+
+  /**
+   * 공유할 디자인. ① **가게 사진은 안 보냅니다** — 사진 벽은 흰 벽으로, 사진 속 간판을 덮던 «가리기 판»도 뺍니다
+   * (사진은 서버에 두지 않습니다 — 개인정보·용량, 두려면 처리방침부터). ② **이 PC 글꼴·올린 글꼴로 쓴 글자는
+   * 모양(외곽선)으로 굳힙니다** — 받는 사람 브라우저엔 그 글꼴이 없어 못 그립니다. 글꼴 파일은 안 나갑니다.
+   * 사람 결정(2026-09-25): *"관리자가 이미 그 글꼴을 사용했다면 가능할 가능성이 매우 높으니 그냥 사용 가능하게"*.
+   */
+  function shareable(): { design: Design; baked: number; photo: boolean } | { error: string } {
+    const photo = d.wall === "photo";
+    let baked = 0;
+    const items: Item[] = [];
+    for (const it of d.items) {
+      if (photo && it.type === "patch") continue;
+      if (it.type !== "text" || it.font.src === "lib") {
+        items.push(it);
+        continue;
+      }
+      const L = locals.get(it.id), t = texts.get(it.id);
+      if (!L || !t) return { error: "글꼴을 아직 불러오는 글자가 있습니다(새로고침하면 이 PC 글꼴 목록이 비워집니다) — 벽에 글자가 다 보인 뒤 다시 누르세요." };
+      const byColor = new Map<string, string>();
+      for (const q of L.paths) byColor.set(q.color, (byColor.get(q.color) ?? "") + q.d);
+      items.push({
+        id: it.id,
+        type: "logo",
+        name: `${it.lines.map((l) => l.text).join(" / ")} · ${t.fontName}`,
+        layers: [...byColor].map(([color, pd], i) => ({ name: `글자 색 ${i + 1}`, d: pd, color })),
+        srcW: L.size.w,
+        srcH: L.size.h,
+        w: L.size.w,
+        x: it.x,
+        y: it.y,
+        rot: it.rot,
+        warp: it.warp,
+        letterMm: Math.min(...it.lines.map((l) => l.heightMm)),
+      });
+      baked++;
+    }
+    return { design: { ...d, wall: photo ? "white" : d.wall, items }, baked, photo };
+  }
+
+  async function makeShare() {
+    setErr("");
+    const s = shareable();
+    if ("error" in s) return setErr(s.error);
+    if (!s.design.items.some((it) => it.type !== "patch")) return setErr("벽에 올린 글자·로고가 없습니다.");
+    const bytes = new TextEncoder().encode(JSON.stringify(s.design)).length;
+    if (bytes > MAKER_SHARE_MAX_BYTES) return setErr(`디자인이 너무 큽니다(${Math.round(bytes / 1000)}KB) — 로고를 «SVG 따기»에서 매끄럽게 다듬어 점을 줄여 주세요.`);
+    setBusy("공유 링크를 만드는 중…");
+    try {
+      const r = await createMakerShare(s.design, shareTitle.trim() || firstText);
+      if (!r.ok) return setErr(r.error);
+      const url = `${location.origin}/maker/s/${r.share.token}`;
+      const notes: string[] = [];
+      if (s.photo) notes.push("가게 사진은 안 들어갑니다 — 받는 사람은 같은 크기의 흰 벽으로 봅니다.");
+      if (s.baked) notes.push(`이 PC 글꼴로 쓴 글자 ${s.baked}개는 모양 그대로(외곽선) 들어갑니다 — 받는 쪽에서 글자를 고칠 수는 없습니다.`);
+      let copied = true;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        copied = false;
+      }
+      setShareOut({ url, expires: ymd(r.share.expires_at), notes: copied ? notes : ["주소를 눌러 직접 복사하세요.", ...notes] });
+      setShares((l) => (l ? { ...l, items: [r.share, ...l.items] } : l));
+    } catch (e) {
+      setErr(`공유 링크를 만들지 못했습니다: ${(e as Error).message}`);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function loadShares() {
+    setErr("");
+    const r = await listMakerShares();
+    if (!r.ok) return setErr(r.error);
+    setShares({ items: r.items, at: Date.now() });
+  }
+
+  async function removeShare(x: ShareItem) {
+    if (!confirm(`«${x.title || "이름 없음"}» 링크를 끊을까요? 받은 사람은 더 이상 못 엽니다. 되돌릴 수 없습니다.`)) return;
+    const r = await deleteMakerShare(x.id);
+    if (!r.ok) return setErr(r.error ?? "끊지 못했습니다.");
+    setShares((l) => (l ? { ...l, items: l.items.filter((y) => y.id !== x.id) } : l));
+    if (shareOut?.url.endsWith(x.token)) setShareOut(null);
+  }
+
+  /** 공유받은 디자인을 이 브라우저의 손님 초안으로 옮겨 `/maker` 에서 이어 고칩니다 */
+  function continueEdit() {
+    try {
+      const had = localStorage.getItem(STORE("customer"));
+      if (had && !confirm("이 브라우저에서 만들던 간판 디자인이 있습니다. 받은 디자인으로 바꿀까요?")) return;
+      localStorage.setItem(STORE("customer"), JSON.stringify(d));
+      router.push("/maker");
+    } catch {
+      setErr("브라우저 저장소가 막혀 있어 옮기지 못했습니다.");
     }
   }
 
@@ -690,12 +862,14 @@ export default function SignMaker({ mode }: { mode: Mode }) {
   const zoomBy = (f: number) => setView((v) => ({ x: v.x + (v.w - v.w * f) / 2, y: v.y + ((v.w - v.w * f) * (canvasPx.h / canvasPx.w)) / 2, w: v.w * f }));
 
   return (
-    <div className="grid gap-0 lg:h-full lg:grid-cols-[230px_minmax(0,1fr)_290px] 2xl:grid-cols-[260px_minmax(0,1fr)_320px]">
+    <div className={`grid gap-0 lg:h-full ${viewOnly ? "lg:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_340px]" : "lg:grid-cols-[230px_minmax(0,1fr)_290px] 2xl:grid-cols-[260px_minmax(0,1fr)_320px]"}`}>
       {/* ───────── 가운데: 무대 ───────── */}
       <section className="order-1 flex min-w-0 flex-col lg:order-2 lg:min-h-0">
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-white px-3 py-2">
-          <Seg value={night ? "night" : "day"} onChange={(v) => setNight(v === "night")} options={[{ v: "day", label: "주간" }, { v: "night", label: "야간" }]} />
-          {night && kind.needsLed && <Check label="조명 켜기" checked={ledOn} onChange={setLedOn} />}
+          <span data-tour="daynight" className="flex items-center gap-2">
+            <Seg value={night ? "night" : "day"} onChange={(v) => setNight(v === "night")} options={[{ v: "day", label: "주간" }, { v: "night", label: "야간" }]} />
+            {night && kind.needsLed && <Check label="조명 켜기" checked={ledOn} onChange={setLedOn} />}
+          </span>
           <Check label="치수" checked={dims} onChange={setDims} />
           <Check label="격자" checked={d.grid !== false} onChange={(v) => patchDesign({ grid: v })} />
           <span className="mx-1 h-5 w-px bg-line" />
@@ -704,13 +878,15 @@ export default function SignMaker({ mode }: { mode: Mode }) {
             {zoomPct}%
           </button>
           <ToolBtn onClick={() => zoomBy(0.8)} label="확대">+</ToolBtn>
+          {!viewOnly && (
           <span className="ml-auto flex gap-1">
             <ToolBtn onClick={undo} disabled={!hist.past.length} label="되돌리기 (Ctrl+Z)">↶</ToolBtn>
             <ToolBtn onClick={redo} disabled={!hist.future.length} label="다시 하기 (Ctrl+Y)">↷</ToolBtn>
           </span>
+          )}
         </div>
 
-        <div className="relative h-[62vh] min-h-[340px] lg:h-auto lg:min-h-0 lg:flex-1">
+        <div data-tour="stage" className="relative h-[62vh] min-h-[340px] lg:h-auto lg:min-h-0 lg:flex-1">
           <Stage
             design={d}
             kind={kind}
@@ -735,6 +911,7 @@ export default function SignMaker({ mode }: { mode: Mode }) {
               }
             }}
             svgRef={svgRef}
+            readOnly={viewOnly}
             onSelect={select}
             onGlyph={(id, g) => {
               setSelected(id);
@@ -776,13 +953,17 @@ export default function SignMaker({ mode }: { mode: Mode }) {
           </p>
         )}
         <p className="border-t border-line bg-white px-4 py-2 text-[12px] leading-relaxed text-ink-500">
-          Ctrl+휠 확대 · 빈 곳을 끌면 이동 · 글자를 두 번 누르면 한 자씩 · Ctrl+D 복제 · 화면의 색·밝기는 실제와 다르고, 야간 모습은 점등 «표현»입니다.
+          {viewOnly
+            ? "위 − + 또는 Ctrl+휠로 확대 · 끌면 이동 · 화면의 색·밝기는 실제와 다르고, 야간 모습은 점등 «표현»입니다. 치수·위치는 현장 실측 후 확정합니다."
+            : "Ctrl+휠 확대 · 빈 곳을 끌면 이동 · 글자를 두 번 누르면 한 자씩 · Ctrl+D 복제 · 화면의 색·밝기는 실제와 다르고, 야간 모습은 점등 «표현»입니다."}
         </p>
       </section>
 
       {/* ───────── 왼쪽: 넣기 · 벽 · 레이어 ───────── */}
+      {/* 보기 전용(공유 링크)엔 넣기·벽·레이어가 없습니다 */}
+      {!viewOnly && (
       <aside className="order-2 border-line bg-white lg:order-1 lg:min-h-0 lg:overflow-y-auto lg:border-r">
-        <Panel title="넣기">
+        <Panel title="넣기" tour="add">
           <div className="grid grid-cols-3 gap-px bg-line">
             <AddBtn onClick={addText} label="글자" sub="가게 이름" />
             <label className="flex cursor-pointer flex-col items-center gap-0.5 bg-white px-2 py-3 text-center hover:bg-brand-50">
@@ -795,7 +976,7 @@ export default function SignMaker({ mode }: { mode: Mode }) {
           <p className="mt-2 text-[12px] leading-relaxed text-ink-500">로고는 이 브라우저 안에서 선으로 바뀝니다. 선을 자세히 다듬으려면 왼쪽 «SVG 따기»로.</p>
         </Panel>
 
-        <Panel title="벽">
+        <Panel title="벽" tour="wall">
           <div className="grid grid-cols-3 gap-1.5">
             {walls.map((w) => (
               <button key={w.key} type="button" onClick={() => pickWall(w.key)} aria-pressed={d.wall === w.key} className="text-left">
@@ -804,6 +985,18 @@ export default function SignMaker({ mode }: { mode: Mode }) {
               </button>
             ))}
           </div>
+          <Field label="벽 색 (외벽 색에 맞춰 고르기)">
+            <Swatches items={wallColors.map((c) => ({ name: c.name, hex: c.hex }))} value={d.wall === "color" ? (d.wallColor ?? "") : ""} onPick={(hex) => pickWall("color", hex)}>
+              <input
+                type="color"
+                value={wallFill({ ...d, wall: "color" })}
+                onChange={(e) => pickWall("color", e.target.value)}
+                title="다른 색 직접 고르기"
+                aria-label="벽 색 직접 고르기"
+                className={`h-8 w-8 cursor-pointer border p-0.5 ${d.wall === "color" && !wallColors.some((c) => c.hex === d.wallColor) ? "border-brand-700 ring-2 ring-brand" : "border-line"}`}
+              />
+            </Swatches>
+          </Field>
           <label className="mt-3 flex cursor-pointer items-center justify-center border border-brand-700 px-3 py-2.5 text-[14px] font-bold text-brand-700 hover:bg-brand-50">
             가게 사진 올리기
             <input type="file" accept="image/*" className="sr-only" onChange={(e) => e.target.files?.[0] && onPhoto(e.target.files[0])} />
@@ -864,6 +1057,8 @@ export default function SignMaker({ mode }: { mode: Mode }) {
         </Panel>
       </aside>
 
+      )}
+
       {/* ───────── 오른쪽: 선택한 것 · 간판 · 판정 ───────── */}
       <aside className="order-3 border-line bg-white lg:min-h-0 lg:overflow-y-auto lg:border-l">
         {sel && (
@@ -911,7 +1106,22 @@ export default function SignMaker({ mode }: { mode: Mode }) {
           </Panel>
         )}
 
-        <Panel title="간판 종류 · 제작">
+        {viewOnly ? (
+          <Panel title="받은 간판 디자인">
+            <h1 className="text-[18px] font-black leading-snug">{share?.title || "간판 디자인"}</h1>
+            <p className="mt-1.5 text-[14px] font-bold">
+              <span className="mr-1.5 text-[11px] tracking-wider text-ink-500">{kind.code}</span>
+              {kind.name}
+            </p>
+            <p className="mt-0.5 text-[13px] leading-relaxed text-ink-500">{kind.hint}</p>
+            {kind.needsLed && <p className="mt-1 text-[13px]">조명 색 · {ledName}</p>}
+            <p className="mt-3 text-[13px] leading-relaxed text-ink-500">
+              수산나디자인이 보내 드린 디자인입니다. 위쪽 «주간·야간»으로 불 켜진 모습을 볼 수 있습니다.
+              {share?.expiresAt ? ` 이 링크는 ${ymd(share.expiresAt)} 까지 열립니다.` : ""}
+            </p>
+          </Panel>
+        ) : (
+        <Panel title="간판 종류 · 제작" tour="kind">
           <ul className="space-y-0.5">
             {makerKinds.map((k) => (
               <li key={k.key}>
@@ -976,7 +1186,10 @@ export default function SignMaker({ mode }: { mode: Mode }) {
           )}
         </Panel>
 
+        )}
+
         <Panel title="만들 수 있나">
+          <div data-tour="verdict">
           <p className={`text-[15px] font-black ${verdict === "ok" ? "text-brand-700" : verdict === "check" ? "text-ink" : "text-accent-600"}`}>{LEVEL_LABEL[verdict]}</p>
           {overall && <p className="mt-1 text-[13px] text-ink-500">전체 가로 {fmtMm(overall.w)} × 세로 {fmtMm(overall.h)}</p>}
           <ul className="mt-2 space-y-1.5">
@@ -994,7 +1207,8 @@ export default function SignMaker({ mode }: { mode: Mode }) {
               ? "판정 기준: 절곡 채널 획 38mm↑ · 조명 글자 높이 203mm↑ · 속공간 30mm↑ (/sign-proof 와 같은 자). 회전·원근은 판정에 안 들어갑니다."
               : "견적을 보내시면 담당자가 제작 방식과 치수를 다시 확인해 연락드립니다."}
           </p>
-          <div className="mt-4 space-y-2">
+          </div>
+          <div data-tour="finish" className="mt-4 space-y-2">
             {admin ? (
               <>
                 <button type="button" onClick={exportJpeg} className="w-full bg-brand-700 px-4 py-3 font-bold text-white hover:bg-brand-600">
@@ -1023,11 +1237,70 @@ export default function SignMaker({ mode }: { mode: Mode }) {
                 <button type="button" onClick={exportJpeg} className="w-full px-4 py-2 text-[14px] font-bold text-ink-500 underline">
                   미리보기 그림 저장
                 </button>
+                {viewOnly && share?.canEdit && (
+                  <button type="button" onClick={continueEdit} className="w-full border border-brand-700 px-4 py-2.5 text-[14px] font-bold text-brand-700 hover:bg-brand-50">
+                    복사해서 이어 편집
+                  </button>
+                )}
               </>
             )}
           </div>
         </Panel>
+
+        {admin && (
+          <Panel title="공유 링크">
+            <p className="text-[12px] leading-relaxed text-ink-500">
+              링크를 받은 사람은 로그인 없이 이 디자인을 보고(주간·야간·확대) 그대로 견적을 넣습니다. 90일 뒤 저절로 닫힙니다. 가게 사진은 안 들어갑니다.
+            </p>
+            <label className="mt-2 block text-[12px] font-bold">
+              이름 (목록·받는 화면 제목)
+              <input value={shareTitle} maxLength={60} placeholder={firstText || "예: 가게 이름"} onChange={(e) => setShareTitle(e.target.value)} className="mt-1 w-full border border-line px-2 py-1.5 text-[13px] font-normal" />
+            </label>
+            <button type="button" onClick={makeShare} className="mt-2 w-full border border-brand-700 px-4 py-2.5 font-bold text-brand-700 hover:bg-brand-50">
+              공유 링크 만들기
+            </button>
+            {shareOut && (
+              <div className="mt-3 border-l-[3px] border-brand pl-3" role="status">
+                <p className="text-[12px] font-bold text-brand-700">링크를 만들어 복사했습니다 · {shareOut.expires} 까지</p>
+                <input readOnly value={shareOut.url} onFocus={(e) => e.currentTarget.select()} className="mt-1 w-full border border-line px-2 py-1 text-[12px]" aria-label="공유 링크 주소" />
+                {shareOut.notes.map((n) => (
+                  <p key={n} className="mt-1 text-[12px] leading-relaxed text-ink-500">
+                    {n}
+                  </p>
+                ))}
+              </div>
+            )}
+            <div className="mt-3">
+              {!shares ? (
+                <button type="button" onClick={loadShares} className="text-[13px] font-bold text-ink-500 underline">
+                  보낸 링크 보기
+                </button>
+              ) : !shares.items.length ? (
+                <p className="text-[12px] text-ink-500">보낸 링크가 없습니다.</p>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {shares.items.map((x) => (
+                    <li key={x.id} className="flex items-center gap-2 py-1.5 text-[12px]">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-bold">{x.title || "이름 없음"}</span>
+                        <span className="text-ink-500">{Date.parse(x.expires_at) < shares.at ? "기간 지남" : `${ymd(x.expires_at)} 까지`}</span>
+                      </span>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(`${location.origin}/maker/s/${x.token}`)} className="font-bold text-brand-700 underline">
+                        복사
+                      </button>
+                      <button type="button" onClick={() => removeShare(x)} className="font-bold text-ink-500 underline">
+                        끊기
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Panel>
+        )}
       </aside>
+
+      {tour && mode !== "view" && <MakerTour mode={mode} onClose={endTour} onPrepare={prepareTour} />}
     </div>
   );
 }
@@ -1037,7 +1310,7 @@ export default function SignMaker({ mode }: { mode: Mode }) {
 function TransformProps({ it, warpMode, onWarpMode, onChange }: { it: Item; warpMode: boolean; onWarpMode: (v: boolean) => void; onChange: (p: Partial<Item>) => void }) {
   const deg = Math.round(((it.rot ?? 0) + 540) % 360) - 180;
   return (
-    <div className="mb-4 border-b border-line pb-4">
+    <div data-tour="transform" className="mb-4 border-b border-line pb-4">
       <div className="flex items-center gap-2 text-[13px]">
         <span className="w-10 shrink-0 font-bold">회전</span>
         <input type="range" min={-180} max={180} step={1} value={deg} onChange={(e) => onChange({ rot: Number(e.target.value), warp: null })} className="flex-1 accent-brand" aria-label="회전" />
@@ -1098,6 +1371,7 @@ function TextProps({
 
   return (
     <div className="space-y-3">
+      <div data-tour="text-lines" className="space-y-3">
       {it.lines.map((l, i) => (
         <div key={i} className="space-y-1.5">
           <div className="flex gap-1.5">
@@ -1126,6 +1400,7 @@ function TextProps({
           + 줄 추가 (업종·전화 등)
         </button>
       )}
+      </div>
 
       <Field label="앞면 색 (전체)">
         <Swatches items={faceColors.map((c) => ({ name: c.name, hex: c.hex }))} value={it.face} onPick={(hex) => onChange({ face: hex })} />
@@ -1133,7 +1408,7 @@ function TextProps({
       </Field>
 
       {/* 글자 한 자씩 — 해외 메이커의 «글자별 색»을 위치·크기·회전까지 넓혔습니다 */}
-      <Field label="글자 한 자씩 (캔버스에서 두 번 눌러도 됩니다)">
+      <Field label="글자 한 자씩 (캔버스에서 두 번 눌러도 됩니다)" tour="glyphs">
         <div className="flex flex-wrap gap-1">
           {glyphs.map((g) => {
             const on = glyph === g.i, custom = !!it.glyphs?.[g.i];
@@ -1161,7 +1436,7 @@ function TextProps({
         )}
       </Field>
 
-      <Field label={`글꼴 · 지금 «${fontLabel(it.font)}»`}>
+      <Field label={`글꼴 · 지금 «${fontLabel(it.font)}»`} tour="font">
         <div className="max-h-56 overflow-y-auto border border-line">
           {fontGroups.map((g) => (
             <div key={g.key}>
@@ -1256,9 +1531,10 @@ function LogoProps({ it, onChange, onRetrace }: { it: LogoItem; onChange: (p: Pa
 
 /* ================================================================ 작은 부품 */
 
-function Panel({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+/** `tour` = 처음 온 사람 안내(MakerTour)가 강조할 자리의 이름 */
+function Panel({ title, action, tour, children }: { title: string; action?: React.ReactNode; tour?: string; children: React.ReactNode }) {
   return (
-    <section className="border-b border-line">
+    <section data-tour={tour} className="border-b border-line">
       <header className="flex items-center justify-between px-4 pb-1 pt-3">
         <h2 className="text-[12px] font-black tracking-[0.08em] text-ink-500">{title}</h2>
         {action}
@@ -1268,9 +1544,9 @@ function Panel({ title, action, children }: { title: string; action?: React.Reac
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, tour, children }: { label: string; tour?: string; children: React.ReactNode }) {
   return (
-    <div className="mt-3 first:mt-0">
+    <div data-tour={tour} className="mt-3 first:mt-0">
       <p className="mb-1.5 text-[12px] font-bold text-ink-500">{label}</p>
       {children}
     </div>
@@ -1290,7 +1566,8 @@ function Slider({ label, unit, min, max, step, value, onChange }: { label: strin
   );
 }
 
-function Swatches({ items, value, onPick, glow, emptyLabel = "같게" }: { items: { name: string; hex: string }[]; value: string; onPick: (hex: string) => void; glow?: boolean; emptyLabel?: string }) {
+/** `children` 은 견본 줄 끝에 같이 섭니다(벽 색의 «직접 고르기» 칸) */
+function Swatches({ items, value, onPick, glow, emptyLabel = "같게", children }: { items: { name: string; hex: string }[]; value: string; onPick: (hex: string) => void; glow?: boolean; emptyLabel?: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((c) => {
@@ -1304,12 +1581,13 @@ function Swatches({ items, value, onPick, glow, emptyLabel = "같게" }: { items
             aria-pressed={on}
             onClick={() => onPick(c.hex)}
             className={`h-8 min-w-8 border px-1 text-[11px] font-bold ${on ? "border-brand-700 ring-2 ring-brand" : "border-line"}`}
-            style={c.hex ? { background: c.hex, boxShadow: glow ? `0 0 10px ${c.hex}` : undefined, color: lum(c.hex) > 0.6 ? "#0f1a19" : "#fff" } : undefined}
+            style={c.hex ? { background: c.hex, boxShadow: glow ? `0 0 10px ${c.hex}` : undefined, color: inkOn(c.hex) } : undefined}
           >
             {!c.hex ? emptyLabel : ""}
           </button>
         );
       })}
+      {children}
     </div>
   );
 }
@@ -1372,10 +1650,7 @@ function Dot({ level }: { level: Level }) {
   return <span aria-label={LEVEL_LABEL[level]} className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full ${c}`} />;
 }
 
-function lum(hex: string) {
-  const n = parseInt(hex.replace("#", ""), 16);
-  return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255;
-}
+const ymd = (iso: string) => iso.slice(0, 10);
 
 const stamp = () => {
   const t = new Date();

@@ -119,3 +119,18 @@ export type ProfileRow = {
   role: "admin" | "viewer";
   created_at: string;
 };
+
+/**
+ * 간판 메이커 공유 링크 (`0013_maker_share.sql`, F26-b).
+ * 익명은 이 표를 못 읽습니다 — `get_maker_share(토큰)` 함수가 한 건만 돌려줍니다.
+ * `design` 은 `lib/maker/design.ts` 의 `Design` 모양입니다(가게 사진 없음, 관리자 글꼴 글자는 외곽선).
+ */
+export type MakerShareRow = {
+  id: string;
+  token: string;
+  title: string;
+  design: unknown;
+  created_by: string | null;
+  created_at: string;
+  expires_at: string;
+};

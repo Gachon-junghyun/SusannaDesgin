@@ -67,6 +67,8 @@ type Props = {
   onRotate: (id: string, deg: number, done: boolean) => void;
   onWarp: (id: string, corner: number, p: Pt, done: boolean) => void;
   onCalibPoint: (p: Pt) => void;
+  /** 보기 전용(공유 링크, F26-b) — 골라 옮기기·손잡이 없이 확대·이동만 됩니다 */
+  readOnly?: boolean;
   /** 캔버스 크기(px)가 바뀔 때 — 「화면에 맞춤」 계산에 씁니다 */
   onMeasure?: (w: number, h: number) => void;
   svgRef: React.RefObject<SVGSVGElement | null>;
@@ -176,7 +178,7 @@ export default function Stage({ svgRef, ...p }: Props) {
             return;
           }
           const t = e.target as Element;
-          if (e.button === 1 || t === e.currentTarget || t.hasAttribute("data-bg")) {
+          if (e.button === 1 || p.readOnly || t === e.currentTarget || t.hasAttribute("data-bg")) {
             p.onSelect(null);
             capture(e.currentTarget as Element, e.pointerId);
             drag.current = { kind: "pan", start: [e.clientX, e.clientY], v: p.view };
@@ -268,9 +270,10 @@ export default function Stage({ svgRef, ...p }: Props) {
             return (
               <g
                 key={r.id}
-                style={{ cursor: "move" }}
+                style={{ cursor: p.readOnly ? undefined : "move" }}
                 onPointerDown={(e) => startMove(e, r)}
                 onDoubleClick={(e) => {
+                  if (p.readOnly) return;
                   const g = (e.target as Element).getAttribute("data-glyph");
                   if (g !== null && r.type === "text") p.onGlyph(r.id, Number(g));
                 }}
@@ -413,7 +416,8 @@ export default function Stage({ svgRef, ...p }: Props) {
   }
 
   function startMove(e: React.PointerEvent, r: RItem) {
-    if (p.calib || e.button !== 0) return;
+    // 보기 전용이면 여기서 안 받고 무대로 흘려 보냅니다 — 글자 위를 끌어도 화면이 이동합니다
+    if (p.readOnly || p.calib || e.button !== 0) return;
     e.stopPropagation();
     if (p.selected !== r.id) p.onSelect(r.id);
     begin(e, { kind: "move", id: r.id, ox: r.cx, oy: r.cy, start: toMm(e) });

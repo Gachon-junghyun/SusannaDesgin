@@ -149,18 +149,32 @@ export const trimColors = [
 
 /* ------------------------------------------------------------------ 벽 */
 
-export type Wall = { key: string; name: string; color: string; ink: string };
+export type Wall = { key: string; name: string; color: string };
 
 /**
  * 벽 — **흰 벽이 기본**입니다(2026-09-25 사람 지시: *"배경 에셋은 흰색으로, 에셋은 다 안 보이게 — 너무 구려서"*).
  * 처음엔 3D 렌더 재질 사진(화강석·벽돌 …)을 깔았는데 도면 도구처럼 안 보이고 간판보다 벽이 먼저 읽혀서 뺐습니다.
- * 실제 벽은 **가게 사진**으로 올립니다. `ink` 는 그 벽 위의 치수선·눈금 색입니다.
+ * 실제 벽은 **가게 사진**으로 올립니다. 벽 위의 치수선·눈금 색(ink)은 벽 밝기에서 셈합니다(`inkOn`).
  */
 export const walls: Wall[] = [
-  { key: "white", name: "흰 벽", color: "#ffffff", ink: "#0f1a19" },
-  { key: "blueprint", name: "도면", color: "#0f4a46", ink: "#ffffff" },
-  { key: "dark", name: "어두운 벽", color: "#2a2d2c", ink: "#ffffff" },
+  { key: "white", name: "흰 벽", color: "#ffffff" },
+  { key: "blueprint", name: "도면", color: "#0f4a46" },
+  { key: "dark", name: "어두운 벽", color: "#2a2d2c" },
 ];
+
+/**
+ * 벽 색 직접 고르기 — 자주 보는 외벽 색 (2026-09-25 사람 요청: *"회백·베이지·연회색·진회색·검정·붉은 벽돌색 등"*).
+ * 🔴 **색만입니다. 재질 사진(텍스처)을 다시 깔지 마세요** — 위 `walls` 머리말의 이유 그대로입니다.
+ * 값은 도장·드라이비트·벽돌 외벽의 «흔한 톤»을 눈으로 고른 것이지 도료 번호가 아닙니다.
+ */
+export const wallColors = [
+  { name: "회백", hex: "#e6e3dc" },
+  { name: "베이지", hex: "#d8c7a6" },
+  { name: "연회색", hex: "#c3c6c4" },
+  { name: "진회색", hex: "#595e5c" },
+  { name: "검정", hex: "#1c1e1e" },
+  { name: "붉은 벽돌색", hex: "#9a4b37" },
+] as const;
 
 /* ------------------------------------------------------------------ 주고받기 */
 
@@ -174,3 +188,94 @@ export const MAKER_STORAGE_KEY = "susanna-maker-design";
 /** «SVG 따기» → 간판 에디터로 보내기. 같은 브라우저 저장소(localStorage)로만 건넵니다 — 서버를 안 거칩니다 */
 export const INCOMING_LOGO_KEY = "susanna-maker-incoming-logo";
 export const MAKER_INTEREST = "간판 메이커 디자인";
+
+/**
+ * 공유 링크(F26-b · `0013_maker_share.sql`) — 디자인 JSON 한 벌의 상한(바이트).
+ * 서버 액션 본문 한도(Next 기본 1MB)보다 작게 둡니다. DB 쪽 상한(1,000,000)은 이보다 조금 큽니다.
+ * 로고 외곽선이 아주 복잡하면 걸립니다 — 그때는 «SVG 따기»에서 매끄러움을 올려 점을 줄이면 됩니다.
+ */
+export const MAKER_SHARE_MAX_BYTES = 900_000;
+
+/* ------------------------------------------------------------------ 처음 온 사람 안내 (튜토리얼) */
+
+/**
+ * 안내를 «본 적 있다» 표시 — 이 브라우저 `localStorage`. 모드마다 따로 둡니다(관리자·손님 문구가 달라서).
+ * 문구를 크게 바꿔 다시 보여줘야 하면 `v1` 을 올리세요.
+ */
+export const makerTourKey = (mode: "admin" | "customer") => `susanna-maker-tour-v1-${mode}`;
+
+/** 상단 막대 «도움말» → 에디터. 막대(MakerShell)와 에디터(SignMaker)가 다른 부품이라 창 이벤트로 건넵니다 */
+export const MAKER_HELP_EVENT = "susanna-maker-help";
+
+type TourText = string | { admin: string; customer: string };
+
+export type TourStep = {
+  /**
+   * 강조할 자리 — 화면의 `data-tour="…"` 값. 여럿이면 구멍이 여럿 납니다. 못 찾으면 가운데 말풍선만 뜹니다.
+   * **말풍선은 첫 자리 옆에 섭니다** — 무대(`stage`)처럼 큰 자리는 뒤에 두세요(옆에 빈 곳이 없습니다).
+   */
+  targets: string[];
+  title: TourText;
+  body: TourText;
+  /** 이 단계는 글자가 하나 선택돼 있어야 보입니다(오른쪽 «글자» 칸) — 에디터가 첫 글자를 골라 둡니다 */
+  needsText?: boolean;
+};
+
+/**
+ * 처음 들어온 사람에게 여덟 단계로 말풍선을 띄웁니다 (2026-09-25 사람 요청).
+ * 🔴 **숫자를 문장에 손으로 적지 마세요** — 판정 문턱은 위 `FAB` 에서 끌어옵니다(시안 시트·판정과 같은 자).
+ */
+export const makerTour: TourStep[] = [
+  {
+    targets: ["add"],
+    title: "글자 넣기",
+    body: "«글자»를 누르면 가게 이름이 벽에 올라갑니다. 로고 그림을 올리면 이 브라우저 안에서 선으로 바뀝니다. 벽 위의 글자는 끌어서 옮깁니다.",
+  },
+  {
+    targets: ["text-lines", "font"],
+    needsText: true,
+    title: "글꼴과 글자 높이",
+    body: {
+      customer: `글자 높이는 실제 간판의 mm 입니다. 조명이 들어가는 간판은 ${FAB.ledMinLetterMm}mm 이상이어야 합니다. 글꼴은 간판에 써도 되는 무료 글꼴만 모았습니다.`,
+      admin: `글자 높이는 실제 간판의 mm 입니다(조명 간판은 ${FAB.ledMinLetterMm}mm 이상). 관리자는 이 PC 에 설치된 글꼴과 글꼴 파일도 씁니다 — 이 브라우저 안에서만 쓰이고 손님 화면에는 안 나옵니다.`,
+    },
+  },
+  {
+    targets: ["kind", "daynight"],
+    title: "간판 종류와 조명",
+    body: "종류를 고르면 옆면 두께와 빛 나오는 방식이 바뀝니다. 위쪽 «주간·야간»으로 불이 켜진 모습을 봅니다. 화면의 밝기는 «표현»이라 실제와 다릅니다.",
+  },
+  {
+    targets: ["wall"],
+    title: "벽과 가게 사진",
+    body: "흰 벽·도면·벽 색을 고르거나 가게 사진을 올립니다. 사진을 올리면 길이를 아는 곳(출입문 높이 등) 두 끝을 차례로 눌러 실제 크기를 맞춥니다. 사진은 이 브라우저 밖으로 나가지 않습니다.",
+  },
+  {
+    targets: ["glyphs", "stage"],
+    needsText: true,
+    title: "글자 한 자씩",
+    body: "벽 위의 글자를 두 번 누르면 그 한 자만 고릅니다. 색·크기·회전·위치를 따로 바꾸고, 화살표 키로도 옮깁니다.",
+  },
+  {
+    targets: ["transform", "stage"],
+    needsText: true,
+    title: "회전과 네 점 원근",
+    body: "선택한 글자 위 동그라미를 끌면 돌아갑니다(Shift 는 15° 단위). «원근 맞추기»를 켜고 네 모서리를 끌면 비스듬한 사진 벽에 간판 면을 맞춥니다. 보이는 모양만 바뀌고 치수는 그대로입니다.",
+  },
+  {
+    targets: ["verdict"],
+    title: "만들 수 있나",
+    body: {
+      customer: "글자 높이·가장 가는 획·글자 속공간을 재서 만들 수 있는지 알려 드립니다. «어려움»이 떠도 견적은 보낼 수 있습니다 — 담당자가 방법을 찾아 연락드립니다.",
+      admin: `판정 기준은 /sign-proof 와 같은 자입니다 — 절곡 채널 획 ${FAB.bendMinStrokeMm}mm · 조명 글자 ${FAB.ledMinLetterMm}mm · 속공간 ${FAB.minHoleMm}mm. 회전·원근은 판정에 안 들어갑니다.`,
+    },
+  },
+  {
+    targets: ["finish"],
+    title: { customer: "견적 받기", admin: "내보내기" },
+    body: {
+      customer: "이 디자인으로 견적을 보내면 미리보기 그림과 외곽선이 견적서에 붙습니다. 디자인은 이 브라우저에 남아 있어 다시 들어와도 이어서 합니다. 안내는 위 «도움말»로 다시 봅니다.",
+      admin: "시안 그림(JPG)·제작용 외곽선(SVG, mm)·사양 요약을 내려받습니다. 외곽선은 «시안»이라 공장에서 칼선을 다시 뽑습니다. 안내는 위 «도움말»로 다시 봅니다.",
+    },
+  },
+];

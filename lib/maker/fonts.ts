@@ -194,8 +194,16 @@ export function layoutLines(font: Font, lines: TextLine[], gap = 0.35): Outline 
   return { d, w: W, h: y, lines: boxes, glyphs, missing };
 }
 
-/** 글꼴 이름 (메타데이터에서) — 로컬·올린 파일의 표시용 */
+/**
+ * 글꼴 이름 (메타데이터에서) — 로컬·올린 파일의 표시용.
+ * ⚠️ **opentype.js 2.0 은 이름을 플랫폼별로 한 단계 아래에 둡니다**(`names.windows.fullName` 등).
+ * 옛 모양(`names.fullName`)만 보던 때는 이 PC 글꼴·올린 글꼴이 전부 «이름 없는 글꼴»로 견적 요약에 적혔습니다
+ * (2026-09-25 공유 링크 실측에서 발견). 두 모양을 다 봅니다.
+ */
 export function fontDisplayName(font: Font): string {
-  const n = font.names.fullName ?? font.names.fontFamily;
-  return (n && (n.ko ?? n.en ?? Object.values(n)[0])) || "이름 없는 글꼴";
+  type Rec = Record<string, string> | undefined;
+  const N = font.names as unknown as Record<string, Rec> & Partial<Record<"windows" | "macintosh" | "unicode", Record<string, Rec>>>;
+  const pickLang = (r: Rec) => r && (r.ko ?? r.en ?? Object.values(r)[0]);
+  const byKey = (k: string) => pickLang(N[k]) || pickLang(N.windows?.[k]) || pickLang(N.macintosh?.[k]) || pickLang(N.unicode?.[k]);
+  return byKey("fullName") || byKey("fontFamily") || "이름 없는 글꼴";
 }

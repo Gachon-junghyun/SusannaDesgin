@@ -223,6 +223,9 @@ export default async function RootLayout({
           미리보기·임시 주소의 방문이 실제 통계에 섞이면 되돌릴 수 없습니다.
           `strategy="afterInteractive"` 라 첫 화면 렌더를 막지 않고, 스크립트가
           실패해도 페이지는 그대로 뜹니다 [원칙 A1].
+          🔴 간판 메이커 공유 링크(`/maker/s/<토큰>`, F26-b)로 «들어온» 방문은 `config` 를 안 부릅니다 —
+          GA 는 주소를 통째로 보내서, 부르면 비밀 토큰이 구글에 남습니다. 그 방문 한 번이 통계에서 빠질 뿐입니다.
+          (공유 주소는 사이트 안 어디에도 링크가 없어 «다른 페이지에서 건너가는» 길은 없습니다.)
         */}
         {site.isProductionDomain && site.gaMeasurementId && (
           <>
@@ -231,7 +234,7 @@ export default async function RootLayout({
               strategy="afterInteractive"
             />
             <Script id="ga4" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${site.gaMeasurementId}');`}
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());if(location.pathname.indexOf('/maker/s/')!==0)gtag('config','${site.gaMeasurementId}');`}
             </Script>
           </>
         )}

@@ -4,7 +4,7 @@
  * 좌표는 전부 **벽 위의 mm** 입니다(왼쪽 위가 0,0). 화면 픽셀로 저장하지 않는 이유: 벽 사진의
  * 축척을 나중에 보정하면(십자선 두 개) 픽셀 값은 전부 틀린 값이 되는데, mm 는 그대로 참입니다.
  */
-import { FAB, makerKinds, type MakerKind } from "@/config/maker";
+import { FAB, makerKinds, wallColors, walls, type MakerKind } from "@/config/maker";
 import type { FabResult } from "@/lib/maker/fab";
 import type { TextLine } from "@/lib/maker/fonts";
 
@@ -54,6 +54,11 @@ export type LogoItem = Xform & {
   w: number;
   x: number;
   y: number;
+  /**
+   * 원래 글자였던 로고의 «가장 작은 글자 높이»(mm). 공유 링크(F26-b)가 관리자 PC 글꼴 글자를 외곽선으로
+   * 굳힐 때 남깁니다 — 없으면 로고 전체 높이로 조명 최소 높이를 판정해 여러 줄 글자가 덜 엄하게 판정됩니다.
+   */
+  letterMm?: number;
 };
 
 /** 가리기 — 벽 사진 속 기존 간판을 덮는 판 (SignMonkey 의 «bandaid» 에서 빌린 것) */
@@ -80,8 +85,10 @@ export type Design = {
   view?: "front" | "left" | "right" | "below" | "above";
   /** 옆면 깊이 mm — 비우면 종류의 기본값 */
   depth?: number;
-  /** 벽: "white" · "blueprint" · "dark" · "photo" */
+  /** 벽: "white" · "blueprint" · "dark" · "color"(아래 `wallColor`) · "photo" */
   wall: string;
+  /** 벽 색 직접 고르기 — `wall === "color"` 일 때만 씁니다 (2026-09-25) */
+  wallColor?: string;
   /** 격자(10cm·1m) 보이기 */
   grid?: boolean;
   /** 벽 가로 (mm) — 사진이면 축척 보정으로 바뀝니다 */
@@ -123,6 +130,53 @@ export function defaultDesign(): Design {
 }
 
 export const kindOf = (d: Design): MakerKind => makerKinds.find((k) => k.key === d.kind) ?? makerKinds[0];
+
+/* ------------------------------------------------------------------ 벽 */
+
+export const WALL_COLOR_DEFAULT = "#e6e3dc";
+
+/** 벽의 바탕색 — 사진 벽은 사진이 덮으므로 사진이 안 뜬 동안의 회색입니다 */
+export function wallFill(d: Design): string {
+  if (d.wall === "color") return d.wallColor || WALL_COLOR_DEFAULT;
+  if (d.wall === "photo") return "#d9d9d6";
+  return (walls.find((w) => w.key === d.wall) ?? walls[0]).color;
+}
+
+/** 벽 이름 — 견적 요약·시안 그림 아랫줄에 들어갑니다 */
+export function wallLabel(d: Design): string {
+  if (d.wall === "photo") return "가게 사진";
+  if (d.wall === "color") {
+    const c = d.wallColor || WALL_COLOR_DEFAULT;
+    const hit = wallColors.find((w) => w.hex.toLowerCase() === c.toLowerCase());
+    return hit ? `${hit.name} 벽 (${c})` : `벽 색 ${c}`;
+  }
+  return (walls.find((w) => w.key === d.wall) ?? walls[0]).name;
+}
+
+/** WCAG 상대 휘도 (0 = 검정, 1 = 흰색) */
+export function luminance(hex: string): number {
+  const h = hex.replace("#", "");
+  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16) || 0;
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+}
+
+const INK_DARK = "#0f1a19";
+const INK_LIGHT = "#ffffff";
+
+/**
+ * 그 벽 위의 치수선·눈금·격자 색 — **먹과 흰색 중 대비가 큰 쪽**(WCAG 대비비로 셈).
+ * 문턱 한 값을 박지 않은 이유: 중간 회색·붉은 벽돌색처럼 경계에 있는 색에서 «덜 보이는 쪽»을 고르는 일이 없게.
+ */
+export function inkOn(bg: string): string {
+  const L = luminance(bg);
+  const vsDark = (L + 0.05) / (luminance(INK_DARK) + 0.05);
+  const vsLight = 1.05 / (L + 0.05);
+  return vsDark >= vsLight ? INK_DARK : INK_LIGHT;
+}
 
 /* ------------------------------------------------------------------ 크기 */
 

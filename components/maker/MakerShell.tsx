@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { MAKER_HELP_EVENT } from "@/config/maker";
+
 /**
  * 수산나 메이커의 껍데기 — 상단 막대(로고) + 왼쪽 목록 + 작업 화면 (F26 · 2026-09-25).
  *
@@ -20,6 +22,7 @@ export default function MakerShell({
   mode,
   base,
   hidden,
+  nav: showNav = true,
   children,
 }: {
   mode: "admin" | "customer";
@@ -27,6 +30,11 @@ export default function MakerShell({
   base: string;
   /** 손님에게 아직 안 열렸는가 (미리보기로 보는 중) */
   hidden?: boolean;
+  /**
+   * 왼쪽 목록(에디터 · SVG 따기)을 세울지. 공유 링크(F26-b)는 `SHOW_MAKER` 가 꺼져 있으면 안 세웁니다 —
+   * 목록이 가리키는 `/maker` 가 손님에게 404 라서, 누르면 막다른 길입니다.
+   */
+  nav?: boolean;
   children: React.ReactNode;
 }) {
   const path = usePathname();
@@ -38,7 +46,8 @@ export default function MakerShell({
   return (
     <div className="flex min-h-dvh flex-col bg-[#eef0ef] text-ink lg:h-dvh lg:overflow-hidden">
       <header className="flex h-12 shrink-0 items-center gap-4 bg-ink px-4 text-white">
-        <Link href={base} className="flex items-center gap-2.5" aria-label="수산나 메이커 처음으로">
+        {/* 목록을 안 세우는 화면(닫힌 메이커의 공유 링크)에선 로고도 홈으로 — `/maker` 가 손님에게 404 입니다 */}
+        <Link href={showNav ? base : "/"} className="flex items-center gap-2.5" aria-label={showNav ? "수산나 메이커 처음으로" : "수산나디자인 홈으로"}>
           <MakerMark />
           <span className="whitespace-nowrap text-[15px] font-black tracking-[0.08em]">
             SUSANNA <span className="text-brand-400">MAKER</span>
@@ -47,6 +56,12 @@ export default function MakerShell({
         {mode === "admin" && <span className="border border-white/25 px-2 py-0.5 text-[11px] font-bold text-white/80">관리자</span>}
         {hidden && <span className="hidden bg-accent px-2 py-0.5 text-[11px] font-bold text-ink md:inline">아직 손님에게 안 보임 · 미리보기</span>}
         <nav className="ml-auto flex items-center gap-4 whitespace-nowrap text-[13px] font-bold text-white/75">
+          {/* 처음 온 사람 안내를 다시 엽니다(F26-a). 안내는 에디터에만 있어 «SVG 따기»에서는 안 섭니다 */}
+          {path === base && (
+            <button type="button" onClick={() => window.dispatchEvent(new Event(MAKER_HELP_EVENT))} className="hover:text-white">
+              도움말
+            </button>
+          )}
           {mode === "admin" ? (
             <Link href="/admin" className="hover:text-white">관리자 홈</Link>
           ) : (
@@ -59,6 +74,7 @@ export default function MakerShell({
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        {showNav && (
         <aside className="shrink-0 border-b border-line bg-white lg:w-16 lg:border-b-0 lg:border-r xl:w-52">
           <ul className="flex overflow-x-auto lg:block lg:py-3">
             {nav.map((n) => {
@@ -93,9 +109,11 @@ export default function MakerShell({
             </li>
           </ul>
         </aside>
-        <main id="main" className="min-h-0 min-w-0 flex-1">
+        )}
+        {/* `<main id="main">` 은 루트 레이아웃이 이미 감쌉니다 — 겹치던 id 를 2026-09-25 에 걷어냈습니다 */}
+        <div className="min-h-0 min-w-0 flex-1">
           {children}
-        </main>
+        </div>
       </div>
     </div>
   );
