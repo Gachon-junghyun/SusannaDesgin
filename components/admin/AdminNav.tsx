@@ -13,6 +13,14 @@ import { usePathname } from "next/navigation";
  */
 const GROUPS: { label: string; items: { href: string; label: string; sub?: string }[] }[] = [
   { label: "", items: [{ href: "/admin", label: "홈" }] },
+  {
+    label: "업무",
+    items: [
+      { href: "/admin/desk", label: "달력 · 할 일" },
+      { href: "/admin/desk/rhythm", label: "마케팅 주기" },
+      { href: "/admin/desk/links", label: "바로가기" },
+    ],
+  },
   { label: "손님", items: [{ href: "/admin/quotes", label: "견적 문의" }] },
   {
     label: "홈페이지",
@@ -28,7 +36,8 @@ const GROUPS: { label: string; items: { href: string; label: string; sub?: strin
 
 export default function AdminNav() {
   const path = usePathname() ?? "";
-  const isOn = (href: string) => (href === "/admin" ? path === "/admin" : path === href || path.startsWith(`${href}/`));
+  const isOn = (href: string) =>
+    href === "/admin" || href === "/admin/desk" ? path === href : path === href || path.startsWith(`${href}/`);
 
   return (
     <nav aria-label="관리자 메뉴" className="overflow-x-auto lg:overflow-visible">

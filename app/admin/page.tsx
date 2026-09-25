@@ -2,13 +2,14 @@ import Link from "next/link";
 
 import AdminShell from "@/components/admin/AdminShell";
 import { requireAdmin } from "@/lib/auth";
+import { addDays, todayKST } from "@/lib/desk";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminHome() {
   const user = await requireAdmin();
   const supabase = await createClient();
 
-  const [heroCount, workCount, newQuotes, blockCount] = await Promise.all([
+  const [heroCount, workCount, newQuotes, blockCount, deskDue] = await Promise.all([
     supabase!.from("hero_slides").select("id", { count: "exact", head: true }),
     supabase!.from("works").select("id", { count: "exact", head: true }),
     supabase!
@@ -16,11 +17,24 @@ export default async function AdminHome() {
       .select("id", { count: "exact", head: true })
       .eq("handled", false),
     supabase!.from("content_blocks").select("id", { count: "exact", head: true }),
+    // 0015 를 안 돌렸으면 오류가 오고 count 가 null — 카드는 숫자 없이 뜹니다 [A1]
+    supabase!
+      .from("desk_tasks")
+      .select("id", { count: "exact", head: true })
+      .is("done_at", null)
+      .lte("due_on", addDays(todayKST(), 7)),
   ]);
 
   const pending = newQuotes.count ?? 0;
 
   const cards = [
+    {
+      href: "/admin/desk",
+      title: "업무 달력",
+      count: deskDue.error ? null : (deskDue.count ?? 0),
+      unit: "건",
+      desc: "기한이 지났거나 7일 안에 돌아오는 할 일 수입니다. 마케팅 주기·바로가기도 왼쪽 «업무»에 있습니다.",
+    },
     {
       href: "/admin/quotes",
       title: "견적 문의",

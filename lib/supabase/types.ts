@@ -134,3 +134,24 @@ export type MakerShareRow = {
   created_at: string;
   expires_at: string;
 };
+
+/** 관리자 «업무» 할 일 (0015 · F28) */
+export type DeskTaskRow = {
+  id: string;
+  title: string;
+  due_on: string | null;
+  who: string;
+  area: string;
+  note: string;
+  link: string;
+  done_at: string | null;
+  seed_key: string | null;
+  created_at: string;
+};
+
+/** 관리자 «업무» 마케팅 주기 — 항목별 마지막으로 한 날 (0015 · F28) */
+export type DeskRhythmRow = {
+  key: string;
+  last_done_on: string;
+  updated_at: string;
+};
