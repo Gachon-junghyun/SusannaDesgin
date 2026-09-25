@@ -65,12 +65,11 @@
   },
 
   /**
-   * 🔴 현장 사진 저장소 (F29) — **버킷을 먼저 만든 뒤에 아래 주석을 푸세요.**
+   * 현장 사진 저장소 (F29) — R2 버킷 `susanna-site-photos` (2026-09-26 생성 · Standard · **Public Access: Disabled**).
    *
-   * 없는 버킷을 적어 두면 `wrangler deploy` 가 실패해 **홈페이지 배포 전체가 멈춥니다.** 그래서 주석으로 둡니다.
-   * 순서: Cloudflare 대시보드(홈페이지 워커가 있는 계정) → R2 → «버킷 만들기» → 이름 `susanna-site-photos`
-   *       (공개 접근은 켜지 마세요 — 공개 전 현장 사진이 주소만 알면 보이게 됩니다) → 아래 주석 풀고 푸시.
-   * 안 풀려 있어도 사이트는 멀쩡하고, 관리자 «현장 폴더»가 «사진 저장소 설정 필요»를 띄웁니다 [A1].
+   * 🔴 **공개 접근을 켜지 마세요** — 공개 전 현장 사진(손님 가게)이 주소만 알면 보이게 됩니다.
+   *    사진은 `/media/…` 라우트가 공개 여부를 보고 냅니다(ARCHITECTURE F29).
+   * 🔴 이 줄의 버킷을 지우거나 이름을 바꾸면 `wrangler deploy` 가 실패해 **홈페이지 배포 전체가 멈춥니다.**
    */
-  // "r2_buckets": [{ "binding": "SITE_PHOTOS", "bucket_name": "susanna-site-photos" }]
+  "r2_buckets": [{ "binding": "SITE_PHOTOS", "bucket_name": "susanna-site-photos" }]
 }
