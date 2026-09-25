@@ -1,4 +1,5 @@
 import { getWorks } from "@/lib/cms";
+import { getPublishedSites } from "@/lib/sites";
 import { seo, site } from "@/config/site";
 
 /**
@@ -24,7 +25,7 @@ function escapeXml(s: string): string {
 }
 
 export async function GET() {
-  const works = await getWorks();
+  const [works, cases] = await Promise.all([getWorks(), getPublishedSites()]);
   const now = new Date().toUTCString();
 
   // 시공사례를 항목으로 내보냅니다. 개별 상세 페이지가 생기면 link 를 그쪽으로 바꿉니다.
@@ -43,6 +44,22 @@ export async function GET() {
     })
     .join("\n");
 
+  // 시공사례 상세(F29) — 공개일이 있어 «새로 올라왔다»를 제대로 알립니다
+  const caseItems = cases
+    .map((c) => {
+      const link = `${site.url}/works/${encodeURIComponent(c.slug)}`;
+      const title = [c.location, c.title, c.sign_type, "시공 사례"].filter(Boolean).join(" ");
+      return `    <item>
+      <title>${escapeXml(title)}</title>
+      <link>${link}</link>
+      <guid isPermaLink="true">${escapeXml(link)}</guid>
+      <description>${escapeXml(c.story.replace(/\s+/g, " ").slice(0, 200))}</description>
+      <category>${escapeXml(c.sign_type || "시공사례")}</category>
+      <pubDate>${new Date(c.published_at ?? c.updated_at).toUTCString()}</pubDate>
+    </item>`;
+    })
+    .join("\n");
+
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
@@ -52,6 +69,7 @@ export async function GET() {
     <language>ko</language>
     <lastBuildDate>${now}</lastBuildDate>
     <atom:link href="${site.url}/rss.xml" rel="self" type="application/rss+xml" />
+${caseItems}
 ${items}
   </channel>
 </rss>`;

@@ -43,6 +43,13 @@ export default async function AdminHome() {
       desc: "홈페이지로 들어온 문의입니다. 확인 안 한 건수를 보여줍니다.",
     },
     {
+      href: "/admin/sites",
+      title: "현장 폴더",
+      count: null,
+      unit: "",
+      desc: "현장마다 사진을 모아 두고, 사실 몇 칸을 채워 공개하면 홈페이지에 시공사례 페이지가 생깁니다.",
+    },
+    {
       href: "/admin/hero",
       title: "첫 화면 사진",
       count: heroCount.count ?? 0,

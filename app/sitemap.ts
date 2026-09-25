@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { SHOW_PRODUCTS } from "@/config/content";
 import { noindexPaths, site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
+import { getPublishedSites } from "@/lib/sites";
 
 /**
  * 🔴 **요청 시 생성입니다.** 예전에는 빌드 때 한 번 구워졌는데, 이제 이 목록이
@@ -65,7 +66,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * 설명이 없는 간판은 이름·번호·가격대뿐이라 아홉 장이 거의 같은 페이지가 됩니다.
    * 대표님이 관리자 화면에서 설명을 채우면 저절로 들어옵니다.
    */
-  if (!SHOW_PRODUCTS) return base;
+  /**
+   * 시공사례 상세(F29) — 관리자 «현장 폴더»에서 공개한 것만. 공개 조건(사진 3장·이야기 150자)을 통과한 것이라
+   * 얇은 페이지가 사이트맵에 섞이지 않습니다. 0016 을 안 돌렸으면 빈 목록입니다.
+   */
+  const cases = (await getPublishedSites()).map((c) => ({
+    url: `${site.url}/works/${encodeURIComponent(c.slug)}`,
+    lastModified: new Date(c.updated_at),
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  if (!SHOW_PRODUCTS) return [...base, ...cases];
 
   const { signModels } = await getBlocks();
   const details = signModels
@@ -77,5 +89,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-  return [...base, ...details];
+  return [...base, ...cases, ...details];
 }

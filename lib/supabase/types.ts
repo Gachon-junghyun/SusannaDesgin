@@ -155,3 +155,42 @@ export type DeskRhythmRow = {
   last_done_on: string;
   updated_at: string;
 };
+
+/** 현장 폴더 — 현장 한 건 (0016 · F29) */
+export type SiteRow = {
+  id: string;
+  slug: string;
+  title: string;
+  location: string;
+  sign_type: string;
+  size_text: string;
+  materials: string;
+  period: string;
+  story: string;
+  bee_link: string;
+  cover_photo: string | null;
+  published: boolean;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PhotoStage = "before" | "work" | "done" | "night" | "etc";
+
+/** 현장 사진 한 장 (0016 · F29). 파일은 R2, 여기는 위치와 성질만 */
+export type SitePhotoRow = {
+  id: string;
+  site_id: string;
+  key: string;
+  thumb_key: string;
+  taken_at: string | null;
+  stage: PhotoStage;
+  width: number;
+  height: number;
+  bytes: number;
+  caption: string;
+  ocr_text: string;
+  original_status: "none" | "drive" | "failed";
+  drive_file_id: string;
+  created_at: string;
+};

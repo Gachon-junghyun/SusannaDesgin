@@ -25,6 +25,7 @@ const GROUPS: { label: string; items: { href: string; label: string; sub?: strin
   {
     label: "홈페이지",
     items: [
+      { href: "/admin/sites", label: "현장 폴더", sub: "사진 → 시공사례 페이지" },
       { href: "/admin/hero", label: "첫 화면 사진" },
       { href: "/admin/works", label: "주요 실적" },
       { href: "/admin/content", label: "페이지 문구" },
