@@ -1,6 +1,7 @@
 ﻿import QuoteForm from "@/components/QuoteForm";
 import { PageHero } from "@/components/Section";
 import { CUSTOM_FONT_SLUG, specimenFonts } from "@/config/fonts";
+import { MAKER_INTEREST } from "@/config/maker";
 import { site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 import { pageMetadata } from "@/lib/seo";
@@ -49,10 +50,12 @@ export default async function QuotePage({
   searchParams,
 }: {
   /** `/products` 카드에서 넘어올 때만 붙습니다 — 직접 들어오면 비어 있습니다 */
-  searchParams: Promise<{ item?: string; font?: string }>;
+  searchParams: Promise<{ item?: string; font?: string; maker?: string }>;
 }) {
-  const { item, font } = await searchParams;
-  const interest = (await resolveItem(item)) || resolveFont(font);
+  const { item, font, maker } = await searchParams;
+  // 간판 메이커(F26)에서 오면 `?maker=1` 하나뿐입니다 — 디자인 내용은 주소가 아니라
+  // 브라우저 저장소로 건너옵니다(`config/maker.ts` 의 MAKER_STORAGE_KEY). 여기선 고정 문구만 씁니다.
+  const interest = (await resolveItem(item)) || resolveFont(font) || (maker === "1" ? MAKER_INTEREST : "");
 
   return (
     <>

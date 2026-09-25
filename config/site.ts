@@ -8,6 +8,7 @@
 // ⚠️ `content.ts` 는 이 파일을 import 하지 않습니다 — 이 방향으로만 두세요(순환 방지).
 import { SHOW_PRODUCTS } from "./content";
 import { SHOW_FONTS } from "./fonts";
+import { SHOW_MAKER } from "./maker";
 
 /**
  * 최종 확정 도메인. 이 주소 위에서 돌 때만 검색엔진에 노출됩니다.
@@ -259,7 +260,21 @@ export const seo = {
     "/fonts": {
       title: "간판 글꼴 고르기",
       description:
-        "간판에 쓸 수 있는 상업용 무료 한글 글꼴 14종. 가게 이름을 적어 보고 마음에 드는 글꼴로 대전 간판 견적을 받으세요.",
+        "간판에 쓸 수 있는 상업용 무료 한글 글꼴 16종. 가게 이름을 적어 보고 마음에 드는 글꼴로 대전 간판 견적을 받으세요.",
+    },
+    /**
+     * 간판 메이커 (F26, 2026-09-25). 아직 «안 연» 페이지입니다 — `SHOW_MAKER` 가 꺼져 있는 동안은
+     * `noindexPaths` 에 자동으로 들어가 이 문구가 검색에 나가지 않습니다.
+     */
+    "/maker": {
+      title: "간판 직접 만들어 보기",
+      description:
+        "가게 이름을 적고 글꼴·색·LED 조명을 골라 벽에 올려 보는 간판 메이커. 가게 사진 위에 실제 크기로 맞춰 보고 대전 간판 견적을 받으세요.",
+    },
+    "/maker/trace": {
+      title: "로고 그림을 선(SVG)으로 따기",
+      description:
+        "로고·글씨 그림을 올리면 간판 제작용 선(SVG)으로 바꿔 드립니다. 그림은 브라우저 안에서만 처리됩니다.",
     },
     "/works": {
       title: "대전 간판 시공사례",
@@ -321,6 +336,8 @@ export const noindexPaths: readonly string[] = [
   ...(SHOW_PRODUCTS ? [] : ["/products"]),
   /** 글꼴 견본(F25) — 같은 이유로 `SHOW_FONTS` 한 값에 묶었습니다 */
   ...(SHOW_FONTS ? [] : ["/fonts"]),
+  /** 간판 메이커(F26) — 같은 이유로 `SHOW_MAKER` 한 값에 묶었습니다 */
+  ...(SHOW_MAKER ? [] : ["/maker", "/maker/trace"]),
 ];
 
 /** 보유 인증·등록 (회사소개서 03. 인증 및 등록 현황) */

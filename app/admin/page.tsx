@@ -49,6 +49,13 @@ export default async function AdminHome() {
       unit: "개",
       desc: "홈페이지 구역 제목, 회사 강점, 숫자 지표, 업무 프로세스, 제작 공정, 사업영역 문구입니다.",
     },
+    {
+      href: "/admin/maker",
+      title: "간판 메이커",
+      count: null,
+      unit: "",
+      desc: "상호·로고로 간판 시안을 만들고, 만들 수 있는지(획·글자 높이)를 판정합니다. 이 PC 의 글꼴도 쓸 수 있습니다.",
+    },
   ];
 
   return (
@@ -80,10 +87,12 @@ export default async function AdminHome() {
               <h2 className="text-lg font-black transition-colors group-hover:text-brand">
                 {c.title}
               </h2>
-              <p className="text-2xl font-black tracking-tight">
-                {c.count}
-                <span className="ml-0.5 text-[14px] font-bold text-ink-500">{c.unit}</span>
-              </p>
+              {c.count !== null && (
+                <p className="text-2xl font-black tracking-tight">
+                  {c.count}
+                  <span className="ml-0.5 text-[14px] font-bold text-ink-500">{c.unit}</span>
+                </p>
+              )}
             </div>
             <p className="mt-2 text-[14px] leading-relaxed text-ink-500">{c.desc}</p>
           </Link>

@@ -24,6 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { path: "/products", priority: 0.8, freq: "monthly" },
       // 글꼴 견본(F25)도 같습니다 — `SHOW_FONTS` 를 켜면 저절로 들어갑니다.
       { path: "/fonts", priority: 0.6, freq: "monthly" },
+      // 간판 메이커(F26)도 같습니다 — `SHOW_MAKER` 를 켜면 저절로 들어갑니다.
+      { path: "/maker", priority: 0.6, freq: "monthly" },
       { path: "/works", priority: 0.8, freq: "weekly" },
       { path: "/process", priority: 0.7, freq: "monthly" },
       { path: "/about", priority: 0.7, freq: "monthly" },

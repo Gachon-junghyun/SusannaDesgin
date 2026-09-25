@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { CUSTOM_FONT_STORAGE_KEY } from "@/config/fonts";
+import { MAKER_INTEREST, MAKER_STORAGE_KEY } from "@/config/maker";
+import { dataUrlToBlob } from "@/lib/maker/design";
 import Field, { inputCls } from "./Field";
 import PrivacyConsent from "./PrivacyConsent";
 import { floorOptions, signTypeOptions, timingOptions } from "@/config/content";
@@ -92,6 +94,31 @@ ${note}` }));
   const [agree, setAgree] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");
+
+  /**
+   * 간판 메이커에서 넘어온 디자인 (F26, 2026-09-25). 위 커스텀 글꼴과 같은 길 —
+   * 주소엔 `?maker=1` 만 오고, 요약·제작용 SVG·미리보기 그림은 `sessionStorage` 로 건너옵니다.
+   * 그림 둘을 **첨부 파일로 미리 붙여 둡니다** — 손님이 뺄 수 있고(아래 첨부 목록의 ✕),
+   * 알림 메일에 그대로 붙어 가서 대표님이 전화 전에 디자인을 봅니다(F16).
+   */
+  useEffect(() => {
+    if (interest !== MAKER_INTEREST) return;
+    try {
+      const raw = sessionStorage.getItem(MAKER_STORAGE_KEY);
+      if (!raw) return;
+      sessionStorage.removeItem(MAKER_STORAGE_KEY);
+      const got = JSON.parse(raw) as { summary?: string; svg?: string; jpg?: string };
+      const attach: File[] = [];
+      if (got.jpg?.startsWith("data:image/jpeg")) attach.push(new File([dataUrlToBlob(got.jpg)], "간판메이커_미리보기.jpg", { type: "image/jpeg" }));
+      if (got.svg) attach.push(new File([got.svg], "간판메이커_외곽선.svg", { type: "image/svg+xml" }));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 브라우저 저장소는 첫 그림 뒤에만 읽힙니다
+      if (attach.length) setFiles((f) => (f.length ? f : attach));
+      const summary = got.summary;
+      if (summary) setForm((f) => (f.message ? f : { ...f, message: summary.slice(0, 1900) }));
+    } catch {
+      /* 저장소가 막혔거나 모양이 깨짐 — 손님이 직접 적으면 됩니다 */
+    }
+  }, [interest]);
   const [errors, setErrors] = useState<Errors>({});
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const detailRef = useRef<HTMLInputElement>(null);

@@ -64,25 +64,33 @@ export type SpecimenFont = {
    */
   seen: string;
   fits: string;
+  /**
+   * 🔴 **글꼴 파일 원본 주소** — 메이커(F26)가 이 파일을 받아 글자를 «외곽선»으로 바꿉니다 (2026-09-25).
+   * 위 12종은 `app/fonts/specimen.css` 와 **같은 주소**입니다(CSS 는 TS 를 못 읽어 두 곳에 있습니다 —
+   * 바꿀 때 둘 다 고치세요). 구글 폰트 넷은 `next/font` 가 글자 범위별 조각(88~190개)으로 쪼개 내보내서
+   * 외곽선 뽑기에 못 쓰므로 **jsdelivr 의 원본 TTF/OTF** 를 가리킵니다(둘 다 CORS `*`, 2026-09-25 실측).
+   * 이 방식이면 **우리 서버가 파일을 내보내지 않습니다** — 위 머리말의 «배포처 주소로 불러 쓴다» 와 같습니다.
+   */
+  file: string;
 };
 
 export const specimenFonts: SpecimenFont[] = [
-  { slug: "paperlogy", name: "페이퍼로지", group: "gothic", family: "'SpecPaperlogy'", weight: 800, noonnu: 1456, seen: "발표 자료, 포스터 제목", fits: "카페, 학원, 사무실" },
-  { slug: "gmarket-sans", name: "G마켓 산스", group: "gothic", family: "'SpecGmarket'", weight: 700, noonnu: 366, seen: "유튜브 썸네일, 쇼핑몰 배너", fits: "마트, 매장 가격표, 생활용품점" },
-  { slug: "black-han-sans", name: "검은고딕", group: "gothic", family: "var(--font-black-han-sans)", weight: 400, noonnu: 106, seen: "포스터와 현수막의 큰 제목", fits: "식당, 정육점, 철물점" },
-  { slug: "aggro", name: "어그로체", group: "gothic", family: "'SpecAggro'", weight: 700, noonnu: 738, seen: "유튜브 썸네일, 예능 자막", fits: "분식집, 주점, 오락실" },
-  { slug: "isamanru", name: "이사만루", group: "gothic", family: "'SpecIsamanru'", weight: 700, noonnu: 463, seen: "스포츠와 게임 홍보물", fits: "치킨집, 호프, 체육관" },
-  { slug: "a2z", name: "에이투지체", group: "gothic", family: "'SpecA2z'", weight: 800, noonnu: 1778, seen: "회사 홈페이지, 안내문", fits: "병원, 사무실, 부동산" },
-  { slug: "kcc-ganpan", name: "KCC간판체", group: "gothic", family: "'SpecKccGanpan'", weight: 400, noonnu: 1095, seen: "관공서 안내판, 소상공인 간판", fits: "어느 업종에나 (간판용으로 만든 글꼴)" },
-  { slug: "noto-sans-kr", name: "본고딕 (Noto Sans KR)", group: "gothic", family: "var(--font-noto-sans-kr)", weight: 900, noonnu: 34, seen: "안내문, 기업 문서, 웹사이트", fits: "병원, 약국, 관공서, 사무실" },
-  { slug: "gowun-batang", name: "고운바탕", group: "serif", family: "var(--font-gowun-batang)", weight: 700, noonnu: 733, seen: "책 표지, 청첩장", fits: "한식당, 찻집, 공방" },
-  { slug: "maru-buri", name: "마루 부리", group: "serif", family: "'SpecMaruBuri'", weight: 700, noonnu: 487, seen: "책과 잡지, 전시 포스터", fits: "서점, 갤러리, 꽃집" },
-  { slug: "chosun-gungseo", name: "조선궁서체", group: "serif", family: "'SpecChosunGs'", weight: 400, noonnu: 416, seen: "신문 제목, 상장, 현판", fits: "한정식, 한의원, 전통 가게" },
-  { slug: "nanum-brush", name: "나눔손글씨 붓", group: "brush", family: "var(--font-nanum-brush)", weight: 400, noonnu: 43, seen: "캘리그라피풍 현수막, 메뉴판", fits: "국밥집, 막걸리집" },
-  { slug: "jeongmuk-bawi", name: "정묵바위체", group: "brush", family: "'SpecJeongmuk'", weight: 400, noonnu: 395, seen: "영화 포스터, 행사 제목", fits: "고깃집, 주점, 해산물집" },
-  { slug: "dokrip", name: "독립체", group: "brush", family: "'SpecDokrip'", weight: 400, noonnu: 338, seen: "역사 행사 홍보물", fits: "복고풍 가게, 다방" },
-  { slug: "jua", name: "주아체", group: "round", family: "'SpecJua'", weight: 400, noonnu: 53, seen: "배달 앱 광고풍 전단, 메뉴", fits: "분식집, 키즈 매장" },
-  { slug: "cafe24-surround", name: "카페24 써라운드", group: "round", family: "'SpecSurround'", weight: 400, noonnu: 669, seen: "쇼핑몰 배너, 아동 교육물", fits: "키즈카페, 디저트 가게" },
+  { slug: "paperlogy", name: "페이퍼로지", group: "gothic", family: "'SpecPaperlogy'", weight: 800, noonnu: 1456, seen: "발표 자료, 포스터 제목", fits: "카페, 학원, 사무실", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2" },
+  { slug: "gmarket-sans", name: "G마켓 산스", group: "gothic", family: "'SpecGmarket'", weight: 700, noonnu: 366, seen: "유튜브 썸네일, 쇼핑몰 배너", fits: "마트, 매장 가격표, 생활용품점", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff" },
+  { slug: "black-han-sans", name: "검은고딕", group: "gothic", family: "var(--font-black-han-sans)", weight: 400, noonnu: 106, seen: "포스터와 현수막의 큰 제목", fits: "식당, 정육점, 철물점", file: "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/blackhansans/BlackHanSans-Regular.ttf" },
+  { slug: "aggro", name: "어그로체", group: "gothic", family: "'SpecAggro'", weight: 700, noonnu: 738, seen: "유튜브 썸네일, 예능 자막", fits: "분식집, 주점, 오락실", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/SBAggroB.woff" },
+  { slug: "isamanru", name: "이사만루", group: "gothic", family: "'SpecIsamanru'", weight: 700, noonnu: 463, seen: "스포츠와 게임 홍보물", fits: "치킨집, 호프, 체육관", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10@1.0/GongGothicBold.woff" },
+  { slug: "a2z", name: "에이투지체", group: "gothic", family: "'SpecA2z'", weight: 800, noonnu: 1778, seen: "회사 홈페이지, 안내문", fits: "병원, 사무실, 부동산", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-8ExtraBold.woff2" },
+  { slug: "kcc-ganpan", name: "KCC간판체", group: "gothic", family: "'SpecKccGanpan'", weight: 400, noonnu: 1095, seen: "관공서 안내판, 소상공인 간판", fits: "어느 업종에나 (간판용으로 만든 글꼴)", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2302@1.0/KCC-Ganpan.woff2" },
+  { slug: "noto-sans-kr", name: "본고딕 (Noto Sans KR)", group: "gothic", family: "var(--font-noto-sans-kr)", weight: 900, noonnu: 34, seen: "안내문, 기업 문서, 웹사이트", fits: "병원, 약국, 관공서, 사무실", file: "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/KR/NotoSansKR-Black.otf" },
+  { slug: "gowun-batang", name: "고운바탕", group: "serif", family: "var(--font-gowun-batang)", weight: 700, noonnu: 733, seen: "책 표지, 청첩장", fits: "한식당, 찻집, 공방", file: "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/gowunbatang/GowunBatang-Bold.ttf" },
+  { slug: "maru-buri", name: "마루 부리", group: "serif", family: "'SpecMaruBuri'", weight: 700, noonnu: 487, seen: "책과 잡지, 전시 포스터", fits: "서점, 갤러리, 꽃집", file: "https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2" },
+  { slug: "chosun-gungseo", name: "조선궁서체", group: "serif", family: "'SpecChosunGs'", weight: 400, noonnu: 416, seen: "신문 제목, 상장, 현판", fits: "한정식, 한의원, 전통 가게", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGs.woff" },
+  { slug: "nanum-brush", name: "나눔손글씨 붓", group: "brush", family: "var(--font-nanum-brush)", weight: 400, noonnu: 43, seen: "캘리그라피풍 현수막, 메뉴판", fits: "국밥집, 막걸리집", file: "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/nanumbrushscript/NanumBrushScript-Regular.ttf" },
+  { slug: "jeongmuk-bawi", name: "정묵바위체", group: "brush", family: "'SpecJeongmuk'", weight: 400, noonnu: 395, seen: "영화 포스터, 행사 제목", fits: "고깃집, 주점, 해산물집", file: "https://gcore.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/SangSangRockOTF.woff" },
+  { slug: "dokrip", name: "독립체", group: "brush", family: "'SpecDokrip'", weight: 400, noonnu: 338, seen: "역사 행사 홍보물", fits: "복고풍 가게, 다방", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.1/Dokrip.woff" },
+  { slug: "jua", name: "주아체", group: "round", family: "'SpecJua'", weight: 400, noonnu: 53, seen: "배달 앱 광고풍 전단, 메뉴", fits: "분식집, 키즈 매장", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/BMJUA.woff" },
+  { slug: "cafe24-surround", name: "카페24 써라운드", group: "round", family: "'SpecSurround'", weight: 400, noonnu: 669, seen: "쇼핑몰 배너, 아동 교육물", fits: "키즈카페, 디저트 가게", file: "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Cafe24Ssurround.woff" },
 ];
 
 /**

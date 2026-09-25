@@ -32,6 +32,12 @@ const PRODUCTS_NAV = { href: "/products", label: "제품" };
  */
 const FONTS_NAV = { href: "/fonts", label: "글꼴" };
 
+/**
+ * 간판 메이커 메뉴 (F26, 2026-09-25). 같은 규칙 — `SHOW_MAKER || 미리보기` 한 값에서 갈립니다.
+ * 자리는 글꼴 바로 뒤입니다. «어떤 글자로 → 직접 만들어 보기» 순서입니다.
+ */
+const MAKER_NAV = { href: "/maker", label: "간판 만들기" };
+
 /** 이 높이만큼 히어로가 헤더 아래로 깔립니다 (HeroSlider 상단 패딩과 맞춤) */
 const SOLID_AT = 40;
 
@@ -40,9 +46,12 @@ export default function Header({
   productsVisible = false,
   /** 글꼴 메뉴를 세울지. `SHOW_FONTS || 미리보기 켜짐` (F25) */
   fontsVisible = false,
+  /** 간판 메이커 메뉴를 세울지. `SHOW_MAKER || 미리보기 켜짐` (F26) */
+  makerVisible = false,
 }: {
   productsVisible?: boolean;
   fontsVisible?: boolean;
+  makerVisible?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -53,6 +62,7 @@ export default function Header({
     NAV[1],
     ...(productsVisible ? [PRODUCTS_NAV] : []),
     ...(fontsVisible ? [FONTS_NAV] : []),
+    ...(makerVisible ? [MAKER_NAV] : []),
     ...NAV.slice(2),
   ];
 
