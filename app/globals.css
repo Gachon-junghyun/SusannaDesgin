@@ -159,6 +159,74 @@ body {
   animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* ------------------------------------------------------------------
+ * 홈 «수산나 메이커» 카드 줄 — components/MakerShowcase.tsx (F30)
+ *
+ * 한 카드 안의 장면 n장이 번갈아 켜집니다. 장면 i 는 `mk-f{n}` 을
+ * `(i - n) × 박자` 만큼 앞당겨 틀어서, 자기 차례(한 박자)에만 보입니다.
+ * 장면 수가 늘면 여기 `mk-f{n}` 한 벌만 더 적으면 됩니다.
+ * ------------------------------------------------------------------ */
+@keyframes mk-f2 {
+  0%, 44% { opacity: 1; }
+  50%, 94% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes mk-f3 {
+  0%, 29% { opacity: 1; }
+  33.4%, 95.6% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes mk-f4 {
+  0%, 21.6% { opacity: 1; }
+  25%, 96.6% { opacity: 0; }
+  100% { opacity: 1; }
+}
+/* 원근 카드의 마지막 장면 — 이미 네 점으로 기울인 무대를 3D 로 한 번 더 젖혀 과장합니다 */
+@keyframes mk-tilt4 {
+  0% { transform: none; }
+  7%, 20% { transform: rotateY(26deg) rotateX(6deg) scale(1.1); }
+  25%, 100% { transform: none; }
+}
+/* 누른 자리의 파문 · 원근 손잡이의 맥박 (translate 는 Tailwind 가 따로 쥐고 있어 scale 만 씁니다) */
+@keyframes mk-ping {
+  0% { scale: 0.45; opacity: 0.95; }
+  70%, 100% { scale: 1.7; opacity: 0; }
+}
+.mk-ping {
+  animation: mk-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.mk-tile {
+  background:
+    radial-gradient(120% 90% at 88% 6%, rgb(0 167 157 / 0.3), transparent 62%),
+    var(--color-ink-800);
+}
+.mk-stage > div {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 흐르지 않으니 끝없는 복제 줄·멈춤 단추는 필요 없고, 한 장씩 딱 맞춰 넘깁니다.
+     장면은 마지막(결과) 한 장만 — 겹쳐 그려서 DOM 순서상 맨 뒤가 위에 옵니다. */
+  .mk-dup,
+  .mk-motion-only {
+    display: none !important;
+  }
+  .mk-rail {
+    scroll-snap-type: x mandatory;
+  }
+  .mk-card {
+    scroll-snap-align: start;
+  }
+  .mk-frame,
+  .mk-ping,
+  .mk-stage > div {
+    animation: none !important;
+  }
+  .mk-ping {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

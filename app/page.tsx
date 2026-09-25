@@ -3,9 +3,11 @@ import HeroSlider from "@/components/HeroSlider";
 import QuickQuoteForm from "@/components/QuickQuoteForm";
 import Img from "@/components/Img";
 import JsonLd from "@/components/JsonLd";
+import MakerShowcase from "@/components/MakerShowcase";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
-import { SHOW_FABRICATION } from "@/config/content";
+import { SHOW_FABRICATION, makerShowcase } from "@/config/content";
+import { MAKER_BETA, SHOW_MAKER } from "@/config/maker";
 import { site } from "@/config/site";
 import { getBlocks, getSlides, getWorks } from "@/lib/cms";
 import { imageExists } from "@/lib/images";
@@ -279,6 +281,14 @@ export default async function Home() {
           </div>
         </Section>
       )}
+
+      {/* 수산나 메이커 (F30) — 청록 띠를 아래로 밀고 그 위에 새로 낸 자리.
+          메이커가 손님에게 닫혀 있으면(SHOW_MAKER) 단추·카드가 견적으로 갑니다 — /maker 는 404 라서. */}
+      <MakerShowcase
+        copy={copy("home-maker")}
+        cards={makerShowcase.cards}
+        cta={SHOW_MAKER ? { ...makerShowcase.open, beta: MAKER_BETA } : makerShowcase.closed}
+      />
 
       {/* 마무리 CTA */}
       <section className="bg-brand py-16 text-white md:py-20">

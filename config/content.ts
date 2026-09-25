@@ -671,11 +671,140 @@ export const sectionCopy: Record<string, SectionCopy> = {
     title: "공장을 가졌다는 건\n일정을 지킬 수 있다는 뜻입니다",
     desc: "절단부터 검수까지 795평 자체 공장 안에서 끝냅니다. 외주 대기로 납기가 밀리지 않습니다.",
   },
+  "home-maker": {
+    eyebrow: "SUSANNA MAKER",
+    title: "우리 가게 간판,\n벽에 먼저 그려보세요",
+    desc: "상호를 넣고 글꼴과 간판 종류를 고르면, 만들 수 있는지까지 mm 로 알려 드립니다.",
+  },
   "home-cta": {
     eyebrow: "",
     title: "어느 정도 규모인지 알려주세요",
     desc: "현장 확인과 디자인 시안까지 무료입니다. 부담 없이 문의하세요.",
   },
+};
+
+/**
+ * 홈 «수산나 메이커» 구역(F30)의 카드 — 청록 상담 띠 바로 위에서 왼쪽으로 흘러갑니다.
+ *
+ * 🔴 **메이커가 실제로 하는 일만 적습니다**(F26). 없는 기능을 적으면 손님이 들어가서 못 찾습니다.
+ * 🔴 **그림은 전부 실제 메이커 화면 캡처입니다**(`public/images/maker-*.webp`, 2026-09-26 개발 서버에서 찍음).
+ *    스톡·AI 그림을 넣지 마세요. 다시 찍을 때는 `SHOW_MAKER` 를 잠깐 켜고 **반드시 끕니다.**
+ *
+ * 한 카드 = «무대 그림» 여러 장이 번갈아 바뀌고, 그 변화를 일으킨 «조작 부분»(`ui`)이 옆에 떠 있습니다.
+ *   - `frames[i].stage` / `frames[i].ui` 는 같은 순간에 찍은 한 쌍입니다 — 순서를 섞으면 거짓말이 됩니다.
+ *   - `tap` 은 그 순간 누른 자리(조작 그림 안의 %) — 파문이 번지는 곳입니다.
+ *   - `tilt` 는 마지막 장면을 3D 로 기울여 과장합니다(원근 카드만).
+ *   - `width` 는 카드 폭(네이버 메인처럼 폭이 서로 다르게).
+ */
+export type MakerFrame = { stage: string; ui: string; tap?: [number, number] };
+export type MakerCard = {
+  no: string;
+  label: string;
+  title: string;
+  desc: string;
+  alt: string;
+  width: "wide" | "mid" | "narrow";
+  /** 조작 그림의 화면 폭(px, 1배) — 원본 캡처는 2배로 찍었습니다 */
+  uiWidth: number;
+  frames: MakerFrame[];
+  tilt?: boolean;
+  /** 마지막 장면의 원근 손잡이 네 점(무대 그림 안의 %) — 맥박이 뜁니다 */
+  handles?: [number, number][];
+};
+
+export const makerShowcase = {
+  /** 메이커가 열려 있을 때 / 닫혀 있을 때(`SHOW_MAKER`) 위쪽 알약 단추 */
+  open: { label: "수산나 메이커 바로가기", href: "/maker" },
+  closed: { label: "견적 먼저 받기", href: "/quote", note: "손님용 메이커는 곧 엽니다. 지금은 견적을 남기시면 시안을 무료로 만들어 드립니다." },
+  cards: [
+    {
+      no: "01",
+      label: "글꼴",
+      title: "상호를 넣고\n글꼴을 고릅니다",
+      desc: "간판에 써도 되는 무료 글꼴 16종",
+      alt: "메이커 글꼴 목록에서 KCC간판체·페이퍼로지·검은고딕·이사만루를 차례로 골라 벽 위 상호가 바뀌는 화면",
+      width: "mid",
+      uiWidth: 210,
+      frames: [
+        { stage: "/images/maker-font-0.webp", ui: "/images/maker-font-ui-0.webp", tap: [30, 27] },
+        { stage: "/images/maker-font-1.webp", ui: "/images/maker-font-ui-1.webp", tap: [30, 40] },
+        { stage: "/images/maker-font-2.webp", ui: "/images/maker-font-ui-2.webp", tap: [30, 66] },
+        { stage: "/images/maker-font-3.webp", ui: "/images/maker-font-ui-3.webp", tap: [30, 92] },
+      ],
+    },
+    {
+      no: "02",
+      label: "간판 종류",
+      title: "채널·후광·스카시,\n종류마다 빛이 다릅니다",
+      desc: "벽에 붙는 간판 여섯 가지",
+      alt: "메이커 간판 종류 목록에서 전면발광 채널·후광 채널·무점등 스카시를 골라 짙은 청록 벽 위 간판이 바뀌는 화면",
+      width: "wide",
+      uiWidth: 220,
+      frames: [
+        { stage: "/images/maker-kind-0.webp", ui: "/images/maker-kind-ui-0.webp", tap: [35, 23] },
+        { stage: "/images/maker-kind-1.webp", ui: "/images/maker-kind-ui-1.webp", tap: [35, 40] },
+        { stage: "/images/maker-kind-2.webp", ui: "/images/maker-kind-ui-2.webp", tap: [35, 74] },
+      ],
+    },
+    {
+      no: "03",
+      label: "주간 · 야간",
+      title: "불이 켜지면\n어떻게 보일까",
+      desc: "단추 하나로 낮과 밤",
+      alt: "메이커 위쪽의 주간·야간 단추를 눌러 같은 간판이 낮 모습에서 불 켜진 밤 모습으로 바뀌는 화면",
+      width: "narrow",
+      uiWidth: 118,
+      frames: [
+        { stage: "/images/maker-night-0.webp", ui: "/images/maker-night-ui-0.webp", tap: [27, 50] },
+        { stage: "/images/maker-night-1.webp", ui: "/images/maker-night-ui-1.webp", tap: [71, 50] },
+      ],
+    },
+    {
+      no: "04",
+      label: "네 점 원근",
+      title: "비스듬한 벽도\n네 점으로 맞춥니다",
+      desc: "가게 사진 위에서 모서리를 끌어 원근 맞추기",
+      alt: "메이커의 «원근 맞추기(네 점)» 단추를 누르고 주황 손잡이 네 개를 끌어 간판 면을 비스듬하게 기울이는 화면",
+      width: "wide",
+      uiWidth: 230,
+      tilt: true,
+      handles: [
+        [10.2, 16.6],
+        [91.9, 42],
+        [91.9, 57.7],
+        [10.2, 83.1],
+      ],
+      frames: [
+        { stage: "/images/maker-warp-0.webp", ui: "/images/maker-warp-ui-0.webp", tap: [50, 50] },
+        { stage: "/images/maker-warp-1.webp", ui: "/images/maker-warp-ui-1.webp" },
+        { stage: "/images/maker-warp-2.webp", ui: "/images/maker-warp-ui-2.webp" },
+        { stage: "/images/maker-warp-3.webp", ui: "/images/maker-warp-ui-3.webp" },
+      ],
+    },
+    {
+      no: "05",
+      label: "만들 수 있나",
+      title: "획 두께·글자 높이를\nmm 로 판정합니다",
+      desc: "절곡 채널 38mm · 조명 203mm 기준",
+      alt: "굵은 글꼴은 «제작 가능», 가는 붓글씨는 «가장 가는 획 16mm — 조건부»로 판정이 바뀌는 메이커 화면",
+      width: "mid",
+      uiWidth: 236,
+      frames: [
+        { stage: "/images/maker-check-0.webp", ui: "/images/maker-check-ui-0.webp" },
+        { stage: "/images/maker-check-1.webp", ui: "/images/maker-check-ui-1.webp" },
+      ],
+    },
+    {
+      no: "06",
+      label: "견적",
+      title: "그 디자인 그대로\n견적을 받습니다",
+      desc: "미리보기 그림이 문의에 붙어 갑니다",
+      alt: "메이커의 «이 디자인으로 무료 견적 받기» 단추와 «미리보기 그림 저장» 링크",
+      width: "narrow",
+      uiWidth: 200,
+      frames: [{ stage: "/images/maker-quote-0.webp", ui: "/images/maker-quote-ui-0.webp", tap: [50, 30] }],
+    },
+  ] satisfies MakerCard[],
 };
 
 /** 홈 WHY SUSANNA 구역의 근거 네 줄 */

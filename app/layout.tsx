@@ -10,7 +10,7 @@ import PreviewBar from "@/components/PreviewBar";
 import SiteChrome from "@/components/SiteChrome";
 import { SHOW_PRODUCTS } from "@/config/content";
 import { SHOW_FONTS } from "@/config/fonts";
-import { SHOW_MAKER } from "@/config/maker";
+import { MAKER_BETA, MAKER_IN_NAV, SHOW_MAKER } from "@/config/maker";
 import { seo, site } from "@/config/site";
 import { getPreview } from "@/lib/preview";
 import { ogImage } from "@/lib/seo";
@@ -201,7 +201,8 @@ export default async function RootLayout({
           <Header
             productsVisible={SHOW_PRODUCTS || preview.on}
             fontsVisible={SHOW_FONTS || preview.on}
-            makerVisible={SHOW_MAKER || preview.on}
+            makerVisible={(SHOW_MAKER && MAKER_IN_NAV) || preview.on}
+            makerBeta={MAKER_BETA}
           />
         </SiteChrome>
         <main id="main" className="flex-1">

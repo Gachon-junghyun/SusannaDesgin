@@ -36,7 +36,7 @@ const FONTS_NAV = { href: "/fonts", label: "글꼴" };
  * 간판 메이커 메뉴 (F26, 2026-09-25). 같은 규칙 — `SHOW_MAKER || 미리보기` 한 값에서 갈립니다.
  * 자리는 글꼴 바로 뒤입니다. «어떤 글자로 → 직접 만들어 보기» 순서입니다.
  */
-const MAKER_NAV = { href: "/maker", label: "간판 만들기" };
+const MAKER_NAV: { href: string; label: string; tag?: string } = { href: "/maker", label: "간판 만들기" };
 
 /** 이 높이만큼 히어로가 헤더 아래로 깔립니다 (HeroSlider 상단 패딩과 맞춤) */
 const SOLID_AT = 40;
@@ -48,21 +48,24 @@ export default function Header({
   fontsVisible = false,
   /** 간판 메이커 메뉴를 세울지. `SHOW_MAKER || 미리보기 켜짐` (F26) */
   makerVisible = false,
+  /** 「간판 만들기」 옆 작은 표시(`MAKER_BETA`). 빈 문자열이면 안 붙습니다 */
+  makerBeta = "",
 }: {
   productsVisible?: boolean;
   fontsVisible?: boolean;
   makerVisible?: boolean;
+  makerBeta?: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const nav = [
+  const nav: { href: string; label: string; tag?: string }[] = [
     NAV[0],
     NAV[1],
     ...(productsVisible ? [PRODUCTS_NAV] : []),
     ...(fontsVisible ? [FONTS_NAV] : []),
-    ...(makerVisible ? [MAKER_NAV] : []),
+    ...(makerVisible ? [{ ...MAKER_NAV, tag: makerBeta || undefined }] : []),
     ...NAV.slice(2),
   ];
 
@@ -163,6 +166,7 @@ export default function Header({
                       }`}
                     >
                       {n.label}
+                      {n.tag && <Tag clear={clear}>{n.tag}</Tag>}
                       {active && !clear && (
                         <span className="absolute -bottom-1.5 left-0 h-0.5 w-full bg-brand" />
                       )}
@@ -240,7 +244,10 @@ export default function Header({
                     onClick={() => setOpen(false)}
                     className="flex items-center justify-between py-4 text-lg font-bold"
                   >
-                    {n.label}
+                    <span>
+                      {n.label}
+                      {n.tag && <Tag>{n.tag}</Tag>}
+                    </span>
                     <span aria-hidden="true" className="text-ink-500">›</span>
                   </Link>
                 </li>
@@ -269,6 +276,15 @@ export default function Header({
         </div>
       )}
     </header>
+  );
+}
+
+/** 메뉴 이름 옆 작은 글씨(«베타») — 상자 없이 글자만 */
+function Tag({ children, clear = false }: { children: string; clear?: boolean }) {
+  return (
+    <span className={`ml-1 align-super text-[11px] font-bold ${clear ? "text-white/70" : "text-accent"}`}>
+      {children}
+    </span>
   );
 }
 
