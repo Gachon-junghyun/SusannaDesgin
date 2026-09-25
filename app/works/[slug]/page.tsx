@@ -17,6 +17,15 @@ import { getPublishedSite, photoUrl } from "@/lib/sites";
  */
 export const dynamic = "force-dynamic";
 
+/** 주소 조각 풀기 — 깨진 인코딩이면 그대로 둡니다(→ 없는 사례로 404). `decodeURIComponent` 는 깨진 %xx 에서 예외를 던집니다 */
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 const firstLine = (s: string, n = 78) => {
   const t = s.replace(/\s+/g, " ").trim();
   return t.length > n ? `${t.slice(0, n - 1)}…` : t;
@@ -24,7 +33,7 @@ const firstLine = (s: string, n = 78) => {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const got = await getPublishedSite(decodeURIComponent(slug));
+  const got = await getPublishedSite(safeDecode(slug));
   if (!got) return { title: "찾을 수 없는 시공사례", robots: { index: false, follow: true } };
   const { site: s, photos } = got;
   const title = [s.location, s.title, s.sign_type, "시공 사례"].filter(Boolean).join(" ");
@@ -49,7 +58,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function CasePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const got = await getPublishedSite(decodeURIComponent(slug));
+  const got = await getPublishedSite(safeDecode(slug));
   if (!got) notFound();
   return <CaseView site={got.site} photos={got.photos} />;
 }
