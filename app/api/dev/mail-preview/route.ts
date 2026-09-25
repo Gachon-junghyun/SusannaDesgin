@@ -23,6 +23,8 @@ const SAMPLE = {
   region: "대전 서구 둔산동",
   // 제품 카탈로그 카드를 눌러 들어온 경우 (`?item=channel-front`) — F24-c
   product: "전면발광 채널 (T1)",
+  // 메이커에서 온 견적이면 저절로 생긴 디자인 «방» 주소 (0017) — 가짜 토큰입니다
+  designUrl: "https://susannadesign.co.kr/maker/s/0123456789abcdef0123456789abcdef",
   signType: "간판디자인",
   timing: "1개월 이내",
   address: "대전광역시 서구 둔산로 100 3층",

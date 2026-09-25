@@ -216,7 +216,22 @@ export const MAKER_SHARE_MAX_BYTES = 900_000;
  * 안내를 «본 적 있다» 표시 — 이 브라우저 `localStorage`. 모드마다 따로 둡니다(관리자·손님 문구가 달라서).
  * 문구를 크게 바꿔 다시 보여줘야 하면 `v1` 을 올리세요.
  */
-export const makerTourKey = (mode: "admin" | "customer") => `susanna-maker-tour-v1-${mode}`;
+export const makerTourKey = (mode: "admin" | "customer", phone = false) => `susanna-maker-tour-v1-${mode}${phone ? "-phone" : ""}`;
+
+/* ------------------------------------------------------------------ 폰 화면 (2026-09-26) */
+
+/**
+ * 폰 화면으로 가르는 문턱 — 이보다 좁으면 3단을 버리고 «무대 가득 + 아래 탭 + 올라오는 시트»(인스타 편집 화면 결)로 그립니다.
+ * Tailwind 의 `md`(768px) 와 같은 선입니다(`MakerShell` 이 `max-md:` 로 머리말을 걷는 것과 맞춰야 합니다).
+ * 🔴 부품은 PC 와 같습니다 — 갈리는 건 배치뿐입니다(F26 «모드 둘, 부품 하나»).
+ */
+export const MAKER_PHONE_QUERY = "(max-width: 767.98px)";
+
+/** 두 손가락으로 돌릴 때 0°·90°·180°·270° 에서 이 각도(±) 안이면 딱 붙습니다(사람 결정: «크기+회전, 자석») */
+export const PINCH_SNAP_DEG = 4;
+
+/** «두 손가락으로 벌리면 확대 · 비틀면 회전» 말풍선을 본 적 있음 — 이 브라우저 `localStorage` */
+export const MAKER_GESTURE_HINT_KEY = "susanna-maker-gesture-hint-v1";
 
 /** 상단 막대 «도움말» → 에디터. 막대(MakerShell)와 에디터(SignMaker)가 다른 부품이라 창 이벤트로 건넵니다 */
 export const MAKER_HELP_EVENT = "susanna-maker-help";
@@ -290,6 +305,49 @@ export const makerTour: TourStep[] = [
     body: {
       customer: "이 디자인으로 견적을 보내면 미리보기 그림과 외곽선이 견적서에 붙습니다. 디자인은 이 브라우저에 남아 있어 다시 들어와도 이어서 합니다. 안내는 위 «도움말»로 다시 봅니다.",
       admin: "시안 그림(JPG)·제작용 외곽선(SVG, mm)·사양 요약을 내려받습니다. 외곽선은 «시안»이라 공장에서 칼선을 다시 뽑습니다. 안내는 위 «도움말»로 다시 봅니다.",
+    },
+  },
+];
+
+/**
+ * 폰 화면의 처음 온 사람 안내 (2026-09-26). 폰은 칸들이 시트 속에 접혀 있어 PC 안내(`makerTour`)의 자리를
+ * 못 찾습니다 — 그래서 **아래 탭과 무대**를 가리킵니다. 말투는 공공기관식(«~할 수 있습니다», 2026-09-26 A안).
+ */
+export const makerTourPhone: TourStep[] = [
+  {
+    targets: ["tab-add"],
+    title: "넣기",
+    body: "«넣기»에서 글자·로고·가게 사진을 올릴 수 있습니다. 로고와 사진은 휴대폰 앨범이나 카메라에서 바로 고를 수 있으며, 이 휴대폰 밖으로 나가지 않습니다.",
+  },
+  {
+    targets: ["stage"],
+    title: "손가락으로 다루기",
+    body: `한 손가락으로 간판을 눌러 고르고 끌어서 옮길 수 있습니다. 두 손가락을 벌리면 화면이 커지고, 간판을 잡은 채 두 손가락을 벌리거나 비틀면 크기와 각도가 바뀝니다. 0°·90° 근처에서는 반듯하게 붙습니다.`,
+  },
+  {
+    targets: ["tab-text", "tab-font"],
+    title: "글자와 글꼴",
+    body: {
+      customer: `«글자»에서 문구와 실제 글자 높이(mm)를, «글꼴»에서 간판에 써도 되는 무료 글꼴을 바꿀 수 있습니다. 조명이 들어가는 간판은 글자 높이 ${FAB.ledMinLetterMm}mm 이상이어야 합니다.`,
+      admin: `«글자»에서 문구와 글자 높이(mm)를, «글꼴»에서 글꼴을 바꿀 수 있습니다(조명 간판은 ${FAB.ledMinLetterMm}mm 이상). 이 PC 글꼴 목록은 PC 크롬·엣지에서만 됩니다.`,
+    },
+  },
+  {
+    targets: ["tab-kind", "daynight"],
+    title: "간판 종류와 조명",
+    body: "«종류»에서 간판 종류와 조명 색을 고를 수 있습니다. 위쪽 «주간·야간»으로 불이 켜진 모습을 확인할 수 있으며, 화면의 밝기는 «표현»이라 실제와 다릅니다.",
+  },
+  {
+    targets: ["tab-wall"],
+    title: "벽과 가게 사진",
+    body: "흰 벽·벽 색을 고르거나 가게 사진을 올릴 수 있습니다. 사진을 올리면 길이를 아는 곳(출입문 높이 등) 두 끝을 차례로 눌러 실제 크기를 맞춥니다.",
+  },
+  {
+    targets: ["finish-top", "tab-judge"],
+    title: { customer: "판정과 견적", admin: "판정과 내보내기" },
+    body: {
+      customer: "«판정»에서 제작 가능 여부를 확인할 수 있습니다. 오른쪽 위 «완료»를 누르면 이 디자인으로 견적을 받을 수 있습니다. 안내는 왼쪽 위 «?»로 다시 볼 수 있습니다.",
+      admin: "«판정»에서 제작 가능 여부와 시안 그림·제작용 외곽선·공유 링크를 다룰 수 있습니다. 안내는 왼쪽 위 «?»로 다시 볼 수 있습니다.",
     },
   },
 ];

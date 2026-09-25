@@ -94,6 +94,12 @@ ${note}` }));
   const [agree, setAgree] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");
+  /**
+   * 메이커 디자인 «방» 재료 (F26-b · 2026-09-26). 서버가 견적을 저장한 뒤 이걸로 보기 전용 링크를 만들어
+   * 견적함·알림 메일에 붙입니다. 손님에게 링크를 돌려주지는 않습니다(사람 결정 «관리자만 · 90일»).
+   * 가게 사진은 안 들어 있습니다 — 메이커가 흰 벽으로 바꾸고 올린 글꼴 글자는 외곽선으로 굳혀 보냅니다.
+   */
+  const [maker, setMaker] = useState<{ design: string; title: string } | null>(null);
 
   /**
    * 간판 메이커에서 넘어온 디자인 (F26, 2026-09-25). 위 커스텀 글꼴과 같은 길 —
@@ -107,12 +113,14 @@ ${note}` }));
       const raw = sessionStorage.getItem(MAKER_STORAGE_KEY);
       if (!raw) return;
       sessionStorage.removeItem(MAKER_STORAGE_KEY);
-      const got = JSON.parse(raw) as { summary?: string; svg?: string; jpg?: string };
+      const got = JSON.parse(raw) as { summary?: string; svg?: string; jpg?: string; design?: unknown; title?: string };
       const attach: File[] = [];
       if (got.jpg?.startsWith("data:image/jpeg")) attach.push(new File([dataUrlToBlob(got.jpg)], "간판메이커_미리보기.jpg", { type: "image/jpeg" }));
       if (got.svg) attach.push(new File([got.svg], "간판메이커_외곽선.svg", { type: "image/svg+xml" }));
       // eslint-disable-next-line react-hooks/set-state-in-effect -- 브라우저 저장소는 첫 그림 뒤에만 읽힙니다
       if (attach.length) setFiles((f) => (f.length ? f : attach));
+      // 디자인 JSON — 보낼 때 서버가 이걸로 «방»(보기 전용 링크)을 만들어 담당자에게만 붙입니다(0017)
+      if (got.design && typeof got.design === "object") setMaker({ design: JSON.stringify(got.design), title: String(got.title ?? "") });
       const summary = got.summary;
       if (summary) setForm((f) => (f.message ? f : { ...f, message: summary.slice(0, 1900) }));
     } catch {
@@ -206,6 +214,10 @@ ${note}` }));
       fd.set("company_website", form.trap);
       fd.set("agree", "true");
       files.forEach((f) => fd.append("files", f));
+      if (maker) {
+        fd.set("maker_design", maker.design);
+        fd.set("maker_title", maker.title);
+      }
 
       const res = await fetch("/api/quote", { method: "POST", body: fd });
       if (!res.ok) throw new Error("failed");
@@ -501,6 +513,17 @@ ${note}` }));
               </li>
             ))}
           </ul>
+        )}
+        {maker && (
+          <p className="mt-2 flex items-start justify-between gap-3 text-[13px] leading-relaxed text-ink-500">
+            <span>
+              간판 메이커에서 만든 디자인이 함께 전달됩니다. 담당자가 화면에서 주간·야간 모습을 확인할 수 있으며,
+              가게 사진은 포함되지 않습니다.
+            </span>
+            <button type="button" onClick={() => setMaker(null)} className="shrink-0 font-bold underline underline-offset-4 hover:text-ink">
+              빼기
+            </button>
+          </p>
         )}
         {fileError && (
           <p role="alert" className="mt-1.5 text-[13px] font-medium text-accent">

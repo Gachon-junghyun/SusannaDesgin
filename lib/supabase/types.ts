@@ -108,6 +108,11 @@ export type QuoteRow = {
   timing: string;
   message: string;
   files: QuoteFile[];
+  /**
+   * 메이커에서 넘어온 견적이면 그 디자인 «방»의 토큰 (`0017_quote_maker_share.sql`, 2026-09-26).
+   * 관리자 견적함이 `/maker/s/<토큰>` 으로 엽니다. 0017 을 안 돌린 DB 에서는 이 칸이 아예 안 옵니다.
+   */
+  maker_token?: string;
   ip: string;
   handled: boolean;
   created_at: string;
@@ -131,6 +136,8 @@ export type MakerShareRow = {
   title: string;
   design: unknown;
   created_by: string | null;
+  /** 견적 제출 때 저절로 생긴 방이면 그 견적 (0017). 관리자가 만든 링크는 null */
+  quote_id?: string | null;
   created_at: string;
   expires_at: string;
 };

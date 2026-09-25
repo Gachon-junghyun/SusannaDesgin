@@ -204,6 +204,57 @@ body {
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/*
+ * 메이커 폰 화면의 아래 시트 (F26 · 2026-09-26). 아래에서 살짝 올라옵니다(인스타 편집 도구 시트).
+ * 슬라이더는 피그마 UI3 결 — 굵은 6px 길 + 흰 동그라미 손잡이 24px(손가락 과녁). 시트 «안»에만 겁니다(PC 칸은 그대로).
+ */
+@keyframes mk-sheet-in {
+  from {
+    transform: translateY(28px);
+    opacity: 0.4;
+  }
+}
+.mk-sheet {
+  animation: mk-sheet-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mk-sheet input[type="range"] {
+  appearance: none;
+  height: 28px;
+  background: transparent;
+}
+.mk-sheet input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #e3e8e7;
+}
+.mk-sheet input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 26 25 / 0.25), 0 0 0 1px rgb(15 26 25 / 0.08);
+}
+.mk-sheet input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #e3e8e7;
+}
+.mk-sheet input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-brand);
+}
+.mk-sheet input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 26 25 / 0.25), 0 0 0 1px rgb(15 26 25 / 0.08);
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* 흐르지 않으니 끝없는 복제 줄·멈춤 단추는 필요 없고, 한 장씩 딱 맞춰 넘깁니다.
      장면은 마지막(결과) 한 장만 — 겹쳐 그려서 DOM 순서상 맨 뒤가 위에 옵니다. */
@@ -219,7 +270,8 @@ body {
   }
   .mk-frame,
   .mk-ping,
-  .mk-stage > div {
+  .mk-stage > div,
+  .mk-sheet {
     animation: none !important;
   }
   .mk-ping {

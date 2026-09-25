@@ -38,14 +38,21 @@ export default function MakerShell({
   children: React.ReactNode;
 }) {
   const path = usePathname();
+  /**
+   * 폰(768px 미만)의 에디터·공유 화면은 **머리말·목록 없이 화면을 통째로** 씁니다(2026-09-26 사람 요청 — 인스타 편집 화면처럼).
+   * 닫기·도움말·완료는 에디터(SignMaker)가 무대 위에 띄웁니다. «SVG 따기»는 폰에서도 지금 모양 그대로입니다.
+   * 🔴 문턱은 `config/maker.ts` 의 `MAKER_PHONE_QUERY` 와 같은 선(md, 768px)입니다 — 한쪽만 바꾸면 머리말도 탭 바도 없는 폭이 생깁니다.
+   */
+  const immersive = path === base || path.startsWith(`${base}/s/`);
+  const onPhone = (cls: string) => (immersive ? cls : "");
   const nav = [
     { href: base, label: "간판 에디터", sub: "글자·로고·조명·벽", icon: IconSign },
     { href: `${base}/trace`, label: "SVG 따기", sub: "그림 → 선(벡터)", icon: IconPen },
   ];
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#eef0ef] text-ink lg:h-dvh lg:overflow-hidden">
-      <header className="flex h-12 shrink-0 items-center gap-4 bg-ink px-4 text-white">
+    <div className={`flex min-h-dvh flex-col bg-[#eef0ef] text-ink lg:h-dvh lg:overflow-hidden ${onPhone("max-md:h-dvh max-md:overflow-hidden")}`}>
+      <header className={`flex h-12 shrink-0 items-center gap-4 bg-ink px-4 text-white ${onPhone("max-md:hidden")}`}>
         {/* 목록을 안 세우는 화면(닫힌 메이커의 공유 링크)에선 로고도 홈으로 — `/maker` 가 손님에게 404 입니다 */}
         <Link href={showNav ? base : "/"} className="flex items-center gap-2.5" aria-label={showNav ? "수산나 메이커 처음으로" : "수산나디자인 홈으로"}>
           <MakerMark />
@@ -75,7 +82,7 @@ export default function MakerShell({
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {showNav && (
-        <aside className="shrink-0 border-b border-line bg-white lg:w-16 lg:border-b-0 lg:border-r xl:w-52">
+        <aside className={`shrink-0 border-b border-line bg-white lg:w-16 lg:border-b-0 lg:border-r xl:w-52 ${onPhone("max-md:hidden")}`}>
           <ul className="flex overflow-x-auto lg:block lg:py-3">
             {nav.map((n) => {
               const on = path === n.href;

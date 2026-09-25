@@ -62,6 +62,11 @@ export type QuoteNotice = {
    *    받는 사람이 나머지를 찾아 헤매게 됐습니다.
    */
   files: { name: string; stored: boolean; attached: boolean }[];
+  /**
+   * 메이커 디자인 «방» 주소 (`0017_quote_maker_share.sql`, 2026-09-26). 메일에서 바로 열어
+   * 주간·야간·확대로 봅니다. 방을 못 만든 견적(0017 미실행·거절)은 비어 있고, 그래도 JPG·SVG 첨부는 갑니다.
+   */
+  designUrl?: string;
   receivedAt: string;
 };
 
@@ -160,6 +165,7 @@ function asText(q: QuoteNotice): string {
     line("연락처", q.phone) +
     line("이메일", q.email) +
     line("보고 온 제품", q.product) +
+    line("메이커 디자인", q.designUrl) +
     line("지역", q.region) +
     line("문의 분야", q.signType) +
     line("희망 시기", q.timing) +
@@ -230,6 +236,7 @@ export function asHtml(q: QuoteNotice): string {
 
   <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
     ${row("보고 온 제품", q.product)}
+    ${q.designUrl ? rowHtml("메이커 디자인", `<a href="${esc(q.designUrl)}" style="color:#00726C;font-weight:700">디자인 열기</a> <span style="color:#6b7280;font-size:13px">(주간·야간·확대, 90일)</span>`) : ""}
     ${row("지역", q.region)}
     ${row("문의 분야", q.signType)}
     ${row("희망 시기", q.timing)}

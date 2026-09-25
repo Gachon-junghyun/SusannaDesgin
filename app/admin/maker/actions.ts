@@ -1,7 +1,7 @@
 "use server";
 
-import { MAKER_SHARE_MAX_BYTES } from "@/config/maker";
 import { requireAdmin } from "@/lib/auth";
+import { checkShareDesign, cleanShareTitle } from "@/lib/maker/share-check";
 import { createClient } from "@/lib/supabase/server";
 import type { MakerShareRow } from "@/lib/supabase/types";
 
@@ -36,20 +36,10 @@ async function client() {
 export async function createMakerShare(design: unknown, title: string): Promise<ShareResult> {
   const supabase = await client();
 
-  const d = design as { items?: unknown; wall?: unknown; kind?: unknown } | null;
-  if (!d || typeof d !== "object" || !Array.isArray(d.items) || typeof d.kind !== "string") return { ok: false, error: "디자인 모양이 올바르지 않습니다." };
-  if (!d.items.length) return { ok: false, error: "벽에 올린 글자·로고가 없습니다." };
-  if (d.items.length > 100) return { ok: false, error: "아이템이 너무 많습니다(100개까지)." };
-  if (d.wall === "photo") return { ok: false, error: "가게 사진 벽은 공유하지 않습니다 — 흰 벽으로 바꿔 보내야 합니다." };
-
-  const json = JSON.stringify(design);
-  if (/"(data|blob):/i.test(json)) return { ok: false, error: "그림 파일(사진)이 섞여 있어 공유하지 않습니다." };
-  const bytes = new TextEncoder().encode(json).length;
-  if (bytes > MAKER_SHARE_MAX_BYTES)
-    return { ok: false, error: `디자인이 너무 큽니다(${Math.round(bytes / 1000)}KB) — 로고를 «SVG 따기»에서 매끄럽게 다듬어 점을 줄여 주세요.` };
-
-  // 제어문자는 공백으로 — 이 이름이 관리자 목록과 손님 화면 제목에 그대로 나갑니다
-  const cleanTitle = title.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 60);
+  // 검사는 손님 견적 경로와 같은 한 곳(`lib/maker/share-check.ts`)입니다
+  const checked = checkShareDesign(design);
+  if ("error" in checked) return { ok: false, error: checked.error };
+  const cleanTitle = cleanShareTitle(title);
 
   const { data, error } = await supabase
     .from("maker_shares")

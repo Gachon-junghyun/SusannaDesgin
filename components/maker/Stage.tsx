@@ -67,6 +67,17 @@ type Props = {
   onRotate: (id: string, deg: number, done: boolean) => void;
   onWarp: (id: string, corner: number, p: Pt, done: boolean) => void;
   onCalibPoint: (p: Pt) => void;
+  /**
+   * 두 손가락으로 고른 것을 키우고 돌립니다(폰, 2026-09-26). `k` = 처음 두 손가락 거리 대비 배율,
+   * `deg` = 처음 각도 대비 돌린 각(°). 손을 떼면 `done` — 되돌리기 한 칸으로 쌓입니다.
+   */
+  onPinch?: (id: string, k: number, deg: number, done: boolean) => void;
+  /** 두 손가락이 처음 닿았을 때(안내 말풍선 치우기) */
+  onPinchStart?: () => void;
+  /** 손가락 화면 — 손잡이를 44px 로 키우고, 두 번 두드리기·살짝 흔들림 무시를 켭니다 */
+  touch?: boolean;
+  /** 위·왼쪽 m 눈금자. 폰에서는 끕니다(화면을 무대에 다 줍니다) */
+  rulers?: boolean;
   /** 보기 전용(공유 링크, F26-b) — 골라 옮기기·손잡이 없이 확대·이동만 됩니다 */
   readOnly?: boolean;
   /** 캔버스 크기(px)가 바뀔 때 — 「화면에 맞춤」 계산에 씁니다 */
@@ -75,13 +86,18 @@ type Props = {
 };
 
 type Drag =
-  | { kind: "move"; id: string; ox: number; oy: number; start: Pt }
+  | { kind: "move"; id: string; ox: number; oy: number; start: Pt; touch?: boolean; sx?: number; sy?: number; moved?: boolean }
   | { kind: "resize"; id: string; c: Pt; start: Pt }
   | { kind: "rotate"; id: string; c: Pt }
   | { kind: "warp"; id: string; corner: number }
-  | { kind: "pan"; start: [number, number]; v: View };
+  | { kind: "pan"; start: [number, number]; v: View; touch?: boolean; moved?: boolean }
+  /** 두 손가락 — 빈 곳이면 화면 확대·이동(`zoom`), 고른 것을 잡고 있었으면 그것의 크기·회전(`ipinch`) */
+  | { kind: "zoom"; a: number; b: number; v: View; d0: number; anchor: Pt }
+  | { kind: "ipinch"; id: string; a: number; b: number; d0: number; ang0: number; k: number; deg: number };
 
 const RULER = 22;
+/** 손가락이 이만큼(px) 안 움직였으면 «두드림»입니다 — 고르려다 조금 밀린 것을 옮기기로 치지 않습니다 */
+const SLOP = 6;
 
 export default function Stage({ svgRef, ...p }: Props) {
   const { design: d, kind } = p;
@@ -90,6 +106,11 @@ export default function Stage({ svgRef, ...p }: Props) {
   const drag = useRef<Drag | null>(null);
   const [px, setPx] = useState({ w: 800, h: 500 });
   const [panning, setPanning] = useState(false);
+  /** 화면에 닿아 있는 손가락들 (포인터 번호 → 화면 좌표) */
+  const pts = useRef(new Map<number, { x: number; y: number }>());
+  /** 두 번 두드리기(글자 한 자 고르기) — 손가락은 dblclick 이 믿을 만하게 안 옵니다 */
+  const lastTap = useRef<{ t: number; id: string } | null>(null);
+  const R = p.rulers === false ? 0 : RULER;
 
   // 이벤트 처리기가 늘 최신 값을 보게 (휠·크기 감시는 한 번만 붙입니다)
   const live = useRef({ view: p.view, onView: p.onView, onMeasure: p.onMeasure });
@@ -102,13 +123,13 @@ export default function Stage({ svgRef, ...p }: Props) {
     const el = box.current;
     if (!el) return;
     const ro = new ResizeObserver(() => {
-      const w = Math.max(100, el.clientWidth - RULER), h = Math.max(100, el.clientHeight - RULER);
+      const w = Math.max(100, el.clientWidth - R), h = Math.max(100, el.clientHeight - R);
       setPx({ w, h });
       live.current.onMeasure?.(w, h);
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [R]);
 
   const vw = p.view.w, vh = (vw * px.h) / px.w;
   const mmPerPx = vw / px.w;
@@ -130,8 +151,14 @@ export default function Stage({ svgRef, ...p }: Props) {
         onView({ x: mx - (mx - v.x) * (w / v.w), y: my - (my - v.y) * (w / v.w), w });
       } else onView({ x: v.x + (e.shiftKey ? e.deltaY : e.deltaX) * k, y: v.y + (e.shiftKey ? 0 : e.deltaY) * k, w: v.w });
     };
+    // iOS 사파리는 두 손가락을 «페이지 확대»로 먼저 가져갑니다 — 무대 위에서만 막습니다(무대 밖 확대는 그대로)
+    const noGesture = (e: Event) => e.preventDefault();
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    el.addEventListener("gesturestart", noGesture);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("gesturestart", noGesture);
+    };
   }, [svgRef]);
 
   const toMm = (e: { clientX: number; clientY: number }): Pt => {
@@ -159,8 +186,12 @@ export default function Stage({ svgRef, ...p }: Props) {
   );
 
   return (
-    <div ref={box} className="relative h-full w-full overflow-hidden bg-[#e4e7e6]" style={{ paddingLeft: RULER, paddingTop: RULER }}>
-      <Rulers view={p.view} vh={vh} px={px} wallW={d.wallW} wallH={d.wallH} />
+    <div
+      ref={box}
+      className="relative h-full w-full touch-none select-none overflow-hidden overscroll-none bg-[#e4e7e6] [-webkit-touch-callout:none]"
+      style={{ paddingLeft: R, paddingTop: R }}
+    >
+      {R > 0 && <Rulers view={p.view} vh={vh} px={px} wallW={d.wallW} wallH={d.wallH} />}
       <svg
         ref={svgRef}
         data-wall-w={d.wallW}
@@ -172,6 +203,15 @@ export default function Stage({ svgRef, ...p }: Props) {
         role="img"
         aria-label="간판 미리보기"
         style={{ cursor: p.calib ? "crosshair" : panning ? "grabbing" : "default" }}
+        onContextMenu={p.touch ? (e) => e.preventDefault() : undefined}
+        onPointerDownCapture={(e) => {
+          // 손가락을 먼저 셉니다(잡기 단계) — 두 번째 손가락이면 글자·손잡이까지 내려보내지 않고 두 손가락 동작을 시작합니다
+          pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pts.current.size === 2 && !p.calib) {
+            e.stopPropagation();
+            startPinch(e);
+          } else if (pts.current.size > 2) e.stopPropagation();
+        }}
         onPointerDown={(e) => {
           if (p.calib) {
             p.onCalibPoint(toMm(e));
@@ -179,27 +219,39 @@ export default function Stage({ svgRef, ...p }: Props) {
           }
           const t = e.target as Element;
           if (e.button === 1 || p.readOnly || t === e.currentTarget || t.hasAttribute("data-bg")) {
-            p.onSelect(null);
+            const touch = e.pointerType === "touch";
+            // 손가락은 «두드리면» 선택을 풉니다 — 화면을 밀 때마다 선택이 풀리면 칩·시트가 깜빡입니다
+            if (!touch) p.onSelect(null);
             capture(e.currentTarget as Element, e.pointerId);
-            drag.current = { kind: "pan", start: [e.clientX, e.clientY], v: p.view };
+            drag.current = { kind: "pan", start: [e.clientX, e.clientY], v: p.view, touch };
             setPanning(true);
           }
         }}
         onPointerMove={(e) => {
+          const at = pts.current.get(e.pointerId);
+          if (at) {
+            at.x = e.clientX;
+            at.y = e.clientY;
+          }
           const g = drag.current;
           if (!g) return;
+          if (g.kind === "zoom" || g.kind === "ipinch") {
+            pinchMove(g);
+            return;
+          }
           if (g.kind === "pan") {
+            if (Math.hypot(e.clientX - g.start[0], e.clientY - g.start[1]) > SLOP) g.moved = true;
             p.onView({ x: g.v.x - (e.clientX - g.start[0]) * mmPerPx, y: g.v.y - (e.clientY - g.start[1]) * mmPerPx, w: g.v.w });
             return;
           }
+          if (g.kind === "move" && g.touch && !g.moved) {
+            if (Math.hypot(e.clientX - (g.sx ?? 0), e.clientY - (g.sy ?? 0)) < SLOP) return;
+            g.moved = true;
+          }
           handle(g, toMm(e), false, e.shiftKey);
         }}
-        onPointerUp={(e) => {
-          const g = drag.current;
-          drag.current = null;
-          setPanning(false);
-          if (g && g.kind !== "pan") handle(g, toMm(e), true, e.shiftKey);
-        }}
+        onPointerUp={(e) => release(e, false)}
+        onPointerCancel={(e) => release(e, true)}
       >
         <defs>
           <pattern id={`g1-${uid}`} width={100} height={100} patternUnits="userSpaceOnUse">
@@ -230,7 +282,7 @@ export default function Stage({ svgRef, ...p }: Props) {
             이 사각형이 같이 딸려 가 그 사진을 통째로 덮었습니다 — 견적에 «회색 벽 + 글씨만» 이 갔습니다. */}
         <rect data-bg="" data-export-skip={p.wall.photo ? "" : undefined} x={0} y={0} width={d.wallW} height={d.wallH} fill={p.wall.color} />
         {p.wall.photo && (
-          <image data-bg="" data-export-skip="" href={p.wall.photo} x={0} y={0} width={d.wallW} height={d.wallH} preserveAspectRatio="xMidYMid slice" />
+          <image data-bg="" data-export-skip="" className="[-webkit-user-drag:none]" href={p.wall.photo} x={0} y={0} width={d.wallW} height={d.wallH} preserveAspectRatio="xMidYMid slice" />
         )}
         {d.grid !== false && (
           <g data-bg="" pointerEvents="none">
@@ -368,26 +420,37 @@ export default function Stage({ svgRef, ...p }: Props) {
           (() => {
             const r = p.items.find((q) => q.id === p.selected);
             if (!r) return null;
-            const hs = 10 * U;
+            // 손가락이면 손잡이를 22px 로 그리고 44px 를 받습니다(애플·구글 터치 과녁 최소치)
+            const hs = (p.touch ? 22 : 10) * U;
+            const hit = 22 * U;
             const q = r.quad;
             const tm: Pt = [(q[0][0] + q[1][0]) / 2, (q[0][1] + q[1][1]) / 2];
             const ex = q[1][0] - q[0][0], ey = q[1][1] - q[0][1], el = Math.hypot(ex, ey) || 1;
             const nrm: Pt = [ey / el, -ex / el];
-            const rh: Pt = [tm[0] + nrm[0] * 32 * U, tm[1] + nrm[1] * 32 * U];
+            const rd = (p.touch ? 46 : 32) * U;
+            const rh: Pt = [tm[0] + nrm[0] * rd, tm[1] + nrm[1] * rd];
             const gq = p.glyph !== null ? r.glyphQuads[p.glyph] : null;
             return (
               <g data-export-skip="">
                 <polygon points={q.map((v) => v.join(",")).join(" ")} fill="none" stroke="#00a79d" strokeWidth={U * 1.5} strokeDasharray={`${U * 6} ${U * 4}`} pointerEvents="none" />
                 {gq && <polygon points={gq.map((v) => v.join(",")).join(" ")} fill="none" stroke="#ff5900" strokeWidth={U * 1.8} pointerEvents="none" />}
                 {p.warpMode ? (
-                  q.map((v, i) => (
-                    <circle key={i} cx={v[0]} cy={v[1]} r={hs * 0.7} fill="#ff5900" stroke="#fff" strokeWidth={U * 1.5} style={{ cursor: "move" }} onPointerDown={(e) => begin(e, { kind: "warp", id: r.id, corner: i })} />
-                  ))
+                  q.map((v, i) => {
+                    const go = (e: React.PointerEvent) => begin(e, { kind: "warp", id: r.id, corner: i });
+                    return (
+                      <g key={i}>
+                        {p.touch && <circle cx={v[0]} cy={v[1]} r={hit} fill="transparent" onPointerDown={go} />}
+                        <circle cx={v[0]} cy={v[1]} r={p.touch ? hs * 0.5 : hs * 0.7} fill="#ff5900" stroke="#fff" strokeWidth={U * (p.touch ? 2.5 : 1.5)} style={{ cursor: "move" }} onPointerDown={go} />
+                      </g>
+                    );
+                  })
                 ) : (
                   <>
                     <line x1={tm[0]} y1={tm[1]} x2={rh[0]} y2={rh[1]} stroke="#00a79d" strokeWidth={U * 1.2} pointerEvents="none" />
-                    <circle cx={rh[0]} cy={rh[1]} r={hs * 0.6} fill="#fff" stroke="#00a79d" strokeWidth={U * 1.8} style={{ cursor: "grab" }} onPointerDown={(e) => begin(e, { kind: "rotate", id: r.id, c: [r.cx, r.cy] })} />
-                    <rect x={q[2][0] - hs / 2} y={q[2][1] - hs / 2} width={hs} height={hs} fill="#fff" stroke="#00a79d" strokeWidth={U * 1.8} style={{ cursor: "nwse-resize" }} onPointerDown={(e) => begin(e, { kind: "resize", id: r.id, c: [r.cx, r.cy], start: toMm(e) })} />
+                    {p.touch && <circle cx={rh[0]} cy={rh[1]} r={hit} fill="transparent" onPointerDown={(e) => begin(e, { kind: "rotate", id: r.id, c: [r.cx, r.cy] })} />}
+                    <circle cx={rh[0]} cy={rh[1]} r={p.touch ? hs * 0.45 : hs * 0.6} fill="#fff" stroke="#00a79d" strokeWidth={U * 1.8} style={{ cursor: "grab" }} onPointerDown={(e) => begin(e, { kind: "rotate", id: r.id, c: [r.cx, r.cy] })} />
+                    {p.touch && <rect x={q[2][0] - hit} y={q[2][1] - hit} width={hit * 2} height={hit * 2} fill="transparent" onPointerDown={(e) => begin(e, { kind: "resize", id: r.id, c: [r.cx, r.cy], start: toMm(e) })} />}
+                    <rect x={q[2][0] - hs / 2} y={q[2][1] - hs / 2} width={hs} height={hs} rx={p.touch ? hs * 0.28 : 0} fill="#fff" stroke="#00a79d" strokeWidth={U * 1.8} style={{ cursor: "nwse-resize" }} onPointerDown={(e) => begin(e, { kind: "resize", id: r.id, c: [r.cx, r.cy], start: toMm(e) })} />
                   </>
                 )}
               </g>
@@ -422,11 +485,83 @@ export default function Stage({ svgRef, ...p }: Props) {
     // 보기 전용이면 여기서 안 받고 무대로 흘려 보냅니다 — 글자 위를 끌어도 화면이 이동합니다
     if (p.readOnly || p.calib || e.button !== 0) return;
     e.stopPropagation();
+    const touch = e.pointerType === "touch";
+    if (touch) {
+      // 두 번 두드리기 = 그 글자 한 자 (마우스의 두 번 누르기와 같은 일)
+      const now = Date.now(), gl = (e.target as Element).getAttribute("data-glyph");
+      const prev = lastTap.current;
+      lastTap.current = { t: now, id: r.id };
+      if (prev && prev.id === r.id && now - prev.t < 350 && gl !== null && r.type === "text") {
+        lastTap.current = null;
+        p.onGlyph(r.id, Number(gl));
+        return;
+      }
+    }
     if (p.selected !== r.id) p.onSelect(r.id);
-    begin(e, { kind: "move", id: r.id, ox: r.cx, oy: r.cy, start: toMm(e) });
+    begin(e, { kind: "move", id: r.id, ox: r.cx, oy: r.cy, start: toMm(e), touch, sx: e.clientX, sy: e.clientY });
   }
 
-  function handle(g: Exclude<Drag, { kind: "pan" }>, m: Pt, done: boolean, shift: boolean) {
+  /** 두 번째 손가락이 닿음 — 한 손가락으로 무엇을 하던 중이었나로 갈립니다 */
+  function startPinch(e: React.PointerEvent) {
+    const [a, b] = [...pts.current.keys()];
+    const A = pts.current.get(a)!, B = pts.current.get(b)!;
+    const g = drag.current;
+    capture(e.currentTarget as Element, e.pointerId);
+    setPanning(false);
+    p.onPinchStart?.();
+    const d0 = Math.max(1, Math.hypot(B.x - A.x, B.y - A.y));
+    // 간판을 잡고 있었으면(옮기기·크기·회전) 그 간판을, 아니면 화면을
+    if (!p.readOnly && p.onPinch && g && (g.kind === "move" || g.kind === "resize" || g.kind === "rotate")) {
+      drag.current = { kind: "ipinch", id: g.id, a, b, d0, ang0: Math.atan2(B.y - A.y, B.x - A.x), k: 1, deg: 0 };
+      return;
+    }
+    const r = svgRef.current!.getBoundingClientRect();
+    const v = live.current.view;
+    const k0 = v.w / r.width;
+    const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2;
+    drag.current = { kind: "zoom", a, b, v, d0, anchor: [v.x + (mx - r.left) * k0, v.y + (my - r.top) * k0] };
+  }
+
+  function pinchMove(g: Extract<Drag, { kind: "zoom" | "ipinch" }>) {
+    const A = pts.current.get(g.a), B = pts.current.get(g.b);
+    if (!A || !B) return;
+    const d = Math.max(1, Math.hypot(B.x - A.x, B.y - A.y));
+    if (g.kind === "ipinch") {
+      g.k = d / g.d0;
+      g.deg = ((Math.atan2(B.y - A.y, B.x - A.x) - g.ang0) * 180) / Math.PI;
+      p.onPinch?.(g.id, g.k, g.deg, false);
+      return;
+    }
+    // 두 손가락 가운데 점 아래의 벽 자리가 손가락을 따라오게 — 벌리면 확대, 같이 밀면 이동
+    const r = svgRef.current!.getBoundingClientRect();
+    const w = Math.min(200000, Math.max(200, (g.v.w * g.d0) / d));
+    const k1 = w / r.width;
+    const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2;
+    p.onView({ x: g.anchor[0] - (mx - r.left) * k1, y: g.anchor[1] - (my - r.top) * k1, w });
+  }
+
+  /** 손가락·마우스를 뗌. 두 손가락 중 하나라도 떼면 그 동작은 끝입니다(남은 손가락이 갑자기 화면을 끌지 않게) */
+  function release(e: React.PointerEvent, cancelled: boolean) {
+    pts.current.delete(e.pointerId);
+    const g = drag.current;
+    if (g && (g.kind === "zoom" || g.kind === "ipinch")) {
+      drag.current = null;
+      if (g.kind === "ipinch") p.onPinch?.(g.id, g.k, g.deg, true);
+      return;
+    }
+    drag.current = null;
+    setPanning(false);
+    if (!g) return;
+    if (g.kind === "pan") {
+      if (g.touch && !g.moved && !cancelled) p.onSelect(null);
+      return;
+    }
+    // 손가락으로 두드리기만 했으면(안 움직임) 옮기기로 쌓지 않습니다
+    if (g.kind === "move" && g.touch && !g.moved) return;
+    handle(g, toMm(e), true, e.shiftKey);
+  }
+
+  function handle(g: Exclude<Drag, { kind: "pan" | "zoom" | "ipinch" }>, m: Pt, done: boolean, shift: boolean) {
     if (g.kind === "move") p.onMove(g.id, g.ox + m[0] - g.start[0], g.oy + m[1] - g.start[1], done);
     else if (g.kind === "resize") {
       const d0 = Math.hypot(g.start[0] - g.c[0], g.start[1] - g.c[1]), d1 = Math.hypot(m[0] - g.c[0], m[1] - g.c[1]);

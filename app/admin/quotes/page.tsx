@@ -178,6 +178,22 @@ export default async function AdminQuotesPage() {
               </div>
             </div>
 
+            {/* 메이커에서 온 견적 — 견적을 보낼 때 저절로 생긴 디자인 «방»(0017). JPG 와 달리 주간·야간·확대로 봅니다 */}
+            {q.maker_token && /^[0-9a-f]{32}$/.test(q.maker_token) && (
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-5 py-3 text-[14px]">
+                <span className="w-24 shrink-0 font-bold text-ink-500">메이커 디자인</span>
+                <a
+                  href={`/maker/s/${q.maker_token}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="font-bold text-brand-700 underline underline-offset-4"
+                >
+                  디자인 열기
+                </a>
+                <span className="text-[13px] text-ink-500">주간·야간·확대 · 접수일부터 90일 · 문의를 지우면 같이 지워집니다</span>
+              </p>
+            )}
+
             <dl className="grid gap-x-6 gap-y-2 border-t border-line px-5 py-4 text-[14px] sm:grid-cols-2">
               {[
                 // 🔴 맨 앞입니다 — 「무엇을 보고 전화하는지」가 통화 전에 제일 먼저

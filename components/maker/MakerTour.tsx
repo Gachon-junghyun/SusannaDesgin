@@ -26,8 +26,17 @@ export default function MakerTour({
   mode,
   onClose,
   onPrepare,
+  steps = makerTour,
+  noScroll = false,
 }: {
   mode: "admin" | "customer";
+  /** 단계 목록 — 폰은 `makerTourPhone`(아래 탭·무대를 가리킴), 넓은 화면은 `makerTour` */
+  steps?: TourStep[];
+  /**
+   * 자리를 보이게 굴리지 않습니다 — 폰 화면은 한 화면에 다 들어 있고 바깥이 `overflow:hidden` 이라,
+   * `scrollIntoView` 가 그 상자를 몰래 밀어 무대·탭 바가 화면 밖으로 밀립니다.
+   */
+  noScroll?: boolean;
   /** 끝까지 봤거나 건너뛰었을 때 — 둘 다 «본 것»으로 칩니다 */
   onClose: () => void;
   /** 단계가 바뀔 때 화면을 준비합니다(글자 하나 골라 두기 등) */
@@ -43,8 +52,8 @@ export default function MakerTour({
   const bubble = useRef<HTMLDivElement>(null);
   const nextBtn = useRef<HTMLButtonElement>(null);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const step = makerTour[i];
-  const last = i === makerTour.length - 1;
+  const step = steps[i];
+  const last = i === steps.length - 1;
   const pick = (t: string | { admin: string; customer: string }) => (typeof t === "string" ? t : t[mode]);
 
   // 부르는 쪽의 최신 함수를 씁니다(효과는 단계가 바뀔 때만 돌게)
@@ -57,20 +66,21 @@ export default function MakerTour({
 
   // 단계가 바뀌면: 화면 준비 → 자리가 생기면 보이게 굴림 → 다음 버튼에 초점
   useEffect(() => {
-    prep.current?.(makerTour[i]);
+    prep.current?.(steps[i]);
     let tries = 0, raf = 0;
     const scroll = () => {
-      const el = document.querySelector(`[data-tour="${makerTour[i].targets[0]}"]`);
+      const el = document.querySelector(`[data-tour="${steps[i].targets[0]}"]`);
       // 넓은 화면은 패널 안에서만 조금 굴리고(nearest), 폰은 페이지째 굴려 자리를 화면 위쪽에 둡니다 —
       // nearest 로 두면 자리가 화면 맨 아래에 겨우 걸리고 말풍선이 그 위를 덮었습니다(2026-09-25 375px 확인)
       // `instant` — 사이트 전체가 `scroll-behavior: smooth` 라 그대로 두면 «다음»을 빨리 누를 때 굴림이 겹쳐 끊깁니다
+      if (noScroll) return;
       if (el) el.scrollIntoView({ block: window.matchMedia("(min-width: 1024px)").matches ? "nearest" : "start", inline: "nearest", behavior: "instant" });
       else if (tries++ < 20) raf = requestAnimationFrame(scroll);
     };
     raf = requestAnimationFrame(scroll);
     nextBtn.current?.focus({ preventScroll: true });
     return () => cancelAnimationFrame(raf);
-  }, [i]);
+  }, [i, steps, noScroll]);
 
   // 여는 동안 매 프레임 자리를 잽니다 — 바뀐 때만 다시 그립니다
   useEffect(() => {
@@ -117,7 +127,7 @@ export default function MakerTour({
       if (e.key === "Enter" || e.key === " ") return;
       e.stopPropagation();
       if (e.key === "Escape") close.current();
-      else if (e.key === "ArrowRight") setI((v) => Math.min(makerTour.length - 1, v + 1));
+      else if (e.key === "ArrowRight") setI((v) => Math.min(steps.length - 1, v + 1));
       else if (e.key === "ArrowLeft") setI((v) => Math.max(0, v - 1));
       else if (e.key === "Tab") {
         // 초점이 어둠 뒤 화면으로 새지 않게 말풍선 안에서 돕니다
@@ -131,7 +141,7 @@ export default function MakerTour({
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, []);
+  }, [steps.length]);
 
   // 닫으면 초점을 원래 자리로
   useEffect(() => {
@@ -168,7 +178,7 @@ export default function MakerTour({
         style={{ left: pos.x, top: pos.y, width: Math.min(360, vp.w - EDGE * 2), visibility: ready ? "visible" : "hidden" }}
       >
         <p className="text-[12px] font-bold tabular-nums text-ink-500">
-          {i + 1} / {makerTour.length}
+          {i + 1} / {steps.length}
         </p>
         <h2 id={titleId} className="mt-1 text-[17px] font-black text-brand-700">
           {pick(step.title)}
