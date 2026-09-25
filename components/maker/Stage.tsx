@@ -225,7 +225,10 @@ export default function Stage({ svgRef, ...p }: Props) {
 
         {/* 작업대 + 벽 */}
         <rect data-bg="" data-export-skip="" x={p.view.x - vw} y={p.view.y - vh} width={vw * 3} height={vh * 3} fill="#e4e7e6" />
-        <rect data-bg="" x={0} y={0} width={d.wallW} height={d.wallH} fill={p.wall.color} />
+        {/* 🔴 사진 벽이면 이 바탕색은 그림으로 내보낼 때 빼야 합니다(2026-09-26 운영에서 밟음). 아래 <image> 는
+            SVG→그림 변환에서 안 불러와져서(브라우저 보안) `composeJpeg` 가 사진을 캔버스에 먼저 그리는데,
+            이 사각형이 같이 딸려 가 그 사진을 통째로 덮었습니다 — 견적에 «회색 벽 + 글씨만» 이 갔습니다. */}
+        <rect data-bg="" data-export-skip={p.wall.photo ? "" : undefined} x={0} y={0} width={d.wallW} height={d.wallH} fill={p.wall.color} />
         {p.wall.photo && (
           <image data-bg="" data-export-skip="" href={p.wall.photo} x={0} y={0} width={d.wallW} height={d.wallH} preserveAspectRatio="xMidYMid slice" />
         )}

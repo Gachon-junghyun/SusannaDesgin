@@ -1458,6 +1458,18 @@ function TextProps({
         {!admin && <p className="mt-1.5 text-[12px] leading-relaxed text-ink-500">간판에 써도 되는 무료 글꼴만 모았습니다(인쇄·상호·웹 사용 가능 확인).</p>}
       </Field>
 
+      {/* 손님도 자기 글꼴(가게 BI 글꼴 등)을 올릴 수 있습니다 (2026-09-26 사람 요청). 관리자처럼 «이 브라우저 안에서만» —
+          파일은 서버로 안 가고, 견적에는 그 글꼴로 그린 외곽선(JPG·SVG)만 붙습니다. PC 글꼴 목록(권한 묻는 창)은 관리자만. */}
+      {!admin && (
+        <Field label="가지고 계신 글꼴로 해 보기">
+          <FontFileInput onFile={onFontFile} />
+          <p className="mt-1.5 text-[12px] leading-relaxed text-ink-500">
+            가게 로고·상호에 쓰는 글꼴 파일이 있으면 올려 보세요. 파일은 이 브라우저 안에서만 쓰이고 저희 서버로 올라가지 않습니다
+            (새로고침하면 다시 올려야 합니다). 상업적으로 써도 되는 글꼴인지는 견적 때 담당자가 같이 확인합니다.
+          </p>
+        </Field>
+      )}
+
       {admin && (
         <Field label="관리자 글꼴 (이 브라우저에서만)">
           {localFontsSupported() ? (
@@ -1486,14 +1498,30 @@ function TextProps({
           ) : (
             <p className="text-[12px] text-ink-500">이 PC 글꼴 목록은 크롬·엣지에서만 됩니다. 아래에서 파일을 올리세요.</p>
           )}
-          <label className="mt-1.5 flex cursor-pointer items-center justify-center border border-line px-3 py-2 text-[13px] font-bold hover:bg-paper">
-            글꼴 파일 올리기 (TTF·OTF·WOFF)
-            <input type="file" accept=".ttf,.otf,.woff,.woff2" className="sr-only" onChange={(e) => e.target.files?.[0] && onFontFile(e.target.files[0])} />
-          </label>
+          <FontFileInput onFile={onFontFile} className="mt-1.5" />
           <p className="mt-1.5 text-[12px] leading-relaxed text-ink-500">여기 글꼴은 서버에 안 올라가고 손님 화면에도 안 보입니다. 손님 간판에 쓰기 전에 그 글꼴의 상업·BI 사용 조건을 확인하세요.</p>
         </Field>
       )}
     </div>
+  );
+}
+
+/** 글꼴 파일 올리기 — 관리자·손님이 같이 씁니다(받는 쪽은 `onFontFile` 하나) */
+function FontFileInput({ onFile, className = "" }: { onFile: (f: File) => void; className?: string }) {
+  return (
+    <label className={`flex cursor-pointer items-center justify-center border border-line px-3 py-2 text-[13px] font-bold hover:bg-paper focus-within:outline-2 focus-within:outline-brand ${className}`}>
+      글꼴 파일 올리기 (TTF·OTF·WOFF)
+      <input
+        type="file"
+        accept=".ttf,.otf,.woff,.woff2"
+        className="sr-only"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+          e.target.value = ""; // 같은 파일을 다시 골라도 바뀌게
+        }}
+      />
+    </label>
   );
 }
 
