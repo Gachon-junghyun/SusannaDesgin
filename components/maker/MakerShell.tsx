@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { LOGO_BETA } from "@/config/logo";
 import { MAKER_HELP_EVENT } from "@/config/maker";
 
 /**
@@ -52,6 +53,13 @@ export default function MakerShell({
     { href: `${base}/color`, label: "건물 색 찾기", sub: "사진 → 우리 가게 색", icon: IconDrop },
     // F26-j (2026-09-26) — 클로드가 뽑아 올린 손님 시안 요소. 손님 자료라 관리자만 봅니다
     ...(mode === "admin" ? [{ href: `${base}/assets`, label: "프로젝트 에셋", sub: "뽑아 올린 로고·그림", icon: IconBox }] : []),
+    // F26-k·l (2026-09-27) — 관리자 전용 베타. 🔴 손님 목록엔 안 섭니다(`/maker/logo`·`/maker/draw` 는 만들지 않았습니다)
+    ...(mode === "admin"
+      ? [
+          { href: `${base}/logo`, label: "로고 만들기", sub: "입력 → 3안 → 판정", icon: IconLogo, beta: true },
+          { href: `${base}/draw`, label: "그림판", sub: "대충 그린 획 → 선", icon: IconBrush, beta: true },
+        ]
+      : []),
   ];
 
   return (
@@ -100,7 +108,10 @@ export default function MakerShell({
                   >
                     <n.icon />
                     <span className="lg:hidden xl:block">
-                      <span className="block text-[14px] font-bold">{n.label}</span>
+                      <span className="block text-[14px] font-bold">
+                        {n.label}
+                        {"beta" in n && n.beta && <span className="ml-1 text-[10px] font-bold text-brand-700">{LOGO_BETA}</span>}
+                      </span>
                       <span className="hidden text-[11px] text-ink-500 xl:block">{n.sub}</span>
                     </span>
                   </Link>
@@ -176,6 +187,23 @@ function IconBox() {
       <rect x="11" y="2.5" width="6.5" height="6.5" />
       <rect x="2.5" y="11" width="6.5" height="6.5" />
       <path d="M11 17.5l2.6-3.4 1.8 2.2 2.1-2.8" />
+    </svg>
+  );
+}
+/** 로고 만들기 — 원 배지 안의 심벌 + 글자 줄 */
+function IconLogo() {
+  return (
+    <svg className={icon} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M7 8.5l3-3 3 3M6.5 12.5h7M8 15h4" />
+    </svg>
+  );
+}
+/** 그림판 — 붓 */
+function IconBrush() {
+  return (
+    <svg className={icon} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M17 3l-7.5 8.5M9.5 11.5c-2-.5-3.5.8-3.8 2.6-.2 1.4-1.2 2.4-2.7 2.6 3.4 1.2 7.3.2 7.3-3.2" />
     </svg>
   );
 }

@@ -78,6 +78,14 @@ export default async function AdminHome() {
       desc: "상호·로고로 간판 시안을 만들고, 만들 수 있는지(획·글자 높이)를 판정합니다. 이 PC 의 글꼴도 쓸 수 있습니다.",
     },
     {
+      // F26-k (2026-09-27) — 관리자 전용 베타. 손님 메이커엔 없습니다
+      href: "/admin/maker/logo",
+      title: "로고 만들기 (베타)",
+      count: null,
+      unit: "",
+      desc: "상호·업종·인상을 넣으면 락업·심벌·글꼴·색을 한 단계씩 정해 세 안을 나란히 보고, 간판으로 만들 수 있는지까지 판정해 에디터로 보냅니다.",
+    },
+    {
       href: "/admin/usage",
       title: "사용량",
       count: null,

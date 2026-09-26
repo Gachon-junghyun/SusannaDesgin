@@ -142,6 +142,7 @@ ${B("CMS 명령줄 도구")}   ${D("npm run cms -- <명령>")}
   ${B("메이커 프로젝트 에셋")} ${D("(F26-j — 관리자만 보는 비공개 저장소)")}
     maker-assets upload <프로젝트> <파일...> [--note "..."]   SVG·PNG·JPG·WEBP 를 올림 ${D("(SVG 는 평평하게 만든 것만)")}
     maker-assets list [프로젝트]                          올라간 에셋 목록
+    maker-assets get <프로젝트> <폴더>                    그 프로젝트 에셋을 폴더로 내려받음 ${D("(그림판 스케치 → 제미나이 --ref)")}
     maker pull <토큰|공유주소> <폴더>                      방(공유 링크)의 디자인 + 그 안의 그림 에셋을 내려받음
 
   ${B("정리")}
@@ -689,6 +690,31 @@ async function listAssets(supabase, project) {
   console.log("");
 }
 
+/**
+ * 프로젝트 에셋을 폴더로 내려받습니다 (F26-l · 2026-09-27) — 그림판 스케치를 클로드 코드가 받아 제미나이 `--ref` 로 쓰는 길.
+ * 파일 이름은 «보이는 이름.확장자»(같은 이름이 있으면 번호 앞 8자를 붙임). 손님 자료일 수 있으니 받은 폴더를 어디에도 올리지 마세요(P7).
+ */
+async function getAssets(supabase, project, dir) {
+  if (!project || !dir) die("사용법: cms maker-assets get <프로젝트> <폴더>");
+  const { data, error } = await supabase.from("maker_assets").select("id, name, kind, path").eq("project", project).order("created_at");
+  if (error) die(explainAsset(error));
+  if (!data.length) die(`«${project}» 프로젝트에 에셋이 없습니다.`);
+  mkdirSync(dir, { recursive: true });
+  const seen = new Set();
+  for (const a of data) {
+    const { data: blob, error: de } = await supabase.storage.from(ASSET_BUCKET).download(a.path);
+    if (de) die(`내려받기 실패 (${a.name}): ${de.message}`);
+    const safe = a.name.replace(/[\/:*?"<>|]/g, "_");
+    const file = seen.has(safe) ? `${safe}_${a.id.slice(0, 8)}.${a.kind}` : `${safe}.${a.kind}`;
+    seen.add(safe);
+    writeFileSync(join(dir, file), Buffer.from(await blob.arrayBuffer()));
+    console.log(`  ${G("↓")} ${file}`);
+  }
+  console.log(D(`
+  ${data.length}개 → ${dir}
+`));
+}
+
 /** 방(공유 링크)을 받아 옵니다 — design.json + 그 디자인이 쓰는 그림 에셋 파일 + assets.json(번호 → 파일) */
 async function pullRoom(supabase, ref, dir) {
   const token = /([0-9a-f]{32})/i.exec(ref ?? "")?.[1];
@@ -750,7 +776,8 @@ async function main() {
   if (group === "maker-assets") {
     if (action === "upload") return uploadAssets(supabase, rest[0], rest.slice(1));
     if (action === "list") return listAssets(supabase, rest[0]);
-    die("사용법: cms maker-assets upload|list …");
+    if (action === "get") return getAssets(supabase, rest[0], rest[1]);
+    die("사용법: cms maker-assets upload|list|get …");
   }
   if (group === "maker") {
     if (action === "pull") return pullRoom(supabase, rest[0], rest[1]);

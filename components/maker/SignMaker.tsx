@@ -65,6 +65,7 @@ import {
   type TextItem,
 } from "@/lib/maker/design";
 import { takeForEditor } from "@/lib/maker/handoff";
+import { INCOMING_ITEMS_KEY } from "@/config/logo";
 import { pickSpots, readLabel, recommend, skyShare, toneOn, type Rec } from "@/lib/maker/palette";
 import { fabCheck, type FabResult } from "@/lib/maker/fab";
 import {
@@ -912,6 +913,44 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       /* 저장소가 막힘 — 로고를 여기서 다시 올리면 됩니다 */
     }
   }, [addLogo]);
+
+  // «로고 만들기»(F26-k)에서 보낸 로고 한 벌·세 벌 받기 — 판(배지)·로고(심벌)·글자 아이템 묶음. 같은 브라우저 저장소로만 건너옵니다.
+  // 🔴 벽의 글자·로고·판을 **바꿉니다**(가리기·그림은 둡니다) — «레퍼런스 스타일»과 같은 약속이고, 되돌리기 한 번이면 전으로 갑니다.
+  // 벽이 좁으면 넓힙니다(사진 벽은 그대로) — 화면 맞춤은 무대가 처음 재어질 때(`onMeasure`) 넓힌 벽으로 합니다.
+  useEffect(() => {
+    if (mode === "view") return;
+    let got: { kind?: string; groups: { name: string; w: number; h: number; items: Item[] }[] } | null = null;
+    try {
+      const raw = localStorage.getItem(INCOMING_ITEMS_KEY);
+      if (!raw) return;
+      localStorage.removeItem(INCOMING_ITEMS_KEY);
+      got = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    const groups = got?.groups?.filter((g) => Array.isArray(g.items) && g.items.length) ?? [];
+    if (!groups.length) return;
+    const gap = Math.max(700, Math.max(...groups.map((g) => g.w)) * 0.35); // 치수선 글자가 옆 안에 겹치지 않게
+    const total = groups.reduce((a, g) => a + g.w, 0) + gap * (groups.length - 1);
+    const tallest = Math.max(...groups.map((g) => g.h));
+    const kindKey = got?.kind;
+    commit((p) => {
+      const photoWall = p.wall === "photo";
+      const W = photoWall ? p.wallW : Math.max(p.wallW, Math.ceil((total * 1.25) / 1000) * 1000);
+      const H = photoWall ? p.wallH : Math.max(p.wallH, Math.ceil((tallest * 2) / 500) * 500);
+      let x = W / 2 - total / 2;
+      const y = H * 0.45;
+      const placed: Item[] = [];
+      for (const g of groups) {
+        const cx = x + g.w / 2;
+        for (const it of g.items) placed.push({ ...it, id: newId(), x: cx + it.x, y: y + it.y } as Item);
+        x += g.w + gap;
+      }
+      const kind = kindKey && makerKinds.some((k) => k.key === kindKey) ? kindKey : p.kind;
+      return { ...p, kind, wallW: W, wallH: H, items: [...p.items.filter((it) => it.type === "patch" || it.type === "image"), ...placed] };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 처음 한 번만(넘어온 것을 꺼내 비웁니다)
+  }, []);
 
   async function onLogo(file: File) {
     setErr("");

@@ -19,6 +19,9 @@ const loading = () => (
 const SignMaker = dynamic(() => import("./SignMaker"), { ssr: false, loading });
 const TraceStudio = dynamic(() => import("./TraceStudio"), { ssr: false, loading });
 const ColorStudio = dynamic(() => import("./ColorStudio"), { ssr: false, loading });
+// F26-k·l (2026-09-27) — 관리자 전용 베타 둘(로고 만들기·그림판). 손님 주소(`/maker/…`)에는 없습니다
+const LogoStudio = dynamic(() => import("./LogoStudio"), { ssr: false, loading });
+const DrawStudio = dynamic(() => import("./DrawStudio"), { ssr: false, loading });
 
 export default function MakerLoader({
   mode,
@@ -26,17 +29,22 @@ export default function MakerLoader({
   base,
   design,
   share,
+  aiReady = false,
 }: {
   mode: "admin" | "customer";
-  /** `color` = 건물 색 찾기(F26-h) */
-  tool?: "editor" | "trace" | "color" | "view";
+  /** `color` = 건물 색 찾기(F26-h) · `logo`·`draw` = 로고 만들기·그림판(F26-k·l, 관리자 전용) */
+  tool?: "editor" | "trace" | "color" | "view" | "logo" | "draw";
   base: string;
   /** 공유 링크의 디자인 (DB 에서 온 JSON — SignMaker 가 기본값과 합쳐 씁니다) */
   design?: unknown;
   share?: ShareInfo;
+  /** 이미지 API 가 붙었나 — 서버(`lib/maker/ai-image.ts`)가 알려 줍니다. 지금은 늘 false */
+  aiReady?: boolean;
 }) {
   if (tool === "trace") return <TraceStudio base={base} />;
   if (tool === "color") return <ColorStudio base={base} />;
+  if (tool === "logo") return <LogoStudio base={base} aiReady={aiReady} />;
+  if (tool === "draw") return <DrawStudio base={base} aiReady={aiReady} />;
   if (tool === "view") return <SignMaker mode="view" initial={design} share={share} />;
   return <SignMaker mode={mode} />;
 }
