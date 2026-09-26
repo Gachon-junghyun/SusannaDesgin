@@ -276,6 +276,11 @@ export const seo = {
       description:
         "로고·글씨 그림을 올리면 간판 제작용 선(SVG)으로 바꿔 드립니다. 그림은 브라우저 안에서만 처리됩니다.",
     },
+    "/maker/color": {
+      title: "건물 사진으로 간판 색 찾기",
+      description:
+        "가게 건물 사진을 올리면 건물에서 다섯 색을 뽑아 사진 속 자리와 함께 보여 드리고, 그 색에 맞는 간판 글자·판 색을 권해 드립니다. 사진은 브라우저 안에서만 처리됩니다.",
+    },
     "/works": {
       title: "대전 간판 시공사례",
       description:
@@ -337,7 +342,7 @@ export const noindexPaths: readonly string[] = [
   /** 글꼴 견본(F25) — 같은 이유로 `SHOW_FONTS` 한 값에 묶었습니다 */
   ...(SHOW_FONTS ? [] : ["/fonts"]),
   /** 간판 메이커(F26) — 같은 이유로 `SHOW_MAKER` 한 값에 묶었습니다 */
-  ...(SHOW_MAKER ? [] : ["/maker", "/maker/trace"]),
+  ...(SHOW_MAKER ? [] : ["/maker", "/maker/trace", "/maker/color"]),
 ];
 
 /** 보유 인증·등록 (회사소개서 03. 인증 및 등록 현황) */

@@ -133,7 +133,8 @@ export type Outline = {
  * em 안에서 글자가 차지하는 비율이 달라, em 으로 맞추면 견적서의 «글자 높이» 와 어긋납니다.
  * 글자를 **한 자씩** 놓습니다 — 한 덩이로 뽑으면 글자별로 색·위치를 못 바꿉니다.
  */
-export function layoutLines(font: Font, lines: TextLine[], gap = 0.35): Outline {
+export function layoutLines(font: Font, lines: TextLine[], gap = 0.35, vertical = false): Outline {
+  if (vertical) return layoutVertical(font, lines);
   const U = 1000;
   const f = (n: number) => (Math.round(n * 100) / 100).toString();
   type Raw = { ch: string; cmds: PathCommand[]; b: { x1: number; y1: number; x2: number; y2: number } };
@@ -192,6 +193,68 @@ export function layoutLines(font: Font, lines: TextLine[], gap = 0.35): Outline 
     y += l.h + (k < built.length - 1 ? l.gapMm : 0);
   });
   return { d, w: W, h: y, lines: boxes, glyphs, missing };
+}
+
+/**
+ * 세로쓰기 (2026-09-26) — 줄마다 세로 단 하나, **첫 줄이 오른쪽**(한글 세로쓰기 관례). 돌출 판·현판·세로 간판용입니다.
+ * 축척은 가로쓰기와 같은 약속입니다: 그 줄에서 가장 높은 글자의 잉크 높이 = `heightMm`. 글자는 단 가운데에 세우고,
+ * 글자 사이는 글자 높이의 0.18 배 + 자간(em 의 1/1000 을 글자 높이에 곱한 값)입니다. 단 사이는 글자 높이의 0.45 배.
+ * 한글 음절은 세로로 세워도 모양이 같아 글리프를 돌리지 않습니다. ⚠️ 영문·숫자도 안 돌립니다(세워 쌓습니다).
+ */
+function layoutVertical(font: Font, lines: TextLine[]): Outline {
+  const U = 1000;
+  const f = (n: number) => (Math.round(n * 100) / 100).toString();
+  let gi = 0;
+  const cols = lines
+    .map((l, li) => ({ l, li }))
+    .filter(({ l }) => l.text.trim())
+    .map(({ l, li }) => {
+      const raws = [...l.text]
+        .filter((ch) => ch.trim())
+        .map((ch) => {
+          const p = font.charToGlyph(ch).getPath(0, 0, U);
+          return { ch, cmds: p.commands as PathCommand[], b: p.getBoundingBox() };
+        })
+        .filter((r) => r.b.x2 > r.b.x1);
+      if (!raws.length) return null;
+      const s = l.heightMm / Math.max(1e-6, Math.max(...raws.map((r) => r.b.y2 - r.b.y1)));
+      const gapMm = l.heightMm * 0.18 + (l.tracking / 1000) * l.heightMm;
+      const colW = Math.max(...raws.map((r) => (r.b.x2 - r.b.x1) * s));
+      const colH = raws.reduce((a, r) => a + (r.b.y2 - r.b.y1) * s, 0) + gapMm * (raws.length - 1);
+      return { li, raws, s, gapMm, colW, colH, sep: l.heightMm * 0.45 };
+    })
+    .filter((v): v is NonNullable<typeof v> => !!v);
+
+  const missing = [...new Set(lines.flatMap((l) => [...l.text].filter((ch) => ch.trim() && font.charToGlyphIndex(ch) === 0)))];
+  const W = cols.reduce((a, c, k) => a + c.colW + (k < cols.length - 1 ? c.sep : 0), 0);
+  const H = Math.max(0, ...cols.map((c) => c.colH));
+  let right = W, d = "";
+  const boxes: Outline["lines"] = [];
+  const glyphs: Glyph[] = [];
+  // 첫 줄이 오른쪽 단 — 오른쪽 끝에서 왼쪽으로 채웁니다
+  for (const c of cols) {
+    const x0col = right - c.colW;
+    let y = 0;
+    for (const r of c.raws) {
+      const gw = (r.b.x2 - r.b.x1) * c.s, gh = (r.b.y2 - r.b.y1) * c.s;
+      const ox = x0col + (c.colW - gw) / 2;
+      const tx = (x: number) => ox + (x - r.b.x1) * c.s;
+      const ty = (yy: number) => y + (yy - r.b.y1) * c.s;
+      let gd = "";
+      for (const m of r.cmds) {
+        if (m.type === "M" || m.type === "L") gd += `${m.type}${f(tx(m.x))},${f(ty(m.y))}`;
+        else if (m.type === "C") gd += `C${f(tx(m.x1))},${f(ty(m.y1))} ${f(tx(m.x2))},${f(ty(m.y2))} ${f(tx(m.x))},${f(ty(m.y))}`;
+        else if (m.type === "Q") gd += `Q${f(tx(m.x1))},${f(ty(m.y1))} ${f(tx(m.x))},${f(ty(m.y))}`;
+        else gd += "Z";
+      }
+      d += gd;
+      glyphs.push({ i: gi++, ch: r.ch, line: c.li, d: gd, x0: ox, y0: y, w: gw, h: gh });
+      y += gh + c.gapMm;
+    }
+    boxes.push({ x0: x0col, y0: 0, w: c.colW, h: c.colH });
+    right = x0col - c.sep;
+  }
+  return { d, w: W, h: H, lines: boxes, glyphs, missing };
 }
 
 /**

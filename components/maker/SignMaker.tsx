@@ -9,21 +9,29 @@ import {
   boardColors,
   faceColors,
   INCOMING_LOGO_KEY,
+  INCOMING_PALETTE_KEY,
   ledColors,
   MAKER_GESTURE_HINT_KEY,
   MAKER_HELP_EVENT,
   MAKER_PHONE_QUERY,
   MAKER_STORAGE_KEY,
   makerKinds,
+  makerProKey,
   MAKER_SHARE_MAX_BYTES,
   makerTour,
   makerTourKey,
   makerTourPhone,
+  MESH_SIZES,
   PINCH_SNAP_DEG,
+  plateColors,
+  plateMounts,
+  plateShapes,
+  refStyles,
   sideColors,
   trimColors,
   wallColors,
   walls,
+  type RefStyle,
   type TourStep,
 } from "@/config/maker";
 import {
@@ -33,6 +41,7 @@ import {
   fabricationSvg,
   fmtMm,
   inkOn,
+  isSign,
   judgeItem,
   kindOf,
   LEVEL_LABEL,
@@ -44,14 +53,18 @@ import {
   type Design,
   type FontRef,
   type GlyphOv,
+  type GlyphPath,
   type Item,
   type Level,
   type LogoItem,
   type Measured,
   type Note,
   type Placed,
+  type PlateItem,
   type TextItem,
 } from "@/lib/maker/design";
+import { takeForEditor } from "@/lib/maker/handoff";
+import { pickSpots, readLabel, skyShare, suggestCombos, toneOn, type Combo } from "@/lib/maker/palette";
 import { fabCheck, type FabResult } from "@/lib/maker/fab";
 import {
   fontDisplayName,
@@ -63,7 +76,31 @@ import {
   type LocalFont,
   type Outline,
 } from "@/lib/maker/fonts";
-import { apply, homography, mapPath, mul, rotateAt, scaleAt, translate, type Affine, type Pt } from "@/lib/maker/geom";
+import {
+  apply,
+  homography,
+  invert,
+  linkedNodes,
+  mapPath,
+  meshMap,
+  meshNew,
+  meshNode,
+  mul,
+  nodesOf,
+  parsePath,
+  platePath,
+  rectPath,
+  rotateAt,
+  scaleXYAt,
+  serializePath,
+  skewXAt,
+  subdivide,
+  translate,
+  type Affine,
+  type Box,
+  type Mesh,
+  type Pt,
+} from "@/lib/maker/geom";
 import { bbox, imageDataOf, layersFromImage, toPathD, traceGray, type Contour } from "@/lib/maker/trace";
 import { createMakerShare, deleteMakerShare, listMakerShares, type ShareItem } from "@/app/admin/maker/actions";
 
@@ -111,11 +148,88 @@ function loadDraft(mode: "admin" | "customer"): Design {
   return defaultDesign();
 }
 
-/** 글자 한 자의 꾸밈 → 아핀 (글자 중심 기준 크기·회전 뒤 이동) */
+/**
+ * 글자 한 자의 꾸밈 → 아핀 (글자 중심 기준 크기·회전 뒤 이동).
+ * PRO(2026-09-26) 칸이 둘 붙었습니다 — 가로·세로 따로 늘리기(`sx`·`sy`)와 기울이기(`skew`). 순서는
+ * 늘리기 → 기울이기 → 회전 → 이동 이라 «기울인 뒤 돌린» 모양이 됩니다(글자를 먼저 눕혀 놓고 돌리는 것과 같음).
+ */
 function glyphAffine(g: { x0: number; y0: number; w: number; h: number }, ov?: GlyphOv): Affine | null {
-  if (!ov || (!ov.dx && !ov.dy && (ov.scale ?? 1) === 1 && !ov.rot)) return null;
+  if (!ov) return null;
+  const k = ov.scale ?? 1, sx = (ov.sx ?? 1) * k, sy = (ov.sy ?? 1) * k;
+  if (!ov.dx && !ov.dy && sx === 1 && sy === 1 && !ov.rot && !ov.skew) return null;
   const cx = g.x0 + g.w / 2, cy = g.y0 + g.h / 2;
-  return mul(translate(ov.dx ?? 0, ov.dy ?? 0), mul(rotateAt(ov.rot ?? 0, cx, cy), scaleAt(ov.scale ?? 1, cx, cy)));
+  return mul(translate(ov.dx ?? 0, ov.dy ?? 0), mul(rotateAt(ov.rot ?? 0, cx, cy), mul(skewXAt(ov.skew ?? 0, cy), scaleXYAt(sx, sy, cx, cy))));
+}
+
+type GlyphBox = Outline["glyphs"][number];
+
+/**
+ * 글자 한 자가 벽에 가기까지의 사슬 (PRO, F26-g). 아이템 좌표로:
+ *   고친 외곽(편집 공간) → `pre`(지금 글자 상자로 늘림) → 격자 왜곡 `M` → 꾸밈 아핀 `A`  =  `post(pre(p))`
+ * 그 뒤에 아이템 전체의 격자 왜곡과 회전·원근이 붙습니다(`toWorldOf`). 점 편집·격자 손잡이는 이 사슬을 거꾸로 짚습니다(`invert`).
+ */
+function glyphChain(g: GlyphBox, ov?: GlyphOv) {
+  const edit = ov?.path && ov.path.ch === g.ch ? ov.path : null;
+  const pre = edit ? (p: Pt): Pt => [g.x0 + (p[0] * g.w) / Math.max(1e-6, edit.w), g.y0 + (p[1] * g.h) / Math.max(1e-6, edit.h)] : (p: Pt) => p;
+  const box: Box = { x0: g.x0, y0: g.y0, w: g.w, h: g.h };
+  const M = meshMap(box, ov?.mesh);
+  const A = glyphAffine(g, ov);
+  const post = (p: Pt): Pt => (A ? apply(A, M(p)) : M(p));
+  return { d0: edit ? edit.d : g.d, edit, pre, post, box, A };
+}
+
+/** 고친 적 없는 글자를 편집 공간으로 옮겨 «고칠 외곽»을 만듭니다 — 상자 왼쪽 위가 0,0 */
+const editPathOf = (g: GlyphBox, ov?: GlyphOv): GlyphPath =>
+  ov?.path && ov.path.ch === g.ch ? ov.path : { d: mapPath(g.d, (p) => [p[0] - g.x0, p[1] - g.y0]), ch: g.ch, w: g.w, h: g.h };
+
+/** 아이템 좌표(왼쪽 위 0,0 · mm) → 벽 좌표. 회전 또는 네 점 원근 — 무대 그림·PRO 되짚기가 같은 함수를 씁니다 */
+function toWorldOf(it: Item, w: number, h: number): (p: Pt) => Pt {
+  const rect: Pt[] = [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]];
+  const H = it.warp && it.warp.length === 4 ? homography(rect, it.warp as Pt[]) : null;
+  const R = rotateAt(it.rot ?? 0, 0, 0);
+  return (p: Pt): Pt => {
+    const c: Pt = [p[0] - w / 2, p[1] - h / 2];
+    const q = H ? H(c) : apply(R, c);
+    return [q[0] + it.x, q[1] + it.y];
+  };
+}
+
+/**
+ * 판을 다는 철물 (아이템 좌표, 벽이 왼쪽 기준 — 오른쪽이면 좌우를 뒤집습니다).
+ * 돌출(T6): 벽 받침 + 까치발 둘 · 걸이(T8): 벽 받침 + 가로 팔 + 봉 둘. 치수는 그림용 어림입니다(제작 도면 아님).
+ */
+function plateHardware(it: PlateItem): string[] {
+  const { w, h } = it;
+  const out: string[] = [];
+  if (it.mount === "blade") {
+    const arm = 130, t = Math.max(18, Math.min(34, h * 0.03));
+    out.push(rectPath(-arm - 40, h * 0.08, 40, h * 0.84));
+    const ys = h < 320 ? [h / 2] : [h * 0.2, h * 0.8];
+    for (const y of ys) out.push(rectPath(-arm, y - t / 2, arm + 12, t));
+  } else if (it.mount === "hang") {
+    const drop = Math.max(160, h * 0.28), reach = 220;
+    out.push(rectPath(-reach - 40, -drop - 120, 40, 240));
+    out.push(rectPath(-reach, -drop - 22, reach + w * 0.92, 44));
+    for (const x of [w * 0.2, w * 0.8]) out.push(rectPath(x - 8, -drop, 16, drop + 12));
+  }
+  return it.side === "right" ? out.map((d) => mapPath(d, (p) => [w - p[0], p[1]])) : out;
+}
+
+/**
+ * 점 정리(PRO) 의 해상도·허용 오차. 로고 따기 기본값(1,200px · 0.55px)을 글자 한 자에 쓰면 너무 촘촘하게 맞춰
+ * **점이 오히려 늘었습니다**(2026-09-26 실측: 고운바탕 «나» 91 → 185). 글자 높이를 이 픽셀로 칠하고 이 오차로 맞춥니다.
+ * 고른 값(같은 날 다섯 쌍을 재 봄, 고운바탕 «수·나·자»): 520/0.55 → 201·185·219 · 300/0.8 → 103·92·131 · **160/1.5 → 68·61·83** ·
+ * 120/1.8 → 61·51·71. 160/1.5 에서 여섯 글자를 원본과 나란히 놓고 봐도 모양 차이가 눈에 안 띄었습니다. 120/1.8 은 점이 더 적지만 모양을 눈으로 확인하지 않아 안 갔습니다.
+ * ⚠️ 바탕체는 세리프 모서리마다 기준점이 서서 **절반 가까이까지만** 줄어듭니다(고딕은 더 줄어듭니다).
+ */
+const SIMPLIFY_PX = 160;
+const SIMPLIFY_TOL = 1.5;
+
+/** 모양이 «바뀌었나» 를 싸게 가르는 해시 — 점 하나를 옮겨도 문자열 길이는 같을 수 있습니다 */
+function hashStr(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
 }
 
 export default function SignMaker({ mode, initial, share }: { mode: Mode; initial?: unknown; share?: ShareInfo }) {
@@ -270,7 +384,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     let alive = true;
     for (const it of d.items) {
       if (it.type !== "text") continue;
-      const key = JSON.stringify([it.lines, it.font]);
+      const key = JSON.stringify([it.lines, it.font, !!it.vertical]);
       if (texts.get(it.id)?.key === key) continue;
       (async () => {
         try {
@@ -289,7 +403,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
             if (!b) throw new Error("올린 글꼴 파일이 이 탭에 없습니다 — 다시 올려 주세요");
             font = await loadFontBlob(f.key, b);
           }
-          const outline = layoutLines(font, it.lines);
+          const outline = layoutLines(font, it.lines, 0.35, !!it.vertical);
           if (!alive) return;
           setTexts((m) => new Map(m).set(it.id, { key, outline, fontName: f.src === "lib" ? fontLabel(f) : fontDisplayName(font) }));
           setFontErr((m) => {
@@ -314,6 +428,8 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     for (const it of d.items) {
       if (it.type === "patch") {
         m.set(it.id, { size: { w: it.w, h: it.h }, paths: [{ d: `M0,0L${it.w},0L${it.w},${it.h}L0,${it.h}Z`, color: it.color }], glyphBoxes: {}, letterH: 0 });
+      } else if (it.type === "plate") {
+        m.set(it.id, { size: { w: it.w, h: it.h }, paths: [{ d: platePath(it.shape, it.w, it.h), color: it.fill }], glyphBoxes: {}, letterH: Math.min(it.w, it.h) * 0.3 });
       } else if (it.type === "logo") {
         const k = it.w / Math.max(1, it.srcW);
         m.set(it.id, {
@@ -326,12 +442,15 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         const t = texts.get(it.id);
         if (!t) continue;
         const glyphBoxes: Record<number, Pt[]> = {};
+        // PRO — 글자 전체 격자 왜곡은 글자 한 자의 꾸밈 «뒤»에 먹입니다(아이템 상자 기준)
+        const IM = meshMap({ x0: 0, y0: 0, w: t.outline.w, h: t.outline.h }, it.mesh);
         const paths: RPath[] = t.outline.glyphs.map((g) => {
           const ov = it.glyphs?.[g.i];
-          const A = glyphAffine(g, ov);
+          const ch = glyphChain(g, ov);
           const corners: Pt[] = [[g.x0, g.y0], [g.x0 + g.w, g.y0], [g.x0 + g.w, g.y0 + g.h], [g.x0, g.y0 + g.h]];
-          glyphBoxes[g.i] = A ? corners.map((c) => apply(A, c)) : corners;
-          return { d: A ? mapPath(g.d, (p) => apply(A, p)) : g.d, color: ov?.color ?? it.face, glyph: g.i };
+          glyphBoxes[g.i] = corners.map((c) => IM(ch.post(c)));
+          const plain = !ch.edit && !ov?.mesh && !ch.A && !it.mesh;
+          return { d: plain ? g.d : mapPath(ch.d0, (p) => IM(ch.post(ch.pre(p)))), color: ov?.color ?? it.face, glyph: g.i };
         });
         m.set(it.id, { size: { w: t.outline.w, h: t.outline.h }, paths, glyphBoxes, lines: t.outline.lines, letterH: Math.max(...it.lines.map((l) => l.heightMm)) });
       }
@@ -346,14 +465,8 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         const L = locals.get(it.id);
         if (!L) return [];
         const { w, h } = L.size;
-        const rect: Pt[] = [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]];
-        const H = it.warp && it.warp.length === 4 ? homography(rect, it.warp as Pt[]) : null;
-        const R = rotateAt(it.rot ?? 0, 0, 0);
-        const toWorld = (p: Pt): Pt => {
-          const c: Pt = [p[0] - w / 2, p[1] - h / 2];
-          const q = H ? H(c) : apply(R, c);
-          return [q[0] + it.x, q[1] + it.y];
-        };
+        const toWorld = toWorldOf(it, w, h);
+        const H = it.warp && it.warp.length === 4;
         const bars: Pt[][] = [];
         if (it.type === "text" && d.bar && (kind.lit === "front" || kind.lit === "both") && L.lines)
           for (const lb of L.lines) {
@@ -377,6 +490,10 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
             bars,
             glyphQuads,
             warped: !!H || !!it.rot,
+            plate:
+              it.type === "plate"
+                ? { fill: it.fill, border: it.border || undefined, borderW: it.border ? (it.borderMm ?? 30) : 0, hardware: plateHardware(it).map((hd) => mapPath(hd, toWorld)) }
+                : undefined,
           },
         ];
       }),
@@ -386,7 +503,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
   /** 바탕판 (T5) — 글자 폭을 먼저 재고 판을 거기 맞춥니다(SIGNTYPES.md §8-3 «바탕판을 먼저 정하지 마라») */
   const board = useMemo(() => {
     if (!kind.backboard) return null;
-    const s = ritems.filter((q) => q.type !== "patch");
+    const s = ritems.filter((q) => q.type === "text" || q.type === "logo");
     if (!s.length) return null;
     const xs = s.flatMap((q) => q.quad.map((v) => v[0])), ys = s.flatMap((q) => q.quad.map((v) => v[1]));
     const lh = Math.max(200, ...s.map((q) => q.letterH));
@@ -405,17 +522,17 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
   /* ---------------------------------------------------------- 판정 (조금 늦게 — 모양이 바뀐 것만) */
   const [fabs, setFabs] = useState<Map<string, FabResult | null>>(new Map());
   const fabKey = d.items
-    .filter((it) => it.type !== "patch")
+    .filter(isSign)
     .map((it) => {
       const L = locals.get(it.id);
-      return `${it.id}:${L?.size.w.toFixed(0)}x${L?.size.h.toFixed(0)}:${L?.paths.reduce((s, q) => s + q.d.length, 0)}`;
+      return `${it.id}:${L?.size.w.toFixed(0)}x${L?.size.h.toFixed(0)}:${hashStr(L?.paths.map((q) => q.d).join("") ?? "")}`;
     })
     .join("|");
   useEffect(() => {
     const t = setTimeout(() => {
       const m = new Map<string, FabResult | null>();
       for (const it of d.items) {
-        if (it.type === "patch") continue;
+        if (!isSign(it)) continue;
         const L = locals.get(it.id);
         if (!L || !L.paths.length) continue;
         m.set(it.id, fabCheck(L.paths.map((q) => q.d).join(""), { x0: 0, y0: 0, w: L.size.w, h: L.size.h }, 1));
@@ -429,7 +546,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
   const notes = useMemo(() => {
     const m = new Map<string, Note[]>();
     for (const it of d.items) {
-      if (it.type === "patch") continue;
+      if (!isSign(it)) continue;
       const t = it.type === "text" ? texts.get(it.id) : null;
       const minLetter = it.type === "text" ? Math.min(...it.lines.map((l) => l.heightMm)) : (it.letterMm ?? locals.get(it.id)?.size.h);
       const n = judgeItem(it, kind, fabs.get(it.id) ?? null, { minLetterMm: minLetter, missing: t?.outline.missing });
@@ -459,9 +576,17 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     const im = new Image();
     im.src = url;
     await im.decode();
-    setPhoto({ url, w: im.naturalWidth, h: im.naturalHeight });
+    photoFile.current = file;
+    placePhoto(url, im.naturalWidth, im.naturalHeight);
+    // 건물 사진이 들어오면 색도 같이 뽑습니다(사람 요청 «건물을 넣으면 퍼스널 색을 뽑게») — 사진은 이 탭 밖으로 안 나갑니다
+    pickPalette(file);
+  }
+
+  /** 사진을 벽으로 — 올린 파일이든 «건물 색 찾기»에서 넘어온 것이든 같은 길 */
+  function placePhoto(url: string, w: number, h: number) {
+    setPhoto({ url, w, h });
     // 처음엔 «사진 가로 = 8m» 로 어림합니다 — 축척 보정(십자선) 전까지는 어림입니다
-    const W = 8000, Hh = (W * im.naturalHeight) / im.naturalWidth;
+    const W = 8000, Hh = (W * h) / Math.max(1, w);
     commit((p) => ({ ...p, wall: "photo", grid: false, wallW: W, wallH: Hh, items: p.items.map((it) => ({ ...it, x: (it.x * W) / p.wallW, y: (it.y * Hh) / p.wallH })) }));
     fit(W, Hh);
     setCalib({});
@@ -492,7 +617,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       ...s.map((it) => {
         const r = ritems.find((q) => q.id === it.id);
         if (r) return Math.max(...r.quad.map((v) => v[1]));
-        const hh = it.type === "text" ? it.lines.reduce((a, l) => a + l.heightMm * 1.35, 0) : 0;
+        const hh = it.type === "text" ? it.lines.reduce((a, l) => a + l.heightMm * 1.35, 0) : it.type === "plate" ? it.h : 0;
         return it.y + hh / 2;
       }),
     );
@@ -521,6 +646,116 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     select(it.id);
   }
 
+  /* ---------------------------------------------------------- 판 · 레퍼런스 스타일 (2026-09-26) */
+  function addPlate() {
+    const it: PlateItem = { id: newId(), type: "plate", shape: "rect", mount: "wall", side: "left", fill: "#1b1d1c", border: "", borderMm: 30, w: 1600, h: 500, x: d.wallW / 2, y: freeY(500) };
+    commit((p) => ({ ...p, items: [...p.items, it] }));
+    select(it.id);
+  }
+
+  /**
+   * 레퍼런스 스타일 한 벌을 차립니다. 지금 벽의 **글자·판을 이 스타일로 바꾸고**(로고·가리기 판은 둡니다), 상호는 첫 글자 줄에서 가져옵니다.
+   * 판 크기는 상호 글자 수에 맞춰 늘립니다(판이 글자보다 작으면 글자가 판 밖으로 나갑니다). 되돌리기 한 번이면 전으로 갑니다.
+   */
+  function applyStyle(s: RefStyle) {
+    const t0 = d.items.find((x): x is TextItem => x.type === "text");
+    const name = t0?.lines[0]?.text.trim() || "가게 이름";
+    const sub = t0?.lines[1]?.text.trim() || "업종 · 전화";
+    const n = [...name.replace(/\s/g, "")].length;
+    const H = s.text.heightMm, tr = (s.text.tracking ?? 0) / 1000;
+    const cx = d.wallW / 2, cy = d.wallH * 0.42;
+    const lines = [{ text: name, heightMm: H, tracking: s.text.tracking ?? 0 }];
+    if (s.subRatio) lines.push({ text: sub, heightMm: Math.max(50, Math.round((H * s.subRatio) / 5) * 5), tracking: 0 });
+    const face = s.tone && d.palette?.length ? toneOn(d.palette[0]) : s.text.face;
+    const items: Item[] = [];
+    if (s.plate) {
+      let { w, h } = s.plate;
+      if (s.text.vertical) h = Math.max(h, n * H * 1.2 + H * 1.1);
+      else w = Math.max(w, n * H * (1.02 + tr) + H * (s.plate.shape === "oval" ? 2.2 : 1.4));
+      if (s.subRatio && !s.text.vertical) h = Math.max(h, H * (1 + s.subRatio) + H * 1.3);
+      items.push({ id: newId(), type: "plate", shape: s.plate.shape, mount: s.plate.mount, side: "left", fill: s.plate.fill, border: s.plate.border ?? "", borderMm: s.plate.borderMm ?? 30, w: Math.round(w), h: Math.round(h), x: cx, y: cy });
+    }
+    const text: TextItem = { id: newId(), type: "text", lines, font: { src: "lib", slug: s.text.font }, face, vertical: s.text.vertical, x: cx, y: cy };
+    items.push(text);
+    commit((p) => ({ ...p, kind: s.kind, depth: undefined, items: [...p.items.filter((x) => x.type === "logo" || x.type === "patch"), ...items] }));
+    select(text.id);
+  }
+
+  /* ---------------------------------------------------------- 건물 색 (퍼스널 컬러, F26-f) */
+  const photoFile = useRef<File | null>(null);
+  /** 뽑은 색마다 사진에서 차지한 비율 — 디자인에는 색 값만 남기고 비율은 이 탭에만 둡니다 */
+  const [palShare, setPalShare] = useState<number[]>([]);
+  /** 하늘로 보고 뺀 부분(사진의 %) — 화면에 알립니다(조용히 빼면 «색이 왜 이것뿐?» 이 됩니다) */
+  const [skyCut, setSkyCut] = useState(0);
+
+  async function pickPalette(file?: File | null) {
+    const src = file ?? photoFile.current;
+    if (!src) return;
+    setErr("");
+    try {
+      const img = await imageDataOf(src, 600);
+      // «건물 색 찾기»(F26-h)와 같은 자로 뽑습니다 — 하늘은 사진 위 가장자리에 이어진 덩어리만 빼고(흰 타일 벽을 하늘로 빼던
+      // 옛 방식 `extractPalette` 의 고장), 사진 아래 바닥·도로는 비중을 낮춥니다. 두 화면이 다른 색을 말하면 안 됩니다
+      const sw = pickSpots(img, 6, "area", true);
+      if (!sw.length) return setErr("사진에서 건물 색을 뽑지 못했습니다 — 건물 벽이 크게 나온 사진으로 해 보세요.");
+      setPalShare(sw.map((s) => s.share));
+      setSkyCut(Math.round(skyShare(img) * 100));
+      commit((p) => ({ ...p, palette: sw.map((s) => s.hex) }));
+    } catch (e) {
+      setErr(`사진을 읽지 못했습니다: ${(e as Error).message}`);
+    }
+  }
+
+  const combos: Combo[] = useMemo(() => suggestCombos((d.palette ?? []).map((hex, i) => ({ hex, share: palShare[i] ?? 0 }))), [d.palette, palShare]);
+
+  /** 뽑은 색 하나 — 고른 것에 입힙니다(글자면 앞면 · 판이면 판 색). 아무것도 안 골랐으면 벽 색으로 */
+  function pickSwatch(hex: string) {
+    if (sel?.type === "text") return setItem(sel.id, { face: hex });
+    if (sel?.type === "plate") return setItem(sel.id, { fill: hex });
+    if (d.wall !== "photo") pickWall("color", hex);
+  }
+
+  /** 조합 하나 — 글자(고른 글자, 없으면 전부)에 글자 색, 판에 바탕 색. 판이 없으면 벽을 그 색으로(사진 벽이면 그대로) */
+  function applyCombo(c: Combo) {
+    const target = sel?.type === "text" ? sel.id : null;
+    commit((p) => {
+      const hasPlate = p.items.some((x) => x.type === "plate");
+      const items = p.items.map((it) => {
+        if (it.type === "text" && (!target || it.id === target)) return { ...it, face: c.face };
+        if (it.type === "plate" && c.key !== "bare") return { ...it, fill: c.bg };
+        return it;
+      });
+      const wallTo = (!hasPlate || c.key === "bare") && p.wall !== "photo" ? { wall: "color", wallColor: c.bg } : {};
+      return { ...p, ...wallTo, items };
+    });
+  }
+
+  /* ---------------------------------------------------------- PRO 모드 (F26-g) */
+  const [pro, setPro] = useState(() => {
+    if (mode === "view") return false;
+    try {
+      return localStorage.getItem(makerProKey(mode)) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [proTool, setProTool] = useState<"glyph" | "points" | "mesh">("glyph");
+  const [meshScope, setMeshScope] = useState<"glyph" | "item">("glyph");
+  const [meshN, setMeshN] = useState(2);
+  /** 점 편집 — 마지막으로 잡은 기준점(이 점의 조절점만 보입니다). `key` 가 지금 «아이템:글자» 와 다르면 없는 것으로 봅니다 */
+  const [activeNode, setActiveNode] = useState<{ key: string; i: number } | null>(null);
+  const setProOn = (v: boolean) => {
+    if (mode === "view") return;
+    setPro(v);
+    setWarpMode(false);
+    if (!v) setProTool("glyph");
+    try {
+      localStorage.setItem(makerProKey(mode), v ? "1" : "0");
+    } catch {
+      /* 저장소가 막힘 — 이번 탭에서만 켜집니다 */
+    }
+  };
+
   // 로고는 비동기(파일 읽기·SVG 따기에서 건너옴)로 들어와서, 그 순간의 «빈자리» 계산을 참조로 건넵니다
   const freeYRef = useRef<((h: number) => number) | null>(null);
   useEffect(() => {
@@ -536,6 +771,38 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       return { past: [...hh.past, p], now: { ...p, items: [...p.items, it] }, future: [] };
     });
     setSelected(id);
+  }, []);
+
+  // «건물 색 찾기»(F26-h)에서 넘어온 사진·색 받기 — 사진은 같은 탭 안의 메모리로만, 색은 저장소로도 건너옵니다
+  useEffect(() => {
+    if (mode === "view") return;
+    const h = takeForEditor();
+    let pal: string[] | null = h?.palette ?? null;
+    try {
+      const raw = localStorage.getItem(INCOMING_PALETTE_KEY);
+      if (raw) {
+        localStorage.removeItem(INCOMING_PALETTE_KEY);
+        pal = pal ?? (JSON.parse(raw) as string[]);
+      }
+    } catch {
+      /* 저장소가 막힘 — 같은 탭 안에서 넘어온 값만 씁니다 */
+    }
+    if (h?.photo) {
+      const ph = h.photo;
+      placePhoto(ph.url, ph.w, ph.h);
+      // «가게 사진에서 뽑기» 가 다시 쓸 수 있게 파일로도 들고 있습니다(blob: 주소는 같은 문서라 열립니다)
+      fetch(ph.url)
+        .then((r) => r.blob())
+        .then((b) => (photoFile.current = new File([b], ph.name, { type: b.type })))
+        .catch(() => {});
+    }
+    if (pal?.length) {
+      const got = pal;
+      setPalShare([]);
+      setSkyCut(0);
+      commit((p) => ({ ...p, palette: got }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 처음 한 번만(넘어온 것을 꺼내 비웁니다)
   }, []);
 
   // «SVG 따기» 에서 보낸 로고 받기 — 같은 브라우저 안의 저장소로만 건너옵니다
@@ -730,6 +997,143 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     endGesture(done);
   }
 
+  /* ---------------------------------------------------------- PRO — 끌기 (무대는 벽 좌표만 줍니다 · 여기서 되짚습니다) */
+
+  /** 고른 글자 아이템의 «아이템 좌표 → 벽» 사슬 (글자 전체 격자 왜곡 포함) */
+  function itemChain(it: TextItem) {
+    const t = texts.get(it.id), L = locals.get(it.id);
+    if (!t || !L) return null;
+    const box: Box = { x0: 0, y0: 0, w: L.size.w, h: L.size.h };
+    const W = toWorldOf(it, L.size.w, L.size.h);
+    const IM = meshMap(box, it.mesh);
+    return { t, L, box, W, IM, F: (p: Pt) => W(IM(p)) };
+  }
+
+  /** 글자 한 자 끌기 — 끈 거리를 «꾸밈 전» 좌표로 되짚어 dx·dy 에 더합니다(회전·원근·격자가 걸려 있어도 손을 따라옵니다) */
+  function onGlyphDrag(id: string, gi: number, start: Pt, cur: Pt, done: boolean) {
+    const base = baseOf(id);
+    if (!base || base.type !== "text") return;
+    const c = itemChain(base);
+    if (!c) return;
+    const g = c.t.outline.glyphs.find((x) => x.i === gi);
+    const guess: Pt = g ? [g.x0 + g.w / 2, g.y0 + g.h / 2] : [c.box.w / 2, c.box.h / 2];
+    const a = invert(c.F, start, guess), b = invert(c.F, cur, guess);
+    // 눌렀다 뗐을 뿐이면(한 번도 안 움직였으면) 되돌리기 목록에 빈 칸을 쌓지 않습니다
+    if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 0.5 && !dragBase.current) {
+      if (done) endGesture(true);
+      return;
+    }
+    const ov = base.glyphs?.[gi] ?? {};
+    const next: GlyphOv = { ...ov, dx: Math.round((ov.dx ?? 0) + b[0] - a[0]), dy: Math.round((ov.dy ?? 0) + b[1] - a[1]) };
+    setItem(id, { glyphs: { ...(base.glyphs ?? {}), [gi]: next } }, !done);
+    endGesture(done);
+  }
+
+  /** 점 하나 끌기 — 편집 공간으로 되짚어 그 점(과 붙은 조절점·겹친 시작점)을 옮깁니다 */
+  function onNodeDrag(i: number, p: Pt, done: boolean) {
+    if (!selected || glyph === null) return;
+    const base = baseOf(selected);
+    if (!base || base.type !== "text") return;
+    const c = itemChain(base);
+    const g = c?.t.outline.glyphs.find((x) => x.i === glyph);
+    if (!c || !g) return;
+    const ov = base.glyphs?.[glyph];
+    const ep = editPathOf(g, ov);
+    const ch = glyphChain(g, ov);
+    const pre = (q: Pt): Pt => [g.x0 + (q[0] * g.w) / Math.max(1e-6, ep.w), g.y0 + (q[1] * g.h) / Math.max(1e-6, ep.h)];
+    const F = (q: Pt) => c.F(ch.post(pre(q)));
+    const segs = parsePath(ep.d);
+    const n = nodesOf(segs)[i];
+    if (!n) return;
+    const key = `${selected}:${glyph}`;
+    if (n.anchor && (activeNode?.key !== key || activeNode.i !== i)) setActiveNode({ key, i });
+    const from = segs[n.seg].p[n.pt];
+    const to = invert(F, p, from);
+    const dx = to[0] - from[0], dy = to[1] - from[1];
+    for (const k of linkedNodes(segs, n)) {
+      const q = segs[k.seg].p[k.pt];
+      segs[k.seg].p[k.pt] = [q[0] + dx, q[1] + dy];
+    }
+    setItem(selected, { glyphs: { ...(base.glyphs ?? {}), [glyph]: { ...ov, path: { ...ep, d: serializePath(segs) } } } }, !done);
+    endGesture(done);
+  }
+
+  /** 격자점 하나 끌기 — 이 글자(`meshScope = glyph`) 또는 글자 전체의 격자 */
+  function onMeshDrag(i: number, p: Pt, done: boolean) {
+    if (!selected) return;
+    const base = baseOf(selected);
+    if (!base || base.type !== "text") return;
+    const c = itemChain(base);
+    if (!c) return;
+    const setOff = (m: Mesh, box: Box, G: (q: Pt) => Pt): Mesh => {
+      const ii = i % (m.cols + 1), jj = Math.floor(i / (m.cols + 1));
+      const cur = meshNode(box, m, ii, jj);
+      const to = invert(G, p, cur);
+      const off = m.off.map((o) => [o[0], o[1]] as [number, number]);
+      off[i] = [(to[0] - (box.x0 + (ii / m.cols) * box.w)) / box.w, (to[1] - (box.y0 + (jj / m.rows) * box.h)) / box.h];
+      return { ...m, off };
+    };
+    if (meshScope === "item" || glyph === null) {
+      const m = base.mesh ?? meshNew(meshN);
+      setItem(selected, { mesh: setOff(m, c.box, c.W) }, !done);
+    } else {
+      const g = c.t.outline.glyphs.find((x) => x.i === glyph);
+      if (!g) return;
+      const ov = base.glyphs?.[glyph] ?? {};
+      const A = glyphAffine(g, ov);
+      const m = ov.mesh ?? meshNew(meshN);
+      const mesh = setOff(m, { x0: g.x0, y0: g.y0, w: g.w, h: g.h }, (q) => c.F(A ? apply(A, q) : q));
+      setItem(selected, { glyphs: { ...(base.glyphs ?? {}), [glyph]: { ...ov, mesh } } }, !done);
+    }
+    endGesture(done);
+  }
+
+  /** 점 나누기 — 고른 글자의 외곽 점을 두 배로 */
+  function subdivideGlyph() {
+    if (sel?.type !== "text" || glyph === null) return;
+    const g = texts.get(sel.id)?.outline.glyphs.find((x) => x.i === glyph);
+    if (!g) return;
+    const ov = sel.glyphs?.[glyph];
+    const ep = editPathOf(g, ov);
+    setGlyphOv(sel.id, glyph, { path: { ...ep, d: serializePath(subdivide(parsePath(ep.d))) } });
+  }
+
+  /**
+   * 점 정리 — 글자를 캔버스에 칠한 뒤 **로고 따기와 같은 벡터화기**(`traceGray`, vclean 을 옮긴 것)로 다시 땁니다.
+   * 🔴 왜: 바탕·붓 글꼴은 곡선을 잘게 쪼갠 점으로 저장돼 한 글자에 기준점이 수백 개입니다(2026-09-26 실측 — 고운바탕 «나» 를
+   * 305% 로 봐도 점 네모가 글자를 덮음). 코너를 살리고 곡선은 3차 베지어로 맞춰 **적은 점의 매끈한 외곽**이 됩니다. 모양은 거의 그대로입니다.
+   */
+  function simplifyGlyph() {
+    if (sel?.type !== "text" || glyph === null) return;
+    const g = texts.get(sel.id)?.outline.glyphs.find((x) => x.i === glyph);
+    if (!g) return;
+    const ov = sel.glyphs?.[glyph];
+    const ep = editPathOf(g, ov);
+    const k = SIMPLIFY_PX / Math.max(1, ep.h), pad = 12;
+    const cv = document.createElement("canvas");
+    cv.width = Math.ceil(ep.w * k) + pad * 2;
+    cv.height = Math.ceil(ep.h * k) + pad * 2;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(k, 0, 0, k, pad, pad);
+    ctx.fillStyle = "#000";
+    ctx.fill(new Path2D(ep.d), "evenodd");
+    const layer = layersFromImage(ctx.getImageData(0, 0, cv.width, cv.height), "ink")[0];
+    const cs = layer ? traceGray(layer.gray, { tol: SIMPLIFY_TOL }) : [];
+    if (!cs.length) return setErr("이 글자의 외곽을 다시 따지 못했습니다.");
+    setGlyphOv(sel.id, glyph, { path: { ...ep, d: toPathD(cs, 1 / k, -pad / k, -pad / k) } });
+  }
+
+  /** 격자 칸 수 바꾸기 — 그 범위의 격자를 새로 깝니다(이미 휜 모양은 풀립니다) */
+  function setMeshSize(n: number) {
+    setMeshN(n);
+    if (sel?.type !== "text") return;
+    if (meshScope === "item" || glyph === null) setItem(sel.id, { mesh: meshNew(n) });
+    else setGlyphOv(sel.id, glyph, { mesh: meshNew(n) });
+  }
+
   /* ---------------------------------------------------------- 내보내기 · 견적 */
   const sizes = useMemo(() => new Map(ritems.map((s) => [s.id, s.size])), [ritems]);
   const ledName = ledColors.find((l) => l.hex === d.led)?.name ?? d.led;
@@ -911,6 +1315,54 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
   /* ---------------------------------------------------------- 화면 */
   const sel = d.items.find((x) => x.id === selected) ?? null;
   const selText = sel?.type === "text" ? texts.get(sel.id) : null;
+
+  /** PRO — 무대에 띄울 점·조절선·격자 (벽 좌표). 끌면 `onNodeDrag`·`onMeshDrag` 가 같은 사슬을 거꾸로 짚습니다 */
+  const proOverlay = (() => {
+    if (!pro || viewOnly || sel?.type !== "text" || proTool === "glyph") return null;
+    const c = itemChain(sel);
+    if (!c) return null;
+    const g = glyph !== null ? c.t.outline.glyphs.find((x) => x.i === glyph) : undefined;
+    const ov = glyph !== null ? sel.glyphs?.[glyph] : undefined;
+    if (proTool === "points") {
+      if (!g) return null;
+      const ch = glyphChain(g, ov);
+      const F = (q: Pt) => c.F(ch.post(ch.pre(q)));
+      const segs = parsePath(ch.d0);
+      const nodes = nodesOf(segs);
+      // 조절점은 «잡은 기준점» 것만 — 일러스트레이터와 같은 약속. 다 띄우면 한 글자에 수백 개가 글자를 덮습니다
+      const act = activeNode && activeNode.key === `${sel.id}:${glyph}` && nodes[activeNode.i]?.anchor ? activeNode.i : null;
+      const vis = new Set<number>();
+      if (act !== null)
+        for (const k of linkedNodes(segs, nodes[act])) {
+          const idx = nodes.findIndex((n) => n.seg === k.seg && n.pt === k.pt);
+          if (idx >= 0) vis.add(idx);
+        }
+      const handles: [Pt, Pt][] = [];
+      let idx = 0, cur: Pt = [0, 0];
+      for (const s of segs) {
+        if (s.c === "C") {
+          if (vis.has(idx)) handles.push([F(cur), F(s.p[0])]);
+          if (vis.has(idx + 1)) handles.push([F(s.p[1]), F(s.p[2])]);
+        } else if (s.c === "Q" && vis.has(idx)) handles.push([F(cur), F(s.p[0])], [F(s.p[0]), F(s.p[1])]);
+        idx += s.p.length;
+        if (s.p.length) cur = s.p[s.p.length - 1];
+      }
+      return {
+        nodes: nodes.map((n, k) => ({ p: F(segs[n.seg].p[n.pt]), anchor: n.anchor, hidden: !n.anchor && !vis.has(k), on: k === act })),
+        handles,
+      };
+    }
+    const gb = meshScope === "glyph" && g ? g : null;
+    const m = gb ? (ov?.mesh ?? meshNew(meshN)) : (sel.mesh ?? meshNew(meshN));
+    const box: Box = gb ? { x0: gb.x0, y0: gb.y0, w: gb.w, h: gb.h } : c.box;
+    const A = gb ? glyphAffine(gb, ov) : null;
+    // 🔴 글자 전체 격자의 점은 «그 격자 자신»을 또 지나면 안 됩니다 — 움직인 점을 다시 휘어 두 번 먹고, 끈 거리보다
+    //    4~5배 멀리 튀었습니다(2026-09-26 실측). 글자 한 자 격자는 그 위에 글자 전체 격자가 얹히므로 `c.F` 가 맞습니다.
+    const G = gb ? (q: Pt) => c.F(A ? apply(A, q) : q) : c.W;
+    const pts: Pt[] = [];
+    for (let j = 0; j <= m.rows; j++) for (let i = 0; i <= m.cols; i++) pts.push(G(meshNode(box, m, i, j)));
+    return { nodes: [], handles: [], mesh: { pts, cols: m.cols, rows: m.rows } };
+  })();
   const zoomPct = Math.round(((d.wallW * 1.1) / view.w) * 100);
   const zoomBy = (f: number) => setView((v) => ({ x: v.x + (v.w - v.w * f) / 2, y: v.y + ((v.w - v.w * f) * (canvasPx.h / canvasPx.w)) / 2, w: v.w * f }));
 
@@ -1000,7 +1452,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       onGlyph={(id, g) => {
         setSelected(id);
         setGlyph(g);
-        if (phone) setTab("text"); // 폰 — 한 자 꾸밈 칸이 «글자» 시트에 있습니다
+        if (phone && !pro) setTab("text"); // 폰 — 한 자 꾸밈 칸이 «글자» 시트에 있습니다(PRO 는 벽에서 바로 끌므로 시트를 안 엽니다)
       }}
       onMove={(id, x, y, done) => setItem(id, { x, y }, !done)}
       onResize={onResize}
@@ -1008,6 +1460,11 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       onWarp={onWarp}
       onPinch={onPinch}
       onPinchStart={hint ? dismissHint : undefined}
+      glyphDrag={pro && !viewOnly}
+      onGlyphDrag={onGlyphDrag}
+      pro={proOverlay}
+      onNodeDrag={onNodeDrag}
+      onMeshDrag={onMeshDrag}
       onCalibPoint={(pt) => setCalib((c) => (!c ? c : !c.a || c.b ? { a: pt } : { a: c.a, b: pt }))}
     />
   );
@@ -1042,8 +1499,9 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
   /* ----- 칸들 — PC 는 왼쪽·오른쪽 칸에, 폰은 시트에 같은 것을 넣습니다 ----- */
   const addPanel = (
     <Panel title="넣기" tour="add">
-      <div className="grid grid-cols-3 gap-px bg-line">
+      <div className="grid grid-cols-2 gap-px bg-line">
         <AddBtn onClick={addText} label="글자" sub="가게 이름" />
+        <AddBtn onClick={addPlate} label="판" sub="현판·걸이·돌출" />
         <label className="flex cursor-pointer flex-col items-center gap-0.5 bg-white px-2 py-3 text-center hover:bg-brand-50">
           <span className="text-[14px] font-black">로고</span>
           <span className="text-[11px] text-ink-500">그림 올리기</span>
@@ -1051,7 +1509,173 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         </label>
         <AddBtn onClick={addPatch} label="가리기" sub="기존 간판 덮기" />
       </div>
-      <p className="mt-2 text-[12px] leading-relaxed text-ink-500">로고는 이 브라우저 안에서 선으로 바뀝니다. 선을 자세히 다듬으려면 왼쪽 «SVG 따기»로.</p>
+      <p className="mt-2 text-[12px] leading-relaxed text-ink-500">로고는 이 브라우저 안에서 선으로 바뀝니다. 선을 자세히 다듬으려면 왼쪽 «SVG 따기»로. 판은 늘 글자 뒤에 놓입니다.</p>
+    </Panel>
+  );
+
+  /** 레퍼런스 스타일 — 한 번 눌러 그 결로 차립니다(한국 가게 전면 레퍼런스에서 본 모양, 2026-09-26) */
+  const stylePanel = (
+    <Panel title="레퍼런스 스타일">
+      <ul className="space-y-1">
+        {refStyles.map((s) => (
+          <li key={s.key}>
+            <button type="button" onClick={() => applyStyle(s)} className="flex w-full items-center gap-2.5 px-1 py-1.5 text-left hover:bg-paper">
+              <StyleThumb s={s} tone={s.tone && d.palette?.length ? toneOn(d.palette[0]) : undefined} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-bold">{s.name}</span>
+                <span className="block text-[11px] leading-snug text-ink-500">{s.note}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[12px] leading-relaxed text-ink-500">누르면 벽의 글자·판을 그 모양으로 바꿉니다(로고는 그대로). 상호는 첫 글자 줄에서 가져옵니다. «되돌리기»(Ctrl+Z)로 전으로 갑니다.</p>
+    </Panel>
+  );
+
+  /** 건물 색 — 사진에서 뽑은 색과 간판 색 조합 (F26-f) */
+  const palettePanel = (
+    <Panel title="건물 색 · 간판 색 추천">
+      <p className="text-[12px] leading-relaxed text-ink-500">
+        건물 사진에서 색을 뽑아 그 색에 맞는 글자·판 색을 권해 드립니다. 사진은 이 브라우저 밖으로 나가지 않습니다.{" "}
+        {!viewOnly && (
+          <Link href={admin ? "/admin/maker/color" : "/maker/color"} className="font-bold text-brand-700 underline">
+            사진 속 자리까지 보며 고르기
+          </Link>
+        )}
+      </p>
+      <div className="mt-2 flex gap-1.5">
+        {photo && (
+          <button type="button" onClick={() => pickPalette()} className="flex-1 border border-line px-2 py-2 text-[12px] font-bold hover:bg-paper">
+            가게 사진에서 뽑기
+          </button>
+        )}
+        <label className="flex flex-1 cursor-pointer items-center justify-center border border-brand-700 px-2 py-2 text-[12px] font-bold text-brand-700 hover:bg-brand-50">
+          건물 사진으로 뽑기
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) pickPalette(f);
+            }}
+          />
+        </label>
+      </div>
+      {!!d.palette?.length && (
+        <>
+          <p className="mb-1 mt-3 text-[12px] font-bold text-ink-500">
+            뽑은 색 — 누르면 {sel?.type === "text" ? "고른 글자" : sel?.type === "plate" ? "고른 판" : "벽"}에 입힙니다{skyCut > 0 ? ` · 하늘로 보이는 부분(사진의 ${skyCut}%)은 뺐습니다` : ""}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {d.palette.map((hex, i) => (
+              <button key={hex + i} type="button" onClick={() => pickSwatch(hex)} title={hex} aria-label={`뽑은 색 ${hex}`} className="flex h-10 min-w-10 flex-col justify-end border border-line px-1 pb-0.5 text-[10px] font-bold" style={{ background: hex, color: inkOn(hex) }}>
+                {palShare[i] ? `${Math.round(palShare[i] * 100)}%` : ""}
+              </button>
+            ))}
+          </div>
+          <p className="mb-1 mt-3 text-[12px] font-bold text-ink-500">조합</p>
+          <ul className="space-y-1.5">
+            {combos.map((c) => (
+              <li key={c.key} className="flex items-center gap-2">
+                <span className="grid h-9 w-14 shrink-0 place-items-center border border-line text-[17px] font-black" style={{ background: c.bg, color: c.face }} aria-hidden="true">
+                  가
+                </span>
+                <span className="min-w-0 flex-1 text-[12px] leading-snug">
+                  <b className="block text-[13px]">{c.label}</b>
+                  <span className={c.ratio < 3 ? "text-accent-600" : "text-ink-500"}>
+                    대비 {c.ratio.toFixed(1)} · {readLabel(c.ratio)}
+                  </span>
+                </span>
+                <button type="button" onClick={() => applyCombo(c)} className="shrink-0 border border-brand-700 px-2.5 py-1.5 text-[12px] font-bold text-brand-700 hover:bg-brand-50">
+                  적용
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] leading-relaxed text-ink-500">
+            대비는 화면 글자 기준(WCAG)을 빌린 어림입니다 — 4.5 이상 «잘 읽힘», 3 이상 «큰 글자면 읽힘». 사진 색은 날씨·노출을 타서 실물과 다르고, 최종 색은 견본으로 정합니다.
+          </p>
+        </>
+      )}
+    </Panel>
+  );
+
+  /** PRO 글자 편집 — 상단 스위치로 켭니다 (F26-g) */
+  const proPanel = pro && !viewOnly && sel?.type === "text" && (
+    <Panel title="PRO 글자 편집">
+      <Seg
+        value={proTool}
+        onChange={(v) => setProTool(v as typeof proTool)}
+        options={[
+          { v: "glyph", label: "한 자 끌기" },
+          { v: "points", label: "점 편집" },
+          { v: "mesh", label: "격자 왜곡" },
+        ]}
+      />
+      <p className="mt-2 text-[12px] leading-relaxed text-ink-500">
+        {proTool === "glyph"
+          ? "벽 위 글자 한 자를 누르고 끌면 그 한 자만 옮겨집니다. Shift 를 누른 채 끌면 글자 전체가 옮겨집니다."
+          : proTool === "points"
+            ? glyph === null
+              ? "벽 위 글자 한 자를 누르세요. 그 글자의 점이 뜹니다 — 네모는 선이 지나는 점, 파란 동그라미는 곡선을 당기는 점입니다."
+              : "점을 끌어 모양을 바꿉니다. 점이 모자라면 «점 나누기»로 두 배로 늘립니다."
+            : "보라색 격자점을 끌면 그 안의 글자가 따라 휩니다. 글자 한 자만, 또는 글자 전체에 걸 수 있습니다."}
+      </p>
+      {proTool === "points" && glyph !== null && (
+        <div className="mt-2 space-y-1.5">
+          <p className="text-[12px] text-ink-500">
+            기준점 {proOverlay?.nodes.filter((n) => n.anchor).length ?? 0}개 — 너무 촘촘하면 «점 정리», 모자라면 «점 나누기». 확대(Ctrl+휠)하면 잡기 쉽습니다.
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button type="button" onClick={simplifyGlyph} className="border border-line px-2 py-2 text-[12px] font-bold hover:bg-paper">
+              점 정리 (적게·매끈)
+            </button>
+            <button type="button" onClick={subdivideGlyph} className="border border-line px-2 py-2 text-[12px] font-bold hover:bg-paper">
+              점 나누기 (×2)
+            </button>
+          </div>
+          {!!sel.glyphs?.[glyph]?.path && (
+            <button type="button" onClick={() => setGlyphOv(sel.id, glyph, { path: undefined })} className="w-full border border-line px-2 py-2 text-[12px] font-bold hover:bg-paper">
+              모양 처음대로
+            </button>
+          )}
+        </div>
+      )}
+      {proTool === "mesh" && (
+        <div className="mt-2 space-y-2">
+          <Seg
+            value={glyph === null ? "item" : meshScope}
+            onChange={(v) => setMeshScope(v as "glyph" | "item")}
+            options={[
+              { v: "glyph", label: glyph === null ? "한 자 (글자를 누르세요)" : "이 글자" },
+              { v: "item", label: "글자 전체" },
+            ]}
+          />
+          <div className="flex items-center gap-2 text-[12px]">
+            <span className="font-bold">칸</span>
+            <Seg value={String((meshScope === "glyph" && glyph !== null ? sel.glyphs?.[glyph]?.mesh?.cols : sel.mesh?.cols) ?? meshN)} onChange={(v) => setMeshSize(Number(v))} options={MESH_SIZES.map((n) => ({ v: String(n), label: `${n}×${n}` }))} />
+          </div>
+          <button
+            type="button"
+            onClick={() => (meshScope === "glyph" && glyph !== null ? setGlyphOv(sel.id, glyph, { mesh: undefined }) : setItem(sel.id, { mesh: undefined }))}
+            className="w-full border border-line px-2 py-2 text-[12px] font-bold hover:bg-paper"
+          >
+            격자 처음대로
+          </button>
+        </div>
+      )}
+      {glyph !== null && (
+        <div className="mt-3 space-y-2 border-t border-line pt-3">
+          <p className="text-[12px] font-bold text-ink-500">«{selText?.outline.glyphs.find((x) => x.i === glyph)?.ch ?? ""}» 늘리기·기울이기</p>
+          <Slider label="가로" unit="%" min={30} max={300} step={5} value={Math.round((sel.glyphs?.[glyph]?.sx ?? 1) * 100)} onChange={(v) => setGlyphOv(sel.id, glyph, { sx: v / 100 })} />
+          <Slider label="세로" unit="%" min={30} max={300} step={5} value={Math.round((sel.glyphs?.[glyph]?.sy ?? 1) * 100)} onChange={(v) => setGlyphOv(sel.id, glyph, { sy: v / 100 })} />
+          <Slider label="기울기" unit="°" min={-35} max={35} step={1} value={sel.glyphs?.[glyph]?.skew ?? 0} onChange={(v) => setGlyphOv(sel.id, glyph, { skew: v })} />
+        </div>
+      )}
+      <p className="mt-3 text-[11px] leading-relaxed text-ink-500">PRO 로 바꾼 모양은 «만들 수 있나» 판정과 제작용 외곽선(SVG)에 그대로 들어갑니다 — 실제로 그렇게 만들기 때문입니다.</p>
     </Panel>
   );
 
@@ -1126,9 +1750,17 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         {[...d.items].reverse().map((it) => (
           <li key={it.id} className={`flex items-center ${selected === it.id ? "bg-brand-100" : "hover:bg-paper"}`}>
             <button type="button" onClick={() => select(it.id)} className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-[13px] ${selected === it.id ? "font-bold text-brand-700" : ""}`}>
-              <span className="w-8 shrink-0 text-[10px] font-bold tracking-wider text-ink-500">{it.type === "text" ? "글자" : it.type === "logo" ? "로고" : "가림"}</span>
-              <span className="truncate">{it.type === "text" ? it.lines.map((l) => l.text).join(" / ") : it.type === "logo" ? it.name : "가리기 판"}</span>
-              {it.type !== "patch" && <Dot level={worst(notes.get(it.id) ?? [])} />}
+              <span className="w-8 shrink-0 text-[10px] font-bold tracking-wider text-ink-500">{TYPE_LABEL[it.type]}</span>
+              <span className="truncate">
+                {it.type === "text"
+                  ? it.lines.map((l) => l.text).join(" / ")
+                  : it.type === "logo"
+                    ? it.name
+                    : it.type === "plate"
+                      ? `${plateShapes.find((s) => s.key === it.shape)?.name ?? ""} 판 · ${plateMounts.find((m) => m.key === it.mount)?.short ?? ""}`
+                      : "가리기 판"}
+              </span>
+              {isSign(it) && <Dot level={worst(notes.get(it.id) ?? [])} />}
             </button>
             <button type="button" onClick={() => reorder(it.id, 1)} className="px-1.5 text-[12px] text-ink-500 hover:text-ink" aria-label="앞으로">▲</button>
             <button type="button" onClick={() => reorder(it.id, -1)} className="px-1.5 text-[12px] text-ink-500 hover:text-ink" aria-label="뒤로">▼</button>
@@ -1171,6 +1803,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         />
       )}
       {it.type === "logo" && part !== "font" && <LogoProps it={it} onChange={(patch) => setItem(it.id, patch)} onRetrace={(m, inv, k) => relogo(it, m, inv, k)} />}
+      {it.type === "plate" && part !== "font" && <PlateProps it={it} palette={d.palette} onChange={(patch) => setItem(it.id, patch)} />}
       {it.type === "patch" && part !== "font" && (
         <Field label="색 (사진 속 벽과 비슷하게)">
           <input type="color" value={it.color} onChange={(e) => setItem(it.id, { color: e.target.value })} className="h-9 w-full cursor-pointer border border-line" />
@@ -1183,7 +1816,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       )}
     </>
   );
-  const selTitle = sel ? (sel.type === "text" ? "글자" : sel.type === "logo" ? "로고" : "가리기 판") : "글자";
+  const selTitle = sel ? (sel.type === "patch" ? "가리기 판" : TYPE_LABEL[sel.type]) : "글자";
 
   const viewInfoPanel = (
     <Panel title="받은 간판 디자인">
@@ -1437,7 +2070,12 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
                   }}
                 />
                 <PhoneTile icon="wall" title="가게 사진" sub="앨범에서 고르기" onFile={onPhotoPick} />
+                <PhoneTile icon="plate" title="판" sub="현판·걸이·돌출" onClick={addPlate} />
                 <PhoneTile icon="patch" title="가리기 판" sub="사진 속 기존 간판 덮기" onClick={addPatch} />
+              </div>
+              <div className="mt-4 border-t border-line pt-3">
+                <p className="mb-1 text-[12px] font-black tracking-[0.08em] text-ink-500">레퍼런스 스타일 — 한 번 눌러 차리기</p>
+                {stylePanel}
               </div>
               <p className="mt-3 text-[12px] leading-relaxed text-ink-500">
                 로고와 가게 사진은 «카메라»로 바로 찍을 수도 있습니다. 이 휴대폰 안에서만 쓰이며, 견적을 보낼 때 미리보기 그림으로만 붙습니다.
@@ -1451,7 +2089,14 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
             </>
           );
         case "text":
-          return sel ? selBody(sel, "text") : empty("벽 위의 글자를 누르거나 새 글자를 넣을 수 있습니다.");
+          return sel ? (
+            <>
+              {proPanel && <div className="mb-4 border-b border-line pb-4">{proPanel}</div>}
+              {selBody(sel, "text")}
+            </>
+          ) : (
+            empty("벽 위의 글자를 누르거나 새 글자를 넣을 수 있습니다.")
+          );
         case "font":
           return sel?.type === "text" ? selBody(sel, "font") : empty("글꼴은 글자를 고른 뒤 바꿀 수 있습니다.");
         case "kind":
@@ -1460,6 +2105,10 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
           return (
             <>
               {wallPanel}
+              <div className="mt-4 border-t border-line pt-3">
+                <p className="mb-1 text-[12px] font-black tracking-[0.08em] text-ink-500">건물 색 · 간판 색 추천</p>
+                {palettePanel}
+              </div>
               <Field label="보기">
                 <div className="flex gap-5 py-1">
                   <Check label="치수" checked={dims} onChange={setDims} />
@@ -1525,9 +2174,16 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
             </button>
           </div>
           <div className="pointer-events-none absolute inset-x-3 top-[calc(max(10px,env(safe-area-inset-top))+50px)] z-10 flex select-none items-center justify-between">
-            <button type="button" onClick={() => fit()} className="pointer-events-auto h-8 rounded-full bg-white/90 px-3 text-[12px] font-extrabold shadow-[0_1px_2px_rgba(15,26,25,0.08)]">
-              맞춤 · {zoomPct}%
-            </button>
+            <span className="pointer-events-auto flex items-center gap-1.5">
+              <button type="button" onClick={() => fit()} className="h-8 rounded-full bg-white/90 px-3 text-[12px] font-extrabold shadow-[0_1px_2px_rgba(15,26,25,0.08)]">
+                맞춤 · {zoomPct}%
+              </button>
+              {!viewOnly && (
+                <button type="button" onClick={() => setProOn(!pro)} aria-pressed={pro} className={`h-8 rounded-full px-3 text-[12px] font-black tracking-[0.06em] shadow-[0_1px_2px_rgba(15,26,25,0.08)] ${pro ? "bg-accent text-ink" : "bg-white/90 text-ink-500"}`}>
+                  PRO
+                </button>
+              )}
+            </span>
             <span data-tour="daynight" className="pointer-events-auto flex items-center gap-1.5">
               {night && kind.needsLed && (
                 <button type="button" onClick={() => setLedOn(!ledOn)} aria-pressed={ledOn} className={`flex h-8 items-center gap-1.5 rounded-full bg-white/90 px-3 text-[12px] font-extrabold shadow-[0_1px_2px_rgba(15,26,25,0.08)] ${ledOn ? "text-ink" : "text-ink-500"}`}>
@@ -1630,6 +2286,20 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       {/* ───────── 가운데: 무대 ───────── */}
       <section className="order-1 flex min-w-0 flex-col lg:order-2 lg:min-h-0">
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-white px-3 py-2">
+          {/* PRO 스위치 — 사람 요청 «상단에서 바꾸면 자유자재로» (2026-09-26) */}
+          {!viewOnly && (
+            <>
+              <span className="flex border border-ink" role="group" aria-label="편집 모드">
+                <button type="button" aria-pressed={!pro} onClick={() => setProOn(false)} className={`px-2.5 py-1.5 text-[12px] font-bold ${!pro ? "bg-ink text-white" : "hover:bg-paper"}`}>
+                  기본
+                </button>
+                <button type="button" aria-pressed={pro} onClick={() => setProOn(true)} className={`px-2.5 py-1.5 text-[12px] font-black tracking-[0.06em] ${pro ? "bg-accent text-ink" : "hover:bg-paper"}`}>
+                  PRO
+                </button>
+              </span>
+              <span className="mx-1 h-5 w-px bg-line" />
+            </>
+          )}
           <span data-tour="daynight" className="flex items-center gap-2">
             <Seg value={night ? "night" : "day"} onChange={(v) => setNight(v === "night")} options={[{ v: "day", label: "주간" }, { v: "night", label: "야간" }]} />
             {night && kind.needsLed && <Check label="조명 켜기" checked={ledOn} onChange={setLedOn} />}
@@ -1650,6 +2320,12 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
           )}
         </div>
 
+        {pro && !viewOnly && (
+          <p className="border-b border-line bg-[#fff6ee] px-3 py-1.5 text-[12px] leading-relaxed">
+            <b className="mr-1.5 font-black text-accent-600">PRO</b>
+            글자 한 자를 누르면 바로 끌립니다 · Shift+끌기 = 글자 전체 · 점 편집·격자 왜곡·늘리기는 오른쪽 «PRO 글자 편집» 칸
+          </p>
+        )}
         <div data-tour="stage" className="relative h-[62vh] min-h-[340px] lg:h-auto lg:min-h-0 lg:flex-1">
           {stageEl}
           {busyEl}
@@ -1669,7 +2345,9 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       {!viewOnly && (
       <aside className="order-2 border-line bg-white lg:order-1 lg:min-h-0 lg:overflow-y-auto lg:border-r">
         {addPanel}
+        {stylePanel}
         {wallPanel}
+        {palettePanel}
         {layersPanel}
       </aside>
 
@@ -1690,6 +2368,8 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
             {selBody(sel)}
           </Panel>
         )}
+
+        {proPanel}
 
         {viewOnly ? viewInfoPanel : kindPanel}
 
@@ -1808,7 +2488,7 @@ function PhoneTile({ icon, title, sub, onClick, onFile }: { icon: GlyphKey; titl
   );
 }
 
-type GlyphKey = PhoneTab | "close" | "undo" | "redo" | "persp" | "logo" | "patch";
+type GlyphKey = PhoneTab | "close" | "undo" | "redo" | "persp" | "logo" | "patch" | "plate";
 
 /** 폰 화면의 선 아이콘 — 1.7 굵기 한 벌(피그마 UI3 도구 막대의 가는 선 결) */
 function Glyph({ k }: { k: GlyphKey }) {
@@ -1875,6 +2555,13 @@ function Glyph({ k }: { k: GlyphKey }) {
       <>
         <rect x="4" y="7" width="16" height="10" rx="1.5" />
         <path d="M4 12h16" strokeDasharray="2 2" />
+      </>
+    ),
+    plate: (
+      <>
+        <path d="M3 4.5h11M7 4.5v4M12 4.5v4" />
+        <ellipse cx="9.5" cy="14" rx="7" ry="5" />
+        <path d="M6.5 14h6" />
       </>
     ),
   };
@@ -1990,6 +2677,8 @@ function TextProps({
           + 줄 추가 (업종·전화 등)
         </button>
       )}
+      {/* 세로쓰기 — 돌출 판·현판·세로 간판(레퍼런스 14·18·20). 줄마다 세로 단 하나, 첫 줄이 오른쪽 */}
+      <Check label="세로쓰기 (첫 줄이 오른쪽 단)" checked={!!it.vertical} onChange={(v) => onChange({ vertical: v, glyphs: undefined })} />
       </div>
 
       <Field label="앞면 색 (전체)">
@@ -2185,6 +2874,87 @@ function LogoProps({ it, onChange, onRetrace }: { it: LogoItem; onChange: (p: Pa
             </li>
           ))}
         </ul>
+      </Field>
+    </div>
+  );
+}
+
+/* ================================================================ 판 · 스타일 (2026-09-26) */
+
+const TYPE_LABEL: Record<Item["type"], string> = { text: "글자", logo: "로고", patch: "가림", plate: "판" };
+
+/** 레퍼런스 스타일 목록의 작은 그림 — 판 색·모양·글자색만으로 결을 보여 줍니다 */
+function StyleThumb({ s, tone }: { s: RefStyle; tone?: string }) {
+  const face = tone ?? s.text.face;
+  const p = s.plate;
+  const W = 56, H = 40;
+  let pw = 0, ph = 0;
+  if (p) {
+    const k = Math.min((W - 8) / p.w, (H - 8) / p.h);
+    pw = p.w * k;
+    ph = p.h * k;
+  }
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0 border border-line bg-[#ecebe6]" aria-hidden="true">
+      {p ? (
+        <>
+          {p.mount === "hang" && <path d={`M${(W - pw) / 2 - 4} ${(H - ph) / 2 - 3}H${(W + pw) / 2}`} stroke="#34393a" strokeWidth={1.4} />}
+          {p.mount === "blade" && <path d={`M${(W - pw) / 2 - 5} ${H / 2}H${(W - pw) / 2}`} stroke="#34393a" strokeWidth={2} />}
+          <path d={platePath(p.shape, pw, ph)} transform={`translate(${(W - pw) / 2} ${(H - ph) / 2})`} fill={p.fill} stroke={p.border || "none"} strokeWidth={p.border ? 1.6 : 0} />
+          {s.text.vertical ? (
+            <path d={`M${W / 2} ${(H - ph) / 2 + 4}V${(H + ph) / 2 - 4}`} stroke={face} strokeWidth={3} />
+          ) : (
+            <path d={`M${(W - pw * 0.6) / 2} ${H / 2}H${(W + pw * 0.6) / 2}`} stroke={face} strokeWidth={3.2} />
+          )}
+        </>
+      ) : (
+        <path d={`M12 ${H / 2}h4M20 ${H / 2}h4M28 ${H / 2}h4M36 ${H / 2}h4`} stroke={face} strokeWidth={4} />
+      )}
+    </svg>
+  );
+}
+
+function PlateProps({ it, palette, onChange }: { it: PlateItem; palette?: string[]; onChange: (p: Partial<PlateItem>) => void }) {
+  const mount = plateMounts.find((m) => m.key === it.mount);
+  return (
+    <div className="space-y-3">
+      <Field label="모양">
+        <Seg
+          value={it.shape}
+          onChange={(v) => onChange(v === "circle" ? { shape: v, h: it.w } : { shape: v })}
+          options={plateShapes.map((s) => ({ v: s.key, label: s.name }))}
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-2 text-[12px]">
+        <label className="block">
+          <span className="font-bold">가로 (mm)</span>
+          <NumIn value={it.w} min={100} max={12000} step={10} onChange={(v) => onChange(it.shape === "circle" ? { w: v, h: v } : { w: v })} />
+        </label>
+        <label className="block">
+          <span className="font-bold">세로 (mm)</span>
+          <NumIn value={it.h} min={100} max={12000} step={10} onChange={(v) => onChange(it.shape === "circle" ? { w: v, h: v } : { h: v })} />
+        </label>
+      </div>
+      <Field label="판 색">
+        <Swatches items={[...plateColors.map((c) => ({ name: c.name, hex: c.hex })), ...(palette ?? []).slice(0, 4).map((hex, i) => ({ name: `건물 색 ${i + 1}`, hex }))]} value={it.fill} onPick={(hex) => onChange({ fill: hex })}>
+          <input type="color" value={it.fill} onChange={(e) => onChange({ fill: e.target.value })} title="다른 색 직접 고르기" aria-label="판 색 직접 고르기" className="h-8 w-8 cursor-pointer border border-line p-0.5" />
+        </Swatches>
+      </Field>
+      <Field label="테두리">
+        <Swatches items={[{ name: "없음", hex: "" }, ...plateColors.map((c) => ({ name: c.name, hex: c.hex }))]} value={it.border ?? ""} onPick={(hex) => onChange({ border: hex })} emptyLabel="없음" />
+        {!!it.border && <Slider label="굵기" unit="mm" min={5} max={150} step={5} value={it.borderMm ?? 30} onChange={(v) => onChange({ borderMm: v })} />}
+      </Field>
+      <Field label="다는 방식">
+        <Seg value={it.mount} onChange={(v) => onChange({ mount: v })} options={plateMounts.map((m) => ({ v: m.key, label: m.short }))} />
+        <p className="mt-1.5 text-[12px] leading-relaxed text-ink-500">
+          {mount?.label}
+          {it.mount === "blade" && " · 정면 그림이라 비스듬히 본 면으로 그립니다 — 사진 속 각도는 «원근 맞추기»로 맞춥니다."}
+        </p>
+        {it.mount !== "wall" && (
+          <div className="mt-1.5">
+            <Seg value={it.side ?? "left"} onChange={(v) => onChange({ side: v as "left" | "right" })} options={[{ v: "left", label: "벽이 왼쪽" }, { v: "right", label: "벽이 오른쪽" }]} />
+          </div>
+        )}
       </Field>
     </div>
   );

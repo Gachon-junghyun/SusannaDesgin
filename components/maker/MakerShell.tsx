@@ -48,6 +48,8 @@ export default function MakerShell({
   const nav = [
     { href: base, label: "간판 에디터", sub: "글자·로고·조명·벽", icon: IconSign },
     { href: `${base}/trace`, label: "SVG 따기", sub: "그림 → 선(벡터)", icon: IconPen },
+    // F26-h (2026-09-26) — 사람 요청 «네비게이션 바에 따로 창을 만들어 건물을 넣고 퍼스널 컬러 찾기»
+    { href: `${base}/color`, label: "건물 색 찾기", sub: "사진 → 우리 가게 색", icon: IconDrop },
   ];
 
   return (
@@ -153,6 +155,15 @@ function IconPen() {
       <circle cx="3.5" cy="3.5" r="1.5" />
       <circle cx="16.5" cy="16.5" r="1.5" />
       <path d="M5 3.5c6 0 11.5 5.5 11.5 11.5" strokeDasharray="2 2" />
+    </svg>
+  );
+}
+/** 스포이트 — «건물 색 찾기» */
+function IconDrop() {
+  return (
+    <svg className={icon} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M12.5 3.5l4 4-1.6 1.6-4-4zM11 5l4 4-6.8 6.8H4.2v-4z" />
+      <path d="M2.5 18.5h5" />
     </svg>
   );
 }

@@ -18,6 +18,7 @@ const loading = () => (
 );
 const SignMaker = dynamic(() => import("./SignMaker"), { ssr: false, loading });
 const TraceStudio = dynamic(() => import("./TraceStudio"), { ssr: false, loading });
+const ColorStudio = dynamic(() => import("./ColorStudio"), { ssr: false, loading });
 
 export default function MakerLoader({
   mode,
@@ -27,13 +28,15 @@ export default function MakerLoader({
   share,
 }: {
   mode: "admin" | "customer";
-  tool?: "editor" | "trace" | "view";
+  /** `color` = 건물 색 찾기(F26-h) */
+  tool?: "editor" | "trace" | "color" | "view";
   base: string;
   /** 공유 링크의 디자인 (DB 에서 온 JSON — SignMaker 가 기본값과 합쳐 씁니다) */
   design?: unknown;
   share?: ShareInfo;
 }) {
   if (tool === "trace") return <TraceStudio base={base} />;
+  if (tool === "color") return <ColorStudio base={base} />;
   if (tool === "view") return <SignMaker mode="view" initial={design} share={share} />;
   return <SignMaker mode={mode} />;
 }

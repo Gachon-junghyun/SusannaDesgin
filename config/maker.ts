@@ -87,7 +87,8 @@ const byKey = (k: string) => {
 /**
  * 메이커가 그릴 수 있는 종류 — **벽에 붙는 글자** 여섯 가지.
  * ⚠️ T6 돌출·T7 옥상·T8 행잉은 «어디에 다나(거치)» 축이라 벽 정면 그림 한 장으로는 모양이
- * 안 섭니다(측면·구조물이 보여야 읽힘 — SIGNTYPES.md §9 T8 주석). 지금은 뺐고, 견적 폼으로 받습니다.
+ * 안 섭니다(측면·구조물이 보여야 읽힘 — SIGNTYPES.md §9 T8 주석). 그래서 이 목록(글자 종류)에는 없고,
+ * **T6·T8 은 2026-09-26 부터 «판» 의 다는 방식으로 그립니다**(아래 `plateMounts` — 정면 그림 + 철물 표현). T7 은 여전히 견적 폼으로 받습니다.
  */
 export const makerKinds: MakerKind[] = [
   { ...pick("channel-front"), lit: "front", depthMm: 80, standoffMm: 0, backboard: false, needsLed: true, hint: "글자 앞면이 빛납니다. 밤에 가장 잘 보입니다." },
@@ -161,6 +162,93 @@ export const trimColors = [
   { name: "금색", hex: "#b08d3c" },
 ] as const;
 
+/* ------------------------------------------------------------------ 판 (2026-09-26) */
+
+/**
+ * 판 모양 — 한국 가게 전면 레퍼런스 20장(2026-09-26 `/research`, 수산나디자인 드라이브
+ * «한국_가게전면_레퍼런스20»)에서 실제로 본 것만: 사각 현판 · 둥근 판 · 타원 걸이판 · 원형 로고판 · 아치.
+ */
+export const plateShapes = [
+  { key: "rect", name: "사각" },
+  { key: "round", name: "둥근 사각" },
+  { key: "oval", name: "타원" },
+  { key: "circle", name: "원" },
+  { key: "arch", name: "아치" },
+] as const;
+
+/**
+ * 판을 다는 방식. 🔴 **새 제품을 만들지 않았습니다** — 돌출·걸이는 `signTypes9` 의 **T6 돌출간판 · T8 행잉형**
+ * 그대로입니다(수산나가 실제로 하는 9종). 그래서 이름·코드를 거기서 끌어옵니다.
+ * ⚠️ 정면 그림 한 장이라 돌출 판은 «비스듬히 본 면»으로 그립니다 — 사진 속 각도는 «원근 맞추기(네 점)» 로 맞춥니다.
+ */
+export const plateMounts: { key: string; label: string; short: string; kindKey?: string }[] = [
+  { key: "wall", label: "벽에 붙이기 (판 간판·현판)", short: "벽에 붙이기" },
+  { key: "blade", label: `${byKey("projecting").code} ${byKey("projecting").name} — 벽에서 직각으로`, short: "돌출", kindKey: "projecting" },
+  { key: "hang", label: `${byKey("hanging").code} ${byKey("hanging").name} — 봉으로 매닮`, short: "걸이", kindKey: "hanging" },
+];
+
+/** 판 색 — 레퍼런스에서 본 톤(먹·유백·원목·크림·남색·짙은 회녹)에 청록을 더했습니다. 도료 번호가 아닙니다 */
+export const plateColors = [
+  { name: "먹", hex: "#1b1d1c" },
+  { name: "유백", hex: "#fbfbf8" },
+  { name: "크림", hex: "#efe6d2" },
+  { name: "원목", hex: "#9a6a3c" },
+  { name: "짙은 나무", hex: "#5a3b22" },
+  { name: "남색", hex: "#23344d" },
+  { name: "짙은 회녹", hex: "#3d4a43" },
+  { name: "청록", hex: "#00a79d" },
+] as const;
+
+/* ------------------------------------------------------------------ 레퍼런스 스타일 (2026-09-26) */
+
+export type RefStyle = {
+  key: string;
+  name: string;
+  /** 레퍼런스에서 본 특징 한 줄 — 왜 이 모양인가 */
+  note: string;
+  /** 글자 쪽 간판 종류(`makerKinds`) */
+  kind: string;
+  plate?: { shape: string; mount: string; w: number; h: number; fill: string; border?: string; borderMm?: number };
+  text: { font: string; face: string; heightMm: number; tracking?: number; vertical?: boolean };
+  /** 두 번째 줄(업종 등)을 첫 줄 높이의 몇 배로 */
+  subRatio?: number;
+  /** 건물 사진에서 뽑은 색이 있으면 그 계열로 글자 색을 맞춥니다(톤온톤) */
+  tone?: boolean;
+};
+
+/**
+ * 한 번 눌러 «그 결»로 차리는 틀 여섯. 🔴 **실제 가게 이름을 화면에 쓰지 않습니다**(공개 화면 — 남의 상호를
+ * 스타일 이름으로 파는 모양이 됩니다). 이름은 모양으로만 붙였고, 근거는 레퍼런스 번호로 여기 주석에만 둡니다.
+ *   letters  ← 03 · 18 · 01 (판 없이 개별 글자, 넓은 자간)
+ *   hyeonpan ← 10 · 07 (대문 위 검정 판 + 흰 글자)
+ *   hanging  ← 04 (남색 타원 나무판 + 크림 글자, 업종 줄)
+ *   blade    ← 20 · 14 (흰 세로 판 + 세로쓰기)
+ *   frame    ← 09 (원목 액자 테두리 + 크림 판)
+ *   tone     ← 19 (문틀과 글자를 같은 색 계열로)
+ * 글자 쪽 종류는 전부 T4 무점등 스카시로 둡니다 — 레퍼런스 20장에 안에서 켜는 판이 0장이었습니다. 바꾸는 건 손님 몫입니다.
+ */
+export const refStyles: RefStyle[] = [
+  { key: "letters", name: "판 없이 글자만", note: "건물의 빈 칸에 개별 글자만 넓은 자간으로 세웁니다. 건물이 주인공입니다.", kind: "scasi", text: { font: "maru-buri", face: "#1b1d1c", heightMm: 320, tracking: 260 }, subRatio: 0.32 },
+  { key: "hyeonpan", name: "현판 (문 위 가로 판)", note: "출입구 위 검정 판에 흰 글자. 간판이 작고 문과 한 벌로 읽힙니다.", kind: "scasi", plate: { shape: "rect", mount: "wall", w: 1800, h: 520, fill: "#1b1d1c" }, text: { font: "chosun-gungseo", face: "#fbfbf8", heightMm: 300, tracking: 120 } },
+  { key: "hanging", name: "걸이 간판 (타원 판)", note: "봉으로 매단 타원 판. 걸이 판 하나가 사진 포인트가 됩니다.", kind: "scasi", plate: { shape: "oval", mount: "hang", w: 1200, h: 800, fill: "#23344d", border: "#efe6d2", borderMm: 28 }, text: { font: "dokrip", face: "#efe6d2", heightMm: 220 }, subRatio: 0.42 },
+  { key: "blade", name: "세로 돌출 판", note: "벽에서 튀어나온 흰 세로 판에 세로쓰기. 골목을 걸어오는 사람에게 읽힙니다.", kind: "scasi", plate: { shape: "rect", mount: "blade", w: 460, h: 1500, fill: "#fbfbf8" }, text: { font: "noto-sans-kr", face: "#1b1d1c", heightMm: 230, vertical: true } },
+  { key: "frame", name: "원목 액자 판", note: "원목 테두리 안의 크림 판. 한옥·목재 전면과 같은 재료로 맞춥니다.", kind: "scasi", plate: { shape: "rect", mount: "blade", w: 1000, h: 460, fill: "#efe6d2", border: "#9a6a3c", borderMm: 55 }, text: { font: "gowun-batang", face: "#3a2a1c", heightMm: 220, tracking: 80 } },
+  { key: "tone", name: "건물 색 톤온톤", note: "문 위 띠 칸에 건물과 같은 색 계열 글자. 건물 사진을 넣으면 그 색에서 뽑습니다.", kind: "scasi", text: { font: "a2z", face: "#6f8a3a", heightMm: 280, tracking: 180 }, tone: true },
+];
+
+/* ------------------------------------------------------------------ PRO 모드 (2026-09-26) */
+
+/**
+ * PRO 모드를 켰는지 — 이 브라우저 `localStorage`. 모드마다 따로 둡니다.
+ * 사람 요청: *"글자 자체도 점으로 나눠서 키우고 다르고 메쉬 … 상단에서 바꾸면 진짜 자유자재로"*.
+ * 켜면 글자 한 자를 눌러 바로 끌고, 점 편집·점 나누기·격자 왜곡·가로세로 늘리기·기울이기를 씁니다.
+ * 🔴 **PRO 로 바꾼 모양은 판정·제작용 SVG 에 들어갑니다** — 실제로 그렇게 만들기 때문입니다(글자별 꾸밈과 같은 규칙).
+ */
+export const makerProKey = (mode: "admin" | "customer") => `susanna-maker-pro-v1-${mode}`;
+
+/** 격자 왜곡 칸 수 고르기 (가로 = 세로) */
+export const MESH_SIZES = [1, 2, 3, 4] as const;
+
 /* ------------------------------------------------------------------ 벽 */
 
 export type Wall = { key: string; name: string; color: string };
@@ -201,6 +289,8 @@ export const MAKER_STORAGE_KEY = "susanna-maker-design";
 
 /** «SVG 따기» → 간판 에디터로 보내기. 같은 브라우저 저장소(localStorage)로만 건넵니다 — 서버를 안 거칩니다 */
 export const INCOMING_LOGO_KEY = "susanna-maker-incoming-logo";
+/** «건물 색 찾기» → 간판 에디터로 색(hex 목록)만 건넵니다. 사진은 저장소에 안 씁니다(`lib/maker/handoff.ts`) */
+export const INCOMING_PALETTE_KEY = "susanna-maker-incoming-palette";
 export const MAKER_INTEREST = "간판 메이커 디자인";
 
 /**

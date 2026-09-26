@@ -24,7 +24,9 @@ export type RPath = { d: string; color: string; glyph?: number };
 /** 무대에 넘기는 «이미 벽 좌표로 옮긴» 아이템 */
 export type RItem = {
   id: string;
-  type: "text" | "logo" | "patch";
+  type: "text" | "logo" | "patch" | "plate";
+  /** 판(2026-09-26) — 색·테두리·철물(벽 좌표 경로). 철물은 돌출(까치발)·걸이(팔 + 봉 둘)에만 있습니다 */
+  plate?: { fill: string; border?: string; borderW: number; hardware: string[] };
   /** 실제 크기 (회전·원근 전) */
   size: Measured;
   /** 벽 좌표로 옮긴 외곽선 */
@@ -82,10 +84,26 @@ type Props = {
   readOnly?: boolean;
   /** 캔버스 크기(px)가 바뀔 때 — 「화면에 맞춤」 계산에 씁니다 */
   onMeasure?: (w: number, h: number) => void;
+  /*
+   * ---------- PRO 모드 (F26-g · 2026-09-26) ----------
+   * 무대는 «어느 점을 어디로 끌었나(벽 좌표)» 만 알려 줍니다. 그 점을 글자 좌표로 되짚는 셈(회전·원근·격자 왜곡을 거꾸로)은
+   * 에디터가 합니다 — 무대가 디자인 자료 모양을 알면 두 곳에서 같은 변형을 셈하게 됩니다.
+   */
+  /** 글자 한 자를 눌러 바로 끌기(두 번 누를 필요 없이). Shift 를 누른 채 끌면 전과 같이 글자 전체가 옮겨집니다 */
+  glyphDrag?: boolean;
+  onGlyphDrag?: (id: string, g: number, start: Pt, cur: Pt, done: boolean) => void;
+  /** 점 편집·격자 손잡이 (벽 좌표) — 있으면 크기·회전 손잡이를 감춥니다(겹치면 못 잡습니다) */
+  /** `hidden` 점은 안 그립니다(번호는 그대로 — 끌 때 에디터가 같은 번호로 찾습니다). 조절점은 고른 기준점 것만 보입니다 */
+  pro?: { nodes: { p: Pt; anchor: boolean; hidden?: boolean; on?: boolean }[]; handles: [Pt, Pt][]; mesh?: { pts: Pt[]; cols: number; rows: number } } | null;
+  onNodeDrag?: (i: number, p: Pt, done: boolean) => void;
+  onMeshDrag?: (i: number, p: Pt, done: boolean) => void;
   svgRef: React.RefObject<SVGSVGElement | null>;
 };
 
 type Drag =
+  | { kind: "gmove"; id: string; g: number; start: Pt }
+  | { kind: "node"; i: number }
+  | { kind: "mesh"; i: number }
   | { kind: "move"; id: string; ox: number; oy: number; start: Pt; touch?: boolean; sx?: number; sy?: number; moved?: boolean }
   | { kind: "resize"; id: string; c: Pt; start: Pt }
   | { kind: "rotate"; id: string; c: Pt }
@@ -309,9 +327,39 @@ export default function Stage({ svgRef, ...p }: Props) {
           </g>
         )}
 
+        {/* 판 (2026-09-26) — 철물 → 그림자 → 두께 → 앞면·테두리. 🔴 늘 글자·로고보다 먼저(뒤에) 그립니다 */}
+        {p.items
+          .filter((r) => r.type === "plate" && r.plate)
+          .map((r) => {
+            const pl = r.plate!, q = r.world[0];
+            if (!q) return null;
+            const tk = 24; // 판 두께의 «보이는» 양 — 바탕판(T5)과 같은 값
+            return (
+              <g key={r.id} style={{ cursor: p.readOnly ? undefined : "move" }} onPointerDown={(e) => startMove(e, r)}>
+                <polygon data-export-skip="" points={r.quad.map((v) => v.join(",")).join(" ")} fill="transparent" />
+                {pl.hardware.map((hd, i) => (
+                  <path key={`hw${i}`} d={hd} fill={p.night ? "#1f2221" : "#34393a"} />
+                ))}
+                {!p.night && (
+                  <g opacity={0.28} filter={`url(#boardsh-${uid})`} pointerEvents="none">
+                    <path d={q.d} transform="translate(16 22)" fill="#000" />
+                  </g>
+                )}
+                <path d={q.d} transform={`translate(${dir[0] * tk} ${dir[1] * tk})`} fill={shade(pl.fill, p.night ? 0.2 : 0.62)} pointerEvents="none" />
+                <path
+                  d={q.d}
+                  fill={p.night ? shade(pl.fill, 0.32) : pl.fill}
+                  stroke={pl.border ? (p.night ? shade(pl.border, 0.35) : pl.border) : undefined}
+                  strokeWidth={pl.border ? pl.borderW : undefined}
+                  strokeLinejoin="round"
+                />
+              </g>
+            );
+          })}
+
         {/* 글자·로고 */}
         {p.items
-          .filter((r) => r.type !== "patch")
+          .filter((r) => r.type === "text" || r.type === "logo")
           .map((r) => {
             const lh = r.letterH;
             const shadowOff = 6 + standoff * 0.6;
@@ -389,7 +437,7 @@ export default function Stage({ svgRef, ...p }: Props) {
         {/* 치수선 — 실제 크기(회전·원근 전)를 적습니다. 내보낸 그림에도 남깁니다 */}
         {p.dims &&
           p.items
-            .filter((r) => r.type !== "patch")
+            .filter((r) => r.type !== "patch" && !insidePlate(r, p.items))
             .map((r) => {
               const xs = r.quad.map((q) => q[0]), ys = r.quad.map((q) => q[1]);
               const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
@@ -434,7 +482,7 @@ export default function Stage({ svgRef, ...p }: Props) {
               <g data-export-skip="">
                 <polygon points={q.map((v) => v.join(",")).join(" ")} fill="none" stroke="#00a79d" strokeWidth={U * 1.5} strokeDasharray={`${U * 6} ${U * 4}`} pointerEvents="none" />
                 {gq && <polygon points={gq.map((v) => v.join(",")).join(" ")} fill="none" stroke="#ff5900" strokeWidth={U * 1.8} pointerEvents="none" />}
-                {p.warpMode ? (
+                {p.pro ? null : p.warpMode ? (
                   q.map((v, i) => {
                     const go = (e: React.PointerEvent) => begin(e, { kind: "warp", id: r.id, corner: i });
                     return (
@@ -456,6 +504,49 @@ export default function Stage({ svgRef, ...p }: Props) {
               </g>
             );
           })()}
+
+        {/* PRO — 격자(메쉬) · 조절선 · 점 (내보내기에는 안 나갑니다) */}
+        {p.pro && !p.readOnly && (
+          <g data-export-skip="">
+            {p.pro.mesh &&
+              (() => {
+                const { pts, cols, rows } = p.pro.mesh;
+                const at = (i: number, j: number) => pts[j * (cols + 1) + i];
+                const lines: Pt[][] = [];
+                for (let j = 0; j <= rows; j++) lines.push(Array.from({ length: cols + 1 }, (_, i) => at(i, j)));
+                for (let i = 0; i <= cols; i++) lines.push(Array.from({ length: rows + 1 }, (_, j) => at(i, j)));
+                return lines.map((l, k) => <polyline key={`ml${k}`} points={l.map((v) => v.join(",")).join(" ")} fill="none" stroke="#7b2d6b" strokeWidth={U * 1.2} strokeOpacity={0.8} pointerEvents="none" />);
+              })()}
+            {p.pro.handles.map(([a, b], i) => (
+              <line key={`hl${i}`} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#3d8bff" strokeWidth={U} pointerEvents="none" />
+            ))}
+            {p.pro.nodes.map((n, i) => {
+              if (n.hidden) return null;
+              const go = (e: React.PointerEvent) => begin(e, { kind: "node", i });
+              // 붓·바탕체는 한 글자에 점이 수백 개라 크게 그리면 글자를 덮습니다(2026-09-26 실측 — 7px 네모가 «나» 를 다 가림)
+              const s = (p.touch ? 10 : 5) * U;
+              return (
+                <g key={`n${i}`}>
+                  {p.touch && <circle cx={n.p[0]} cy={n.p[1]} r={14 * U} fill="transparent" onPointerDown={go} />}
+                  {n.anchor ? (
+                    <rect x={n.p[0] - s / 2} y={n.p[1] - s / 2} width={s} height={s} fill={n.on ? "#3d8bff" : "#fff"} stroke="#3d8bff" strokeWidth={U} style={{ cursor: "move" }} onPointerDown={go} />
+                  ) : (
+                    <circle cx={n.p[0]} cy={n.p[1]} r={s * 0.5} fill="#3d8bff" stroke="#fff" strokeWidth={U * 0.8} style={{ cursor: "move" }} onPointerDown={go} />
+                  )}
+                </g>
+              );
+            })}
+            {p.pro.mesh?.pts.map((q, i) => {
+              const go = (e: React.PointerEvent) => begin(e, { kind: "mesh", i });
+              return (
+                <g key={`m${i}`}>
+                  {p.touch && <circle cx={q[0]} cy={q[1]} r={20 * U} fill="transparent" onPointerDown={go} />}
+                  <circle cx={q[0]} cy={q[1]} r={(p.touch ? 9 : 5.5) * U} fill="#fff" stroke="#7b2d6b" strokeWidth={U * 1.8} style={{ cursor: "move" }} onPointerDown={go} />
+                </g>
+              );
+            })}
+          </g>
+        )}
 
         {/* 축척 보정 십자선 */}
         {p.calib && (
@@ -486,6 +577,15 @@ export default function Stage({ svgRef, ...p }: Props) {
     if (p.readOnly || p.calib || e.button !== 0) return;
     e.stopPropagation();
     const touch = e.pointerType === "touch";
+    // PRO — 글자 한 자를 누르면 그 한 자를 바로 끕니다(Shift 를 누르고 끌면 글자 전체)
+    if (p.glyphDrag && r.type === "text" && !e.shiftKey) {
+      const gl = (e.target as Element).getAttribute("data-glyph");
+      if (gl !== null) {
+        p.onGlyph(r.id, Number(gl));
+        begin(e, { kind: "gmove", id: r.id, g: Number(gl), start: toMm(e) });
+        return;
+      }
+    }
     if (touch) {
       // 두 번 두드리기 = 그 글자 한 자 (마우스의 두 번 누르기와 같은 일)
       const now = Date.now(), gl = (e.target as Element).getAttribute("data-glyph");
@@ -562,7 +662,10 @@ export default function Stage({ svgRef, ...p }: Props) {
   }
 
   function handle(g: Exclude<Drag, { kind: "pan" | "zoom" | "ipinch" }>, m: Pt, done: boolean, shift: boolean) {
-    if (g.kind === "move") p.onMove(g.id, g.ox + m[0] - g.start[0], g.oy + m[1] - g.start[1], done);
+    if (g.kind === "node") p.onNodeDrag?.(g.i, m, done);
+    else if (g.kind === "mesh") p.onMeshDrag?.(g.i, m, done);
+    else if (g.kind === "gmove") p.onGlyphDrag?.(g.id, g.g, g.start, m, done);
+    else if (g.kind === "move") p.onMove(g.id, g.ox + m[0] - g.start[0], g.oy + m[1] - g.start[1], done);
     else if (g.kind === "resize") {
       const d0 = Math.hypot(g.start[0] - g.c[0], g.start[1] - g.c[1]), d1 = Math.hypot(m[0] - g.c[0], m[1] - g.c[1]);
       p.onResize(g.id, d0 > 1 ? d1 / d0 : 1, done);
@@ -572,6 +675,21 @@ export default function Stage({ svgRef, ...p }: Props) {
       p.onRotate(g.id, ((deg % 360) + 360) % 360, done);
     } else p.onWarp(g.id, g.corner, m, done);
   }
+}
+
+/**
+ * 판 안에 다 들어간 글자·로고인가 — 그러면 치수선은 판 것만 그립니다(2026-09-26 화면 확인: 걸이 판의 «800mm» 와
+ * 그 안 글자의 «387mm» 가 같은 자리에 겹쳐 둘 다 안 읽혔습니다). 글자 높이는 오른쪽 칸에 그대로 있습니다.
+ */
+function insidePlate(r: RItem, all: RItem[]) {
+  if (r.type !== "text" && r.type !== "logo") return false;
+  const box = (q: Pt[]) => ({ x0: Math.min(...q.map((v) => v[0])), x1: Math.max(...q.map((v) => v[0])), y0: Math.min(...q.map((v) => v[1])), y1: Math.max(...q.map((v) => v[1])) });
+  const a = box(r.quad);
+  return all.some((pl) => {
+    if (pl.type !== "plate") return false;
+    const b = box(pl.quad);
+    return a.x0 >= b.x0 && a.x1 <= b.x1 && a.y0 >= b.y0 && a.y1 <= b.y1;
+  });
 }
 
 /** 끄는 동안 포인터를 무대에 묶습니다. 펜·일부 터치 기기에서 실패할 수 있어 삼킵니다(끌기는 그래도 됩니다) */

@@ -4,9 +4,10 @@
  * 좌표는 전부 **벽 위의 mm** 입니다(왼쪽 위가 0,0). 화면 픽셀로 저장하지 않는 이유: 벽 사진의
  * 축척을 나중에 보정하면(십자선 두 개) 픽셀 값은 전부 틀린 값이 되는데, mm 는 그대로 참입니다.
  */
-import { FAB, makerKinds, wallColors, walls, type MakerKind } from "@/config/maker";
+import { FAB, makerKinds, plateMounts, plateShapes, wallColors, walls, type MakerKind } from "@/config/maker";
 import type { FabResult } from "@/lib/maker/fab";
 import type { TextLine } from "@/lib/maker/fonts";
+import { pathBox, type Mesh } from "@/lib/maker/geom";
 
 export type FontRef =
   | { src: "lib"; slug: string }
@@ -24,8 +25,31 @@ type Xform = {
   warp?: [number, number][] | null;
 };
 
-/** 글자 한 자의 꾸밈 — 해외 메이커의 «글자별 색» 을 위치·크기·회전까지 넓힌 것 */
-export type GlyphOv = { color?: string; dx?: number; dy?: number; scale?: number; rot?: number };
+/**
+ * PRO 점 편집으로 고친 글자 한 자의 외곽 (F26-g · 2026-09-26).
+ * 좌표는 **고칠 때의 글자 상자 왼쪽 위가 0,0** 이고 그때 상자 크기(`w`·`h`)를 같이 둡니다 — 나중에 글자 높이를
+ * 바꾸면 지금 상자에 맞춰 늘려 그립니다(고친 모양이 같이 커집니다). `ch` 가 지금 그 자리 글자와 다르면
+ * (문구를 고쳐 순번이 밀렸으면) 안 씁니다 — 엉뚱한 글자에 남의 모양이 입혀지지 않게.
+ */
+export type GlyphPath = { d: string; ch: string; w: number; h: number };
+
+/** 글자 한 자의 꾸밈 — 해외 메이커의 «글자별 색» 을 위치·크기·회전까지 넓힌 것. `sx` 부터는 PRO 모드 칸입니다 */
+export type GlyphOv = {
+  color?: string;
+  dx?: number;
+  dy?: number;
+  scale?: number;
+  rot?: number;
+  /** PRO — 가로 늘리기(장평) · 세로 늘리기 (배) */
+  sx?: number;
+  sy?: number;
+  /** PRO — 기울이기 (°, 윗부분이 오른쪽으로) */
+  skew?: number;
+  /** PRO — 점 편집한 외곽 */
+  path?: GlyphPath;
+  /** PRO — 이 글자 상자 위의 격자 왜곡 */
+  mesh?: Mesh;
+};
 
 export type TextItem = Xform & {
   id: string;
@@ -35,6 +59,10 @@ export type TextItem = Xform & {
   face: string;
   /** 글자별 꾸밈 — 열쇠는 `Glyph.i`(공백 뺀 순번) */
   glyphs?: Record<number, GlyphOv>;
+  /** 세로쓰기 — 줄마다 한 세로 단, 첫 줄이 오른쪽(돌출 판·현판에 흔한 결, 2026-09-26) */
+  vertical?: boolean;
+  /** PRO — 글자 전체(이 아이템 상자) 위의 격자 왜곡 */
+  mesh?: Mesh;
   /** 중심 좌표 (mm) */
   x: number;
   y: number;
@@ -64,7 +92,32 @@ export type LogoItem = Xform & {
 /** 가리기 — 벽 사진 속 기존 간판을 덮는 판 (SignMonkey 의 «bandaid» 에서 빌린 것) */
 export type PatchItem = Xform & { id: string; type: "patch"; x: number; y: number; w: number; h: number; color: string };
 
-export type Item = TextItem | LogoItem | PatchItem;
+/**
+ * 판 — 글자를 얹는 판 한 장 (2026-09-26). 한국 가게 전면 레퍼런스의 **현판·걸이 간판·돌출 판·액자형 판**을 그리려고 넣었습니다.
+ * 달리는 방식(`mount`)이 «벽에 붙이기 / 돌출(T6) / 걸이(T8)» 로 갈리고, 뒤 둘은 철물(까치발·봉)을 같이 그립니다.
+ * 🔴 판은 늘 글자·로고 **뒤**에 그립니다(레이어 순서와 무관) — 판이 글자를 덮으면 «글자가 사라졌다» 로 읽힙니다.
+ */
+export type PlateItem = Xform & {
+  id: string;
+  type: "plate";
+  shape: string;
+  mount: string;
+  /** 돌출·걸이에서 벽이 어느 쪽인가 */
+  side?: "left" | "right";
+  fill: string;
+  /** 테두리 색 — "" 면 없음 */
+  border?: string;
+  borderMm?: number;
+  w: number;
+  h: number;
+  x: number;
+  y: number;
+};
+
+export type Item = TextItem | LogoItem | PatchItem | PlateItem;
+
+/** 판정·조명·치수선의 대상 — 글자와 로고 («간판 글자»). 판·가리기는 빠집니다 */
+export const isSign = (it: Item): it is TextItem | LogoItem => it.type === "text" || it.type === "logo";
 
 export type Design = {
   /** `makerKinds` 의 key */
@@ -95,6 +148,8 @@ export type Design = {
   wallW: number;
   /** 벽 세로 (mm) */
   wallH: number;
+  /** 건물 사진에서 뽑은 색(넓은 순) — 사진은 안 남기고 색 값만 둡니다 (F26-f) */
+  palette?: string[];
   items: Item[];
 };
 
@@ -164,6 +219,12 @@ export function luminance(hex: string): number {
   return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
 }
 
+/** WCAG 대비비 (1 ~ 21) — 두 색 중 밝은 쪽이 위로 */
+export function contrast(a: string, b: string): number {
+  const la = luminance(a), lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
 const INK_DARK = "#0f1a19";
 const INK_LIGHT = "#ffffff";
 
@@ -184,7 +245,7 @@ export function inkOn(bg: string): string {
 export type Measured = { w: number; h: number };
 
 export function itemSize(it: Item, textSize?: Measured): Measured {
-  if (it.type === "patch") return { w: it.w, h: it.h };
+  if (it.type === "patch" || it.type === "plate") return { w: it.w, h: it.h };
   if (it.type === "logo") return { w: it.w, h: (it.w * it.srcH) / Math.max(1, it.srcW) };
   return textSize ?? { w: 0, h: 0 };
 }
@@ -266,11 +327,27 @@ export function summarize(
   if (k.needsLed) L.push(`조명 색: ${info.ledName}`);
   if (info.overall) L.push(`전체 크기(글자·로고 외곽): 가로 ${fmtMm(info.overall.w)} × 세로 ${fmtMm(info.overall.h)}`);
   L.push(`벽: ${info.wallName}`);
+  if (d.palette?.length) L.push(`건물 색(사진에서 뽑음): ${d.palette.slice(0, 5).join(", ")}`);
   d.items.forEach((it, i) => {
     if (it.type === "patch") return;
     const sz = info.sizes.get(it.id);
+    if (it.type === "plate") {
+      const shape = plateShapes.find((s) => s.key === it.shape)?.name ?? it.shape;
+      const mount = plateMounts.find((m) => m.key === it.mount);
+      L.push(
+        `${i + 1}. 판 · ${shape} · ${fmtMm(it.w)} × ${fmtMm(it.h)} · 색 ${it.fill}${it.border ? ` · 테두리 ${it.border} ${it.borderMm ?? 0}mm` : ""} · 설치 ${mount ? mount.label : it.mount}`,
+      );
+      return;
+    }
     if (it.type === "text") {
-      L.push(`${i + 1}. 글자 «${it.lines.map((l) => l.text).join(" / ")}» · 글꼴 ${info.fontName(it)} · 글자 높이 ${it.lines.map((l) => `${l.heightMm}mm`).join(" / ")} · 앞면 ${it.face}`);
+      L.push(
+        `${i + 1}. 글자 «${it.lines.map((l) => l.text).join(" / ")}»${it.vertical ? " (세로쓰기)" : ""} · 글꼴 ${info.fontName(it)} · 글자 높이 ${it.lines.map((l) => `${l.heightMm}mm`).join(" / ")} · 앞면 ${it.face}`,
+      );
+      const ovs = Object.values(it.glyphs ?? {});
+      const shaped = ovs.filter((o) => o.path || o.mesh).length;
+      const stretched = ovs.filter((o) => (o.sx ?? 1) !== 1 || (o.sy ?? 1) !== 1 || o.skew).length;
+      const pro = [shaped && `글자 모양 직접 수정 ${shaped}자`, stretched && `늘리기·기울이기 ${stretched}자`, it.mesh && "글자 전체 격자 왜곡"].filter(Boolean);
+      if (pro.length) L.push(`   PRO 편집: ${pro.join(" · ")} — 수정한 외곽은 첨부 SVG 에 그대로 들어 있습니다`);
     } else {
       L.push(`${i + 1}. 로고 «${it.name}» · 색 ${it.layers.map((l) => l.color).join(", ")}`);
     }
@@ -286,33 +363,47 @@ export const fmtMm = (mm: number) => `${Math.round(mm).toLocaleString()}mm`;
 /* ------------------------------------------------------------------ 내보내기 */
 
 export type Placed = {
-  it: TextItem | LogoItem;
+  it: TextItem | LogoItem | PlateItem;
   /** 반듯한(회전·원근 전) 외곽선 — 아이템 왼쪽 위가 0,0, 단위 mm */
   paths: { d: string; color: string }[];
   size: Measured;
 };
 
 /**
- * 제작용 SVG — 벽·조명 없이 **글자·로고 외곽만**, 실제 크기(mm)로.
- * 색마다 `<g>` 로 갈라 둡니다 — 간판은 색마다 아크릴·시트가 따로라 층이 곧 제작 단위입니다.
+ * 제작용 SVG — 벽·조명 없이 **글자·로고(·판) 외곽만**, 실제 크기(mm)로.
+ * 색마다 `<g>` 로 갈라 둡니다 — 간판은 색마다 아크릴·시트가 따로라 층이 곧 제작 단위입니다. 판은 `plate-…` 층으로 따로 갑니다.
  * ⚠️ «시안»이지 제작 원본이 아닙니다(`/sign-proof` 시트의 고지와 같은 말). 공장에서 칼선·CMYK 로 다시 뽑습니다.
+ * 🔴 **범위는 «실제 외곽»으로 잽니다**(2026-09-26) — 글자 한 자를 옮기거나 PRO 격자로 휘면 외곽이 아이템 상자 밖으로
+ * 나가는데, 상자로 재면 그 부분이 SVG 밖에서 잘렸습니다.
  */
 export function fabricationSvg(placed: Placed[]): string {
-  const boxes = placed.map((p) => ({ x0: p.it.x - p.size.w / 2, y0: p.it.y - p.size.h / 2, ...p.size }));
-  if (!boxes.length) return "";
-  const x0 = Math.min(...boxes.map((b) => b.x0)), y0 = Math.min(...boxes.map((b) => b.y0));
-  const x1 = Math.max(...boxes.map((b) => b.x0 + b.w)), y1 = Math.max(...boxes.map((b) => b.y0 + b.h));
+  const origin = placed.map((p) => ({ x: p.it.x - p.size.w / 2, y: p.it.y - p.size.h / 2 }));
+  const ext = placed.flatMap((p, i) =>
+    p.paths.map((q) => {
+      const b = pathBox(q.d);
+      return { x0: origin[i].x + b.x0, y0: origin[i].y + b.y0, x1: origin[i].x + b.x0 + b.w, y1: origin[i].y + b.y0 + b.h };
+    }),
+  ).filter((b) => Number.isFinite(b.x0));
+  if (!ext.length) return "";
+  const x0 = Math.min(...ext.map((b) => b.x0)), y0 = Math.min(...ext.map((b) => b.y0));
+  const x1 = Math.max(...ext.map((b) => b.x1)), y1 = Math.max(...ext.map((b) => b.y1));
   const W = x1 - x0, H = y1 - y0;
   const byColor = new Map<string, string[]>();
   placed.forEach((p, i) => {
-    const b = boxes[i];
+    const o = origin[i];
     for (const path of p.paths) {
-      const g = `<path d="${path.d}" transform="translate(${(b.x0 - x0).toFixed(2)} ${(b.y0 - y0).toFixed(2)})"/>`;
-      byColor.set(path.color, [...(byColor.get(path.color) ?? []), g]);
+      const g = `<path d="${path.d}" transform="translate(${(o.x - x0).toFixed(2)} ${(o.y - y0).toFixed(2)})"/>`;
+      const key = `${p.it.type === "plate" ? "plate" : "face"}|${path.color}`;
+      byColor.set(key, [...(byColor.get(key) ?? []), g]);
     }
   });
+  // 판을 먼저(아래) — 그 위에 글자 층
   const groups = [...byColor.entries()]
-    .map(([c, ps]) => `<g id="face-${c.replace("#", "")}" fill="${c}" fill-rule="evenodd">${ps.join("")}</g>`)
+    .sort(([a], [b]) => (a.startsWith("plate") === b.startsWith("plate") ? 0 : a.startsWith("plate") ? -1 : 1))
+    .map(([k, ps]) => {
+      const [layer, c] = k.split("|");
+      return `<g id="${layer}-${c.replace("#", "")}" fill="${c}" fill-rule="evenodd">${ps.join("")}</g>`;
+    })
     .join("");
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
