@@ -142,6 +142,21 @@ export type MakerShareRow = {
   expires_at: string;
 };
 
+/** 메이커 프로젝트 에셋 (0018 · F26-j) — 관리자만 읽고 씁니다 */
+export type MakerAssetRow = {
+  id: string;
+  project: string;
+  name: string;
+  kind: "svg" | "png" | "jpg" | "webp";
+  /** `maker-assets` 버킷 안 키 */
+  path: string;
+  width: number;
+  height: number;
+  bytes: number;
+  note: string;
+  created_at: string;
+};
+
 /** 관리자 «업무» 할 일 (0015 · F28) */
 export type DeskTaskRow = {
   id: string;

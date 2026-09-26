@@ -24,7 +24,9 @@ export type RPath = { d: string; color: string; glyph?: number };
 /** 무대에 넘기는 «이미 벽 좌표로 옮긴» 아이템 */
 export type RItem = {
   id: string;
-  type: "text" | "logo" | "patch" | "plate";
+  type: "text" | "logo" | "patch" | "plate" | "image";
+  /** 그림(프로젝트 에셋, F26-j) — 서명 URL. 아직 못 받았으면 null(회색 자리만) */
+  image?: { href: string | null };
   /** 판(2026-09-26) — 색·테두리·철물(벽 좌표 경로). 철물은 돌출(까치발)·걸이(팔 + 봉 둘)에만 있습니다 */
   plate?: { fill: string; border?: string; borderW: number; hardware: string[] };
   /** 실제 크기 (회전·원근 전) */
@@ -317,6 +319,22 @@ export default function Stage({ svgRef, ...p }: Props) {
           .map((r) => (
             <path key={r.id} d={r.world[0]?.d} fill={r.world[0]?.color} opacity={p.night ? 0.35 : 1} style={{ cursor: "move" }} onPointerDown={(e) => startMove(e, r)} />
           ))}
+
+        {/* 그림 (프로젝트 에셋, F26-j) — 실사 출력물이라 조명·두께 없이 평면으로. 네 모서리 중 셋으로 아핀(원근은 안 탐) */}
+        {p.items
+          .filter((r) => r.type === "image")
+          .map((r) => {
+            const [q0, q1, , q3] = r.quad, w = r.size.w, h = r.size.h;
+            const m = `matrix(${(q1[0] - q0[0]) / w} ${(q1[1] - q0[1]) / w} ${(q3[0] - q0[0]) / h} ${(q3[1] - q0[1]) / h} ${q0[0]} ${q0[1]})`;
+            return (
+              <g key={r.id} style={{ cursor: p.readOnly ? undefined : "move" }} onPointerDown={(e) => startMove(e, r)} opacity={p.night ? 0.35 : 1}>
+                <polygon data-export-skip="" points={r.quad.map((v) => v.join(",")).join(" ")} fill={r.image?.href ? "transparent" : "#d9d9d6"} />
+                {r.image?.href && (
+                  <image className="[-webkit-user-drag:none]" href={r.image.href} x={0} y={0} width={w} height={h} preserveAspectRatio="none" transform={m} pointerEvents="none" />
+                )}
+              </g>
+            );
+          })}
 
         {/* 바탕판 (T5) — 그림자 + 두께 + 판 */}
         {p.board && (

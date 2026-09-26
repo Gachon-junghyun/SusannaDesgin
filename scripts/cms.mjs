@@ -12,8 +12,8 @@
  * DB 를 바꾸면 공개 페이지(`/` `/works`)는 force-dynamic 이라 **배포 없이** 반영됩니다.
  */
 
-import { readFileSync, existsSync, statSync } from "node:fs";
-import { basename, extname } from "node:path";
+import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from "node:fs";
+import { basename, extname, join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const B = (s) => `\x1b[1m${s}\x1b[0m`;
@@ -138,6 +138,11 @@ ${B("CMS 명령줄 도구")}   ${D("npm run cms -- <명령>")}
     works move  <id> up|down
     works rm    <id> --yes
     works batch <계획.json>         ${D("사진 여러 장을 한 번에 — 아래 참조")}
+
+  ${B("메이커 프로젝트 에셋")} ${D("(F26-j — 관리자만 보는 비공개 저장소)")}
+    maker-assets upload <프로젝트> <파일...> [--note "..."]   SVG·PNG·JPG·WEBP 를 올림 ${D("(SVG 는 평평하게 만든 것만)")}
+    maker-assets list [프로젝트]                          올라간 에셋 목록
+    maker pull <토큰|공유주소> <폴더>                      방(공유 링크)의 디자인 + 그 안의 그림 에셋을 내려받음
 
   ${B("정리")}
     hero renumber / works renumber   순서값을 10,20,30… 으로 다시 매김
@@ -598,6 +603,121 @@ async function batchWorks(supabase, planPath, categories) {
 
 const [group, action, ...rest] = positional;
 
+// ---------------------------------------------------------------
+// 메이커 프로젝트 에셋 (F26-j · 2026-09-26)
+//   클로드 코드가 손님 시안에서 뽑은 요소를 올리고(upload), 사람이 메이커에서 조립한 방을 받아 옵니다(pull).
+//   🔴 비공개 버킷 `maker-assets` + 표 `maker_assets` — RLS is_admin() (0018). 이 도구도 관리자 세션으로만 닿습니다.
+// ---------------------------------------------------------------
+
+const ASSET_BUCKET = "maker-assets";
+const ASSET_MAX = 20 * 1024 * 1024; // 0018 버킷 한도와 같게
+const ASSET_TYPES = { ".svg": ["svg", "image/svg+xml"], ".png": ["png", "image/png"], ".jpg": ["jpg", "image/jpeg"], ".jpeg": ["jpg", "image/jpeg"], ".webp": ["webp", "image/webp"] };
+/** 에디터(`lib/maker/asset-svg.ts`)가 읽는 모양 — 경로만, 변형 없음 */
+const SVG_NOT_FLAT = /transform=|<(rect|circle|ellipse|polygon|polyline|line|text|image|use)[\s>/]/;
+
+/** 그림 크기 — PNG IHDR · JPEG SOF · SVG viewBox. 모르면 0 (에디터가 1:1 로 둡니다) */
+function sizeOf(buf, kind) {
+  try {
+    if (kind === "png") return [buf.readUInt32BE(16), buf.readUInt32BE(20)];
+    if (kind === "svg") {
+      const vb = /viewBox\s*=\s*"([^"]+)"/.exec(buf.toString("utf8"))?.[1]?.trim().split(/[\s,]+/).map(Number);
+      return vb && vb.length === 4 ? [Math.round(vb[2]), Math.round(vb[3])] : [0, 0];
+    }
+    if (kind === "jpg") {
+      let i = 2;
+      while (i < buf.length) {
+        if (buf[i] !== 0xff) return [0, 0];
+        const m = buf[i + 1], len = buf.readUInt16BE(i + 2);
+        if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return [buf.readUInt16BE(i + 7), buf.readUInt16BE(i + 5)];
+        i += 2 + len;
+      }
+    }
+  } catch {
+    /* 크기를 못 읽으면 0 */
+  }
+  return [0, 0];
+}
+
+function explainAsset(e) {
+  const m = e?.message ?? "";
+  if (e?.code === "42P01" || e?.code === "PGRST205" || /maker_assets/.test(m)) return "에셋 표가 없습니다 — supabase/migrations/0018_maker_assets.sql 을 먼저 실행하세요.";
+  if (/bucket not found/i.test(m)) return "maker-assets 버킷이 없습니다 — 0018 을 먼저 실행하세요.";
+  return m || String(e?.code ?? "알 수 없는 오류");
+}
+
+async function uploadAssets(supabase, project, files) {
+  if (!project || !files.length) die('사용법: cms maker-assets upload <프로젝트> <파일...> [--note "..."]');
+  const note = str("note") ?? "";
+  console.log(`\n  프로젝트 ${B(project)} 에 ${files.length}개\n`);
+  for (const f of files) {
+    if (!existsSync(f)) die(`파일이 없습니다: ${f}`);
+    const t = ASSET_TYPES[extname(f).toLowerCase()];
+    if (!t) die(`에셋으로 못 올리는 형식입니다: ${basename(f)}`, `받는 것: ${Object.keys(ASSET_TYPES).join(" · ")}`);
+    const [kind, contentType] = t;
+    const size = statSync(f).size;
+    if (size > ASSET_MAX) die(`너무 큽니다: ${basename(f)} (${(size / 1048576).toFixed(1)}MB, 한도 20MB)`);
+    const buf = readFileSync(f);
+    if (kind === "svg" && SVG_NOT_FLAT.test(buf.toString("utf8"))) {
+      die(`평평하지 않은 SVG 입니다: ${basename(f)}`, "에디터는 <path fill d>(M·L·C·Z 절대좌표)만 읽습니다 — 업로더로 평평하게 만든 뒤 올리세요.");
+    }
+    const [w, h] = sizeOf(buf, kind);
+    const path = `${crypto.randomUUID()}.${kind}`;
+    const { error: ue } = await supabase.storage.from(ASSET_BUCKET).upload(path, buf, { contentType, upsert: false });
+    if (ue) die(`업로드 실패 (${basename(f)}): ${explainAsset(ue)}`);
+    const name = basename(f).replace(/\.[^.]+$/, "").slice(0, 120);
+    const { error: ie } = await supabase.from("maker_assets").insert({ project, name, kind, path, width: w, height: h, bytes: size, note: note.slice(0, 400) });
+    if (ie) {
+      await supabase.storage.from(ASSET_BUCKET).remove([path]);
+      die(`기록 실패 (${basename(f)}): ${explainAsset(ie)}`);
+    }
+    console.log(`  ${G("↑")} ${name} ${D(`${kind} ${w}×${h} · ${(size / 1024).toFixed(0)}KB`)}`);
+  }
+  console.log(D("\n  관리자 메이커 «넣기 → 프로젝트 에셋» 또는 /admin/maker/assets 에서 보입니다.\n"));
+}
+
+async function listAssets(supabase, project) {
+  let q = supabase.from("maker_assets").select("id, project, name, kind, width, height, bytes, created_at").order("project").order("created_at");
+  if (project) q = q.eq("project", project);
+  const { data, error } = await q;
+  if (error) die(explainAsset(error));
+  if (!data.length) return console.log(D("\n  에셋이 없습니다.\n"));
+  let cur = "";
+  for (const a of data) {
+    if (a.project !== cur) console.log(`\n  ${B((cur = a.project))}`);
+    console.log(`    ${a.name}  ${D(`${a.kind} ${a.width}×${a.height} · ${(a.bytes / 1024).toFixed(0)}KB · ${a.id.slice(0, 8)}`)}`);
+  }
+  console.log("");
+}
+
+/** 방(공유 링크)을 받아 옵니다 — design.json + 그 디자인이 쓰는 그림 에셋 파일 + assets.json(번호 → 파일) */
+async function pullRoom(supabase, ref, dir) {
+  const token = /([0-9a-f]{32})/i.exec(ref ?? "")?.[1];
+  if (!token || !dir) die("사용법: cms maker pull <토큰|공유주소> <폴더>");
+  const { data, error } = await supabase.from("maker_shares").select("token, title, design, created_at, expires_at").eq("token", token).maybeSingle();
+  if (error) die(`방을 못 읽었습니다: ${error.message}`);
+  if (!data) die("그런 방이 없습니다(지웠거나 토큰이 틀림).");
+  mkdirSync(join(dir, "assets"), { recursive: true });
+  writeFileSync(join(dir, "design.json"), JSON.stringify({ token: data.token, title: data.title, created_at: data.created_at, design: data.design }, null, 1));
+  const ids = [...new Set((data.design?.items ?? []).filter((it) => it.type === "image").map((it) => it.asset))];
+  const map = {};
+  if (ids.length) {
+    const { data: rows, error: re } = await supabase.from("maker_assets").select("id, name, kind, path, width, height").in("id", ids);
+    if (re) die(explainAsset(re));
+    for (const a of rows) {
+      const { data: blob, error: de } = await supabase.storage.from(ASSET_BUCKET).download(a.path);
+      if (de) die(`에셋 내려받기 실패 (${a.name}): ${de.message}`);
+      const file = `${a.id}.${a.kind}`;
+      writeFileSync(join(dir, "assets", file), Buffer.from(await blob.arrayBuffer()));
+      map[a.id] = { name: a.name, kind: a.kind, file: `assets/${file}`, width: a.width, height: a.height };
+    }
+    const missing = ids.filter((i) => !map[i]);
+    if (missing.length) console.log(Y(`  ⚠ 디자인이 쓰는 그림 ${missing.length}개가 에셋 표에 없습니다(지워졌음): ${missing.join(", ")}`));
+  }
+  writeFileSync(join(dir, "assets.json"), JSON.stringify(map, null, 1));
+  const n = data.design?.items?.length ?? 0;
+  console.log(`\n  ${G("↓")} «${data.title}» — 아이템 ${n}개 · 그림 ${Object.keys(map).length}개 → ${dir}\n`);
+}
+
 async function main() {
   if (!group || group === "help" || has("help")) {
     console.log(USAGE);
@@ -625,6 +745,16 @@ async function main() {
     for (const f of files) await resolveImage(supabase, f);
     console.log(D("\n  위 URL 을 --image 값으로 쓰거나, 곧바로 add 에 파일 경로를 넘겨도 됩니다.\n"));
     return;
+  }
+
+  if (group === "maker-assets") {
+    if (action === "upload") return uploadAssets(supabase, rest[0], rest.slice(1));
+    if (action === "list") return listAssets(supabase, rest[0]);
+    die("사용법: cms maker-assets upload|list …");
+  }
+  if (group === "maker") {
+    if (action === "pull") return pullRoom(supabase, rest[0], rest[1]);
+    die("사용법: cms maker pull <토큰|공유주소> <폴더>");
   }
 
   if (group === "hero" || group === "works") {

@@ -50,6 +50,8 @@ export default function MakerShell({
     { href: `${base}/trace`, label: "SVG 따기", sub: "그림 → 선(벡터)", icon: IconPen },
     // F26-h (2026-09-26) — 사람 요청 «네비게이션 바에 따로 창을 만들어 건물을 넣고 퍼스널 컬러 찾기»
     { href: `${base}/color`, label: "건물 색 찾기", sub: "사진 → 우리 가게 색", icon: IconDrop },
+    // F26-j (2026-09-26) — 클로드가 뽑아 올린 손님 시안 요소. 손님 자료라 관리자만 봅니다
+    ...(mode === "admin" ? [{ href: `${base}/assets`, label: "프로젝트 에셋", sub: "뽑아 올린 로고·그림", icon: IconBox }] : []),
   ];
 
   return (
@@ -164,6 +166,16 @@ function IconDrop() {
     <svg className={icon} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
       <path d="M12.5 3.5l4 4-1.6 1.6-4-4zM11 5l4 4-6.8 6.8H4.2v-4z" />
       <path d="M2.5 18.5h5" />
+    </svg>
+  );
+}
+function IconBox() {
+  return (
+    <svg className={icon} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <rect x="2.5" y="2.5" width="6.5" height="6.5" />
+      <rect x="11" y="2.5" width="6.5" height="6.5" />
+      <rect x="2.5" y="11" width="6.5" height="6.5" />
+      <path d="M11 17.5l2.6-3.4 1.8 2.2 2.1-2.8" />
     </svg>
   );
 }

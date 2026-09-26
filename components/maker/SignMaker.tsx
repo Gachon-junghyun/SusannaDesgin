@@ -60,6 +60,7 @@ import {
   type Measured,
   type Note,
   type Placed,
+  type ImageItem,
   type PlateItem,
   type TextItem,
 } from "@/lib/maker/design";
@@ -103,6 +104,9 @@ import {
 } from "@/lib/maker/geom";
 import { bbox, imageDataOf, layersFromImage, toPathD, traceGray, type Contour } from "@/lib/maker/trace";
 import { createMakerShare, deleteMakerShare, listMakerShares, type ShareItem } from "@/app/admin/maker/actions";
+import { getMakerAssets } from "@/app/admin/maker/assets/actions";
+import { parseAssetSvg } from "@/lib/maker/asset-svg";
+import type { MakerAsset } from "@/lib/maker/assets";
 
 import MakerTour from "./MakerTour";
 import Stage, { type Calib, type RItem, type RPath, type View } from "./Stage";
@@ -296,6 +300,11 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
   const [calibMm, setCalibMm] = useState("2100");
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
+  /* 프로젝트 에셋 (F26-j) — 관리자만. 서명 URL 은 6시간 살아서 디자인에 저장하지 않고 여기(메모리)에만 둡니다 */
+  const [assets, setAssets] = useState<MakerAsset[] | null>(null);
+  const [assetErr, setAssetErr] = useState("");
+  const [assetProject, setAssetProject] = useState("");
+  const [assetUrls, setAssetUrls] = useState<Map<string, string>>(() => new Map());
   const [canvasPx, setCanvasPx] = useState({ w: 800, h: 500 });
   const [view, setView] = useState<View>({ x: -d.wallW * 0.06, y: -d.wallH * 0.1, w: d.wallW * 1.12 });
   const svgRef = useRef<SVGSVGElement>(null);
@@ -430,6 +439,9 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         m.set(it.id, { size: { w: it.w, h: it.h }, paths: [{ d: `M0,0L${it.w},0L${it.w},${it.h}L0,${it.h}Z`, color: it.color }], glyphBoxes: {}, letterH: 0 });
       } else if (it.type === "plate") {
         m.set(it.id, { size: { w: it.w, h: it.h }, paths: [{ d: platePath(it.shape, it.w, it.h), color: it.fill }], glyphBoxes: {}, letterH: Math.min(it.w, it.h) * 0.3 });
+      } else if (it.type === "image") {
+        const h = (it.w * it.srcH) / Math.max(1, it.srcW);
+        m.set(it.id, { size: { w: it.w, h }, paths: [{ d: `M0,0L${it.w},0L${it.w},${h}L0,${h}Z`, color: "transparent" }], glyphBoxes: {}, letterH: 0 });
       } else if (it.type === "logo") {
         const k = it.w / Math.max(1, it.srcW);
         m.set(it.id, {
@@ -490,6 +502,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
             bars,
             glyphQuads,
             warped: !!H || !!it.rot,
+            image: it.type === "image" ? { href: assetUrls.get(it.asset) ?? null } : undefined,
             plate:
               it.type === "plate"
                 ? { fill: it.fill, border: it.border || undefined, borderW: it.border ? (it.borderMm ?? 30) : 0, hardware: plateHardware(it).map((hd) => mapPath(hd, toWorld)) }
@@ -497,7 +510,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
           },
         ];
       }),
-    [d.items, d.bar, locals, kind.lit],
+    [d.items, d.bar, locals, kind.lit, assetUrls],
   );
 
   /** 바탕판 (T5) — 글자 폭을 먼저 재고 판을 거기 맞춥니다(SIGNTYPES.md §8-3 «바탕판을 먼저 정하지 마라») */
@@ -513,7 +526,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
 
   const overall: Measured | null = useMemo(() => {
     if (board) return { w: board.w, h: board.h };
-    const s = ritems.filter((q) => q.type !== "patch");
+    const s = ritems.filter((q) => q.type !== "patch" && q.type !== "image");
     if (!s.length) return null;
     const xs = s.flatMap((q) => q.quad.map((v) => v[0])), ys = s.flatMap((q) => q.quad.map((v) => v[1]));
     return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
@@ -645,6 +658,63 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     commit((p) => ({ ...p, items: [...p.items, it] }));
     select(it.id);
   }
+
+  /* ---------------------------------------------------------- 프로젝트 에셋 (F26-j · 2026-09-26) — 관리자만 */
+  async function loadAssets() {
+    if (mode !== "admin") return;
+    setAssetErr("");
+    const r = await getMakerAssets();
+    if (!r.ok) {
+      setAssetErr(r.error);
+      setAssets([]);
+      return;
+    }
+    setAssets(r.items);
+    setAssetUrls(new Map(r.items.flatMap((a) => (a.url ? [[a.id, a.url] as [string, string]] : []))));
+    setAssetProject((cur) => (cur && r.items.some((a) => a.project === cur) ? cur : (r.items[r.items.length - 1]?.project ?? "")));
+  }
+
+  /** SVG 는 로고(색 바꾸기·판정 가능), PNG·JPG 는 그림(실사 출력) — 🔴 그림은 판정·제작용 SVG 에 안 들어갑니다 */
+  async function addAsset(a: MakerAsset) {
+    if (!a.url) return setErr("이 에셋의 주소를 못 받았습니다 — «새로고침»을 눌러 보세요.");
+    setErr("");
+    try {
+      if (a.kind === "svg") {
+        const txt = await (await fetch(a.url)).text();
+        addLogo(a.name, parseAssetSvg(txt));
+        return;
+      }
+      const srcW = a.width || 1000, srcH = a.height || 1000;
+      const w = Math.min(d.wallW * 0.35, 2000), h = (w * srcH) / srcW;
+      const it: ImageItem = { id: newId(), type: "image", asset: a.id, name: a.name, srcW, srcH, w, x: d.wallW / 2, y: freeY(h) };
+      commit((p) => ({ ...p, items: [...p.items, it] }));
+      select(it.id);
+    } catch (e) {
+      setErr(`에셋을 넣지 못했습니다: ${(e as Error).message}`);
+    }
+  }
+
+  // 관리자 — 처음 한 번 목록과 주소를 받아 둡니다(초안에 이미 올린 그림이 있으면 바로 보이게)
+  useEffect(() => {
+    if (mode !== "admin") return;
+    let alive = true;
+    getMakerAssets()
+      .then((r) => {
+        if (!alive) return;
+        if (!r.ok) {
+          setAssetErr(r.error);
+          setAssets([]);
+          return;
+        }
+        setAssets(r.items);
+        setAssetUrls(new Map(r.items.flatMap((a) => (a.url ? [[a.id, a.url] as [string, string]] : []))));
+        setAssetProject(r.items[r.items.length - 1]?.project ?? "");
+      })
+      .catch((e: Error) => alive && setAssetErr(e.message));
+    return () => {
+      alive = false;
+    };
+  }, [mode]);
 
   /* ---------------------------------------------------------- 판 · 레퍼런스 스타일 (2026-09-26) */
   function addPlate() {
@@ -964,7 +1034,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     const k = Math.max(0.1, Math.min(10, f));
     const warp = base.warp ? base.warp.map((q) => [q[0] * k, q[1] * k] as [number, number]) : base.warp;
     if (base.type === "text") return { lines: base.lines.map((l) => ({ ...l, heightMm: Math.max(20, Math.round((l.heightMm * k) / 5) * 5) })), warp };
-    if (base.type === "logo") return { w: Math.max(50, Math.round(base.w * k)), warp };
+    if (base.type === "logo" || base.type === "image") return { w: Math.max(50, Math.round(base.w * k)), warp };
     return { w: Math.max(50, base.w * k), h: Math.max(20, base.h * k), warp };
   }
 
@@ -1174,7 +1244,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     });
   const placed = (): Placed[] =>
     d.items.flatMap((it) => {
-      if (it.type === "patch") return [];
+      if (it.type === "patch" || it.type === "image") return [];
       const L = locals.get(it.id);
       return L ? [{ it, paths: L.paths.map(({ d: pd, color }) => ({ d: pd, color })), size: L.size }] : [];
     });
@@ -1535,6 +1605,49 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         <AddBtn onClick={addPatch} label="가리기" sub="기존 간판 덮기" />
       </div>
       <p className="mt-2 text-[12px] leading-relaxed text-ink-500">로고는 이 브라우저 안에서 선으로 바뀝니다. 선을 자세히 다듬으려면 왼쪽 «SVG 따기»로. 판은 늘 글자 뒤에 놓입니다.</p>
+      {mode === "admin" && (
+        <div className="mt-4 border-t border-line pt-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-black">프로젝트 에셋</span>
+            <button type="button" onClick={() => void loadAssets()} className="ml-auto text-[11px] text-ink-500 underline underline-offset-2 hover:text-ink">
+              새로고침
+            </button>
+          </div>
+          {assetErr && <p className="mt-1 text-[12px] leading-relaxed text-accent-600">{assetErr}</p>}
+          {assets === null && !assetErr && <p className="mt-1 text-[12px] text-ink-500">불러오는 중…</p>}
+          {assets && assets.length > 0 && (
+            <>
+              <select value={assetProject} onChange={(e) => setAssetProject(e.target.value)} className="mt-2 w-full border border-line bg-white px-2 py-1.5 text-[13px]" aria-label="프로젝트">
+                {[...new Set(assets.map((a) => a.project))].map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+              <ul className="mt-2 grid grid-cols-3 gap-1.5">
+                {assets
+                  .filter((a) => a.project === assetProject)
+                  .map((a) => (
+                    <li key={a.id}>
+                      <button type="button" onClick={() => void addAsset(a)} title={`${a.name} (${a.kind.toUpperCase()})`} className="flex aspect-square w-full items-center justify-center bg-paper p-1 hover:outline hover:outline-2 hover:outline-brand-700">
+                        {a.url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- 서명 URL(수명 있음)
+                          <img src={a.url} alt={a.name} className="max-h-full max-w-full object-contain" loading="lazy" />
+                        ) : (
+                          <span className="text-[10px] text-ink-500">{a.name}</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-ink-500">SVG 는 로고(색 바꾸기 가능), PNG·JPG 는 그림으로 올라갑니다. 그림은 글자·로고 뒤에 놓이고 판정에는 안 들어갑니다.</p>
+            </>
+          )}
+          {assets && !assets.length && !assetErr && (
+            <p className="mt-1 text-[12px] leading-relaxed text-ink-500">
+              올라온 에셋이 없습니다 — <Link href="/admin/maker/assets" className="underline underline-offset-2">에셋 페이지</Link>
+            </p>
+          )}
+        </div>
+      )}
     </Panel>
   );
 
@@ -1784,7 +1897,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
               <span className="truncate">
                 {it.type === "text"
                   ? it.lines.map((l) => l.text).join(" / ")
-                  : it.type === "logo"
+                  : it.type === "logo" || it.type === "image"
                     ? it.name
                     : it.type === "plate"
                       ? `${plateShapes.find((s) => s.key === it.shape)?.name ?? ""} 판 · ${plateMounts.find((m) => m.key === it.mount)?.short ?? ""}`
@@ -1833,6 +1946,20 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         />
       )}
       {it.type === "logo" && part !== "font" && <LogoProps it={it} onChange={(patch) => setItem(it.id, patch)} onRetrace={(m, inv, k) => relogo(it, m, inv, k)} />}
+      {it.type === "image" && part !== "font" && (
+        <Field label="가로 (mm) — 세로는 그림 비율대로">
+          <input
+            inputMode="numeric"
+            value={Math.round(it.w)}
+            onChange={(e) => {
+              const v = Number(e.target.value.replace(/[^\d]/g, ""));
+              if (v >= 50) setItem(it.id, { w: v });
+            }}
+            className="w-full border border-line px-2 py-1.5 text-right"
+          />
+          <p className="mt-1 text-[11px] text-ink-500">그림(실사 출력)은 판정·제작용 SVG 에 안 들어가고, 글자·로고 뒤에 놓입니다.</p>
+        </Field>
+      )}
       {it.type === "plate" && part !== "font" && <PlateProps it={it} palette={d.palette} onChange={(patch) => setItem(it.id, patch)} />}
       {it.type === "patch" && part !== "font" && (
         <Field label="색 (사진 속 벽과 비슷하게)">
@@ -2911,7 +3038,7 @@ function LogoProps({ it, onChange, onRetrace }: { it: LogoItem; onChange: (p: Pa
 
 /* ================================================================ 판 · 스타일 (2026-09-26) */
 
-const TYPE_LABEL: Record<Item["type"], string> = { text: "글자", logo: "로고", patch: "가림", plate: "판" };
+const TYPE_LABEL: Record<Item["type"], string> = { text: "글자", logo: "로고", patch: "가림", plate: "판", image: "그림" };
 
 /** 레퍼런스 스타일 목록의 작은 그림 — 판 색·모양·글자색만으로 결을 보여 줍니다 */
 function StyleThumb({ s, tone }: { s: RefStyle; tone?: string }) {

@@ -114,7 +114,27 @@ export type PlateItem = Xform & {
   y: number;
 };
 
-export type Item = TextItem | LogoItem | PatchItem | PlateItem;
+/**
+ * 그림 — 프로젝트 에셋(F26-j)의 PNG·JPG(실사풍 일러스트·제품 그림·풀밭 띠 같은 것). **관리자 전용**입니다.
+ * 파일은 비공개 버킷에 있고 디자인엔 **에셋 번호만** 남습니다(`asset`) — 주소(서명 URL)는 6시간이면 죽어서 저장하지 않습니다.
+ * 🔴 판정·제작용 SVG·조명 대상이 아닙니다(인쇄·실사 출력물). 판처럼 글자·로고 **뒤**에 그립니다.
+ */
+export type ImageItem = Xform & {
+  id: string;
+  type: "image";
+  /** `maker_assets.id` */
+  asset: string;
+  name: string;
+  /** 원본 픽셀 크기 — 비율을 지키려고 둡니다 */
+  srcW: number;
+  srcH: number;
+  /** 벽 위 가로 (mm). 세로는 비율대로 */
+  w: number;
+  x: number;
+  y: number;
+};
+
+export type Item = TextItem | LogoItem | PatchItem | PlateItem | ImageItem;
 
 /** 판정·조명·치수선의 대상 — 글자와 로고 («간판 글자»). 판·가리기는 빠집니다 */
 export const isSign = (it: Item): it is TextItem | LogoItem => it.type === "text" || it.type === "logo";
@@ -246,7 +266,7 @@ export type Measured = { w: number; h: number };
 
 export function itemSize(it: Item, textSize?: Measured): Measured {
   if (it.type === "patch" || it.type === "plate") return { w: it.w, h: it.h };
-  if (it.type === "logo") return { w: it.w, h: (it.w * it.srcH) / Math.max(1, it.srcW) };
+  if (it.type === "logo" || it.type === "image") return { w: it.w, h: (it.w * it.srcH) / Math.max(1, it.srcW) };
   return textSize ?? { w: 0, h: 0 };
 }
 
@@ -331,6 +351,10 @@ export function summarize(
   d.items.forEach((it, i) => {
     if (it.type === "patch") return;
     const sz = info.sizes.get(it.id);
+    if (it.type === "image") {
+      L.push(`${i + 1}. 그림(프로젝트 에셋) «${it.name}» · ${fmtMm(it.w)} × ${fmtMm((it.w * it.srcH) / Math.max(1, it.srcW))} · 실사 출력`);
+      return;
+    }
     if (it.type === "plate") {
       const shape = plateShapes.find((s) => s.key === it.shape)?.name ?? it.shape;
       const mount = plateMounts.find((m) => m.key === it.mount);
