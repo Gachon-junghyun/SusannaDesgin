@@ -64,7 +64,7 @@ import {
   type TextItem,
 } from "@/lib/maker/design";
 import { takeForEditor } from "@/lib/maker/handoff";
-import { pickSpots, readLabel, skyShare, suggestCombos, toneOn, type Combo } from "@/lib/maker/palette";
+import { pickSpots, readLabel, recommend, skyShare, toneOn, type Rec } from "@/lib/maker/palette";
 import { fabCheck, type FabResult } from "@/lib/maker/fab";
 import {
   fontDisplayName,
@@ -657,9 +657,9 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
    * 레퍼런스 스타일 한 벌을 차립니다. 지금 벽의 **글자·판을 이 스타일로 바꾸고**(로고·가리기 판은 둡니다), 상호는 첫 글자 줄에서 가져옵니다.
    * 판 크기는 상호 글자 수에 맞춰 늘립니다(판이 글자보다 작으면 글자가 판 밖으로 나갑니다). 되돌리기 한 번이면 전으로 갑니다.
    */
-  function applyStyle(s: RefStyle) {
+  function applyStyle(s: RefStyle, nameOverride?: string) {
     const t0 = d.items.find((x): x is TextItem => x.type === "text");
-    const name = t0?.lines[0]?.text.trim() || "가게 이름";
+    const name = nameOverride?.trim() || t0?.lines[0]?.text.trim() || "가게 이름";
     const sub = t0?.lines[1]?.text.trim() || "업종 · 전화";
     const n = [...name.replace(/\s/g, "")].length;
     const H = s.text.heightMm, tr = (s.text.tracking ?? 0) / 1000;
@@ -706,7 +706,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     }
   }
 
-  const combos: Combo[] = useMemo(() => suggestCombos((d.palette ?? []).map((hex, i) => ({ hex, share: palShare[i] ?? 0 }))), [d.palette, palShare]);
+  const recs: Rec[] = useMemo(() => recommend((d.palette ?? []).map((hex, i) => ({ hex, share: palShare[i] ?? 1 / (i + 2) }))), [d.palette, palShare]);
 
   /** 뽑은 색 하나 — 고른 것에 입힙니다(글자면 앞면 · 판이면 판 색). 아무것도 안 골랐으면 벽 색으로 */
   function pickSwatch(hex: string) {
@@ -715,19 +715,39 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     if (d.wall !== "photo") pickWall("color", hex);
   }
 
-  /** 조합 하나 — 글자(고른 글자, 없으면 전부)에 글자 색, 판에 바탕 색. 판이 없으면 벽을 그 색으로(사진 벽이면 그대로) */
-  function applyCombo(c: Combo) {
+  /**
+   * 추천 한 안을 입힙니다(F26-i). 판을 권하는 안인데 벽에 판이 없으면 **현판 틀로 새로 차리고**(판·글자를 그 색으로),
+   * 판이 이미 있으면 색만 바꿉니다(판 색 · 포인트는 판 테두리). 판 없는 안(톤온톤)은 글자 색만 — 사진 벽이 아니면 벽도 건물 색으로.
+   */
+  function applyRec(r: Rec, name?: string) {
+    const hasPlate = d.items.some((x) => x.type === "plate");
+    if (r.plate && !hasPlate) {
+      const base = refStyles.find((s) => s.key === "hyeonpan")!;
+      applyStyle(
+        { ...base, plate: { ...base.plate!, fill: r.plate, border: r.point ?? "", borderMm: r.point ? 28 : undefined }, text: { ...base.text, font: "noto-sans-kr", face: r.face } },
+        name,
+      );
+      // 🔴 벽 판단은 «최신» 상태로 — 건물 색 찾기에서 넘어올 땐 방금 사진 벽을 깔았는데 `d` 는 아직 옛 벽이라, 사진을 덮어썼습니다(2026-09-26 실측)
+      commit((p) => (p.wall === "photo" ? p : { ...p, wall: "color", wallColor: r.wall }));
+      return;
+    }
+    if (!d.items.some((x) => x.type === "text")) {
+      const base = refStyles.find((s) => s.key === "letters")!;
+      applyStyle({ ...base, text: { ...base.text, face: r.face } }, name);
+      // 🔴 벽 판단은 «최신» 상태로 — 건물 색 찾기에서 넘어올 땐 방금 사진 벽을 깔았는데 `d` 는 아직 옛 벽이라, 사진을 덮어썼습니다(2026-09-26 실측)
+      commit((p) => (p.wall === "photo" ? p : { ...p, wall: "color", wallColor: r.wall }));
+      return;
+    }
     const target = sel?.type === "text" ? sel.id : null;
-    commit((p) => {
-      const hasPlate = p.items.some((x) => x.type === "plate");
-      const items = p.items.map((it) => {
-        if (it.type === "text" && (!target || it.id === target)) return { ...it, face: c.face };
-        if (it.type === "plate" && c.key !== "bare") return { ...it, fill: c.bg };
+    commit((p) => ({
+      ...p,
+      ...(p.wall !== "photo" ? { wall: "color", wallColor: r.wall } : {}),
+      items: p.items.map((it) => {
+        if (it.type === "text" && (!target || it.id === target)) return { ...it, face: r.face };
+        if (it.type === "plate" && r.plate) return { ...it, fill: r.plate, border: r.point ?? it.border, borderMm: r.point ? (it.borderMm ?? 28) : it.borderMm };
         return it;
-      });
-      const wallTo = (!hasPlate || c.key === "bare") && p.wall !== "photo" ? { wall: "color", wallColor: c.bg } : {};
-      return { ...p, ...wallTo, items };
-    });
+      }),
+    }));
   }
 
   /* ---------------------------------------------------------- PRO 모드 (F26-g) */
@@ -801,6 +821,11 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       setPalShare([]);
       setSkyCut(0);
       commit((p) => ({ ...p, palette: got }));
+    }
+    // «이 안으로 간판 만들기»(F26-i) — 그 색으로 판·글자를 차립니다
+    if (h?.rec) {
+      const rc = h.rec;
+      applyRec({ key: rc.plate ? "hyeonpan" : "tone", label: "", why: "", wall: pal?.[0] ?? "#e6e3dc", plate: rc.plate, face: rc.face, point: rc.point, ratio: 0 }, rc.name);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 처음 한 번만(넘어온 것을 꺼내 비웁니다)
   }, []);
@@ -1576,20 +1601,25 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
               </button>
             ))}
           </div>
-          <p className="mb-1 mt-3 text-[12px] font-bold text-ink-500">조합</p>
+          <p className="mb-1 mt-3 text-[12px] font-bold text-ink-500">추천 간판 색 — 간판에는 2~3색(바탕·글자·포인트)</p>
           <ul className="space-y-1.5">
-            {combos.map((c) => (
-              <li key={c.key} className="flex items-center gap-2">
-                <span className="grid h-9 w-14 shrink-0 place-items-center border border-line text-[17px] font-black" style={{ background: c.bg, color: c.face }} aria-hidden="true">
-                  가
-                </span>
-                <span className="min-w-0 flex-1 text-[12px] leading-snug">
-                  <b className="block text-[13px]">{c.label}</b>
-                  <span className={c.ratio < 3 ? "text-accent-600" : "text-ink-500"}>
-                    대비 {c.ratio.toFixed(1)} · {readLabel(c.ratio)}
+            {recs.map((r) => (
+              <li key={r.key} className="flex items-center gap-2">
+                <span className="grid h-9 w-14 shrink-0 place-items-center border border-line" style={{ background: r.wall }} aria-hidden="true">
+                  <span className="px-1.5 text-[15px] font-black leading-6" style={{ background: r.plate, color: r.face, outline: r.point ? `2px solid ${r.point}` : undefined, outlineOffset: -3 }}>
+                    가
                   </span>
                 </span>
-                <button type="button" onClick={() => applyCombo(c)} className="shrink-0 border border-brand-700 px-2.5 py-1.5 text-[12px] font-bold text-brand-700 hover:bg-brand-50">
+                <span className="min-w-0 flex-1 text-[12px] leading-snug">
+                  <b className="block text-[13px]">
+                    {r.label}
+                    {r.best && <span className="ml-1.5 text-[11px] font-black text-brand-700">추천</span>}
+                  </b>
+                  <span className={r.ratio < 3 ? "text-accent-600" : "text-ink-500"}>
+                    글자 대비 {r.ratio.toFixed(1)} · {readLabel(r.ratio)}
+                  </span>
+                </span>
+                <button type="button" onClick={() => applyRec(r)} className="shrink-0 border border-brand-700 px-2.5 py-1.5 text-[12px] font-bold text-brand-700 hover:bg-brand-50">
                   적용
                 </button>
               </li>

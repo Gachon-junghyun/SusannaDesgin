@@ -84,57 +84,120 @@ export function toneOn(bg: string, target = 3.2): string {
   return tries.sort((a, b) => Math.abs(luminance(a) - luminance(bg)) - Math.abs(luminance(b) - luminance(bg)))[0];
 }
 
-/* ------------------------------------------------------------------ 조합 추천 */
-
-export type Combo = {
-  key: string;
-  label: string;
-  /** 글자(앞면) 색 */
-  face: string;
-  /** 판 색 — 판이 없으면 «이 색 벽 위의 글자» 로 읽습니다 */
-  bg: string;
-  ratio: number;
-  why: string;
-};
+/* ------------------------------------------------------------------ 간판 색 추천 (F26-i · 2026-09-26) */
 
 export const READ_GOOD = 4.5;
 export const READ_OK = 3;
 export const readLabel = (r: number) => (r >= READ_GOOD ? "잘 읽힘" : r >= READ_OK ? "큰 글자면 읽힘" : "대비 부족");
 
-const INK = "#1b1d1c", MILK = "#fbfbf8";
+/** 먹 · 따뜻한 유백 — 간판 판·글자의 기본 무채색(레퍼런스 현판·세로 판의 두 색) */
+export const INK = "#1b1d1c";
+export const MILK = "#f4f1ea";
 
 /**
- * 사진 색에서 조합 넷 — 레퍼런스 20장에서 본 네 가지 쓰임을 그대로 옮긴 것입니다.
- *   ① 건물 주색을 판으로, 가장 대비 큰 사진 색을 글자로  ② 톤온톤(같은 계열 밝기만)
- *   ③ 가장 진한(채도 높은) 사진 색 하나를 포인트로  ④ 판 없이 — 건물 벽 위에 바로 올릴 글자 색
- * 대비가 모자라면 먹/유백으로 물러섭니다(사진 색만 고집하다 안 읽히는 간판이 되지 않게).
+ * 간판 색 추천 하나. 🔴 **색은 2~3개까지**입니다 — 바탕(판, 없으면 건물 벽) · 글자 · 포인트(선택).
+ * 근거: 한국 가게 전면 레퍼런스 20장의 공통점 «색은 1~2개이고 건물에서 뽑는다»(2026-09-26 `/research`).
  */
-export function suggestCombos(pal: Swatch[]): Combo[] {
-  if (!pal.length) return [];
-  const main = pal[0].hex;
-  const best = (bg: string, pool: string[]) => pool.reduce((a, b) => (contrast(b, bg) > contrast(a, bg) ? b : a), pool[0]);
-  const safe = (face: string, bg: string) => (contrast(face, bg) >= READ_OK ? face : contrast(INK, bg) >= contrast(MILK, bg) ? INK : MILK);
-  const hexes = pal.map((p) => p.hex);
-  const out: Combo[] = [];
-  const push = (c: Omit<Combo, "ratio">) => {
-    if (out.some((o) => o.face === c.face && o.bg === c.bg)) return;
-    out.push({ ...c, ratio: contrast(c.face, c.bg) });
-  };
+export type Rec = {
+  key: "tone" | "hyeonpan" | "onecolor";
+  label: string;
+  why: string;
+  /** 간판이 붙을 건물 벽 색(사진에서 가장 넓은 색) */
+  wall: string;
+  /** 판 색 — 없으면 판 없이 벽에 글자만 */
+  plate?: string;
+  face: string;
+  /** 포인트 — 판 테두리·보조 줄에 조금만 */
+  point?: string;
+  /** 글자와 그 바탕(판 또는 벽)의 대비 */
+  ratio: number;
+  /** 가장 먼저 권하는 안 */
+  best?: boolean;
+};
 
-  const f1 = safe(best(main, hexes.slice(1).length ? hexes.slice(1) : [INK, MILK]), main);
-  push({ key: "main", label: "건물 주색 판", face: f1, bg: main, why: "사진에서 가장 넓은 색을 판으로, 그 색과 대비가 가장 큰 색을 글자로" });
-
-  push({ key: "tone", label: "톤온톤", face: toneOn(main), bg: main, why: "같은 색 계열에서 밝기만 옮겨 글자로 — 건물과 한 벌로 보입니다" });
-
-  const vivid = [...hexes].sort((a, b) => chroma(b) - chroma(a))[0];
-  if (chroma(vivid) > 0.25) {
-    const neutral = hexes.filter((h) => chroma(h) < 0.18);
-    const bg = neutral.length ? best(vivid, neutral) : contrast(vivid, MILK) > contrast(vivid, INK) ? MILK : INK;
-    push({ key: "point", label: "포인트 색 하나", face: safe(vivid, bg), bg, why: "사진에서 가장 진한 색 하나만 글자에 — 나머지는 무채색" });
+/** 같은 색상(色相)을 두고 밝기만 옮겨 `bg` 와 대비 `target` 을 맞춤 — 포인트 색을 판 위에서도 보이게 */
+function fitContrast(color: string, bg: string, target: number): string {
+  if (contrast(color, bg) >= target) return color;
+  const [h, s, l] = toHsl(hexRgb(color));
+  const dir = luminance(bg) > 0.35 ? -1 : 1;
+  for (let k = 1; k <= 40; k++) {
+    const L = l + dir * k * 0.025;
+    if (L < 0.04 || L > 0.97) break;
+    const c = fromHsl(h, s, L);
+    if (contrast(c, bg) >= target) return c;
   }
+  return dir < 0 ? INK : MILK;
+}
 
-  push({ key: "bare", label: "판 없이 글자만", face: safe(best(main, [INK, MILK, ...hexes]), main), bg: main, why: "건물 벽(주색) 위에 글자만 세울 때 읽히는 색" });
-  return out;
+const labC = (hex: string) => {
+  const l = toLab(hexRgb(hex));
+  return Math.hypot(l[1], l[2]);
+};
+
+/**
+ * 건물 색(넓은 순) → 간판 색 추천 셋. 레퍼런스에서 본 세 결을 그대로 옮겼습니다:
+ *   ① **톤온톤**(19 리틀넥) — 판 없이, 벽과 같은 색 계열의 글자. 건물과 한 벌로 보입니다.
+ *   ② **현판형**(10 비담·07 창화당) — 먹 또는 유백 판에 반대 색 글자 + 건물에서 딴 포인트 한 색(테두리). 가장 잘 읽힙니다.
+ *   ③ **한 색 판**(01 노란문약국) — 건물에서 가장 눈에 띄는 색 하나를 판 전체로, 글자는 먹/유백.
+ * 🔴 **«추천» 표시는 대비(글자 ↔ 바탕)가 4.5 이상인 안 중 건물과 가장 한 벌인 것**입니다(톤온톤 → 한 색 판 → 현판 순).
+ * 다 모자라면 현판형이 추천입니다(먹·유백은 어느 벽에서나 읽힘). 판단 기준이 규칙이라는 걸 화면에 적습니다(P6).
+ */
+export function recommend(pal: Swatch[]): Rec[] {
+  if (!pal.length) return [];
+  const sorted = [...pal].sort((a, b) => b.share - a.share);
+  const wall = sorted[0].hex;
+  const accentSw = sorted.filter((s) => labC(s.hex) >= 18 && s.hex !== wall).sort((a, b) => labC(b.hex) * Math.sqrt(b.share) - labC(a.hex) * Math.sqrt(a.share))[0];
+  const accent = accentSw?.hex;
+  const wallDark = luminance(wall) < 0.3;
+  const out: Rec[] = [];
+
+  // ① 톤온톤 — 판 없이
+  const toneFace = toneOn(wall, READ_GOOD);
+  out.push({
+    key: "tone",
+    label: "건물과 한 벌 (톤온톤)",
+    why: `판 없이 벽(${colorName(wall)})과 같은 색 계열로 밝기만 달리한 글자. 간판이 건물 안에 머물러 정돈돼 보입니다.`,
+    wall,
+    face: toneFace,
+    ratio: contrast(toneFace, wall),
+  });
+
+  // ② 현판형 — 먹/유백 판 + 포인트 테두리
+  const plate2 = wallDark ? MILK : INK;
+  const face2 = plate2 === INK ? MILK : INK;
+  const point2 = accent ? fitContrast(accent, plate2, READ_OK) : undefined;
+  out.push({
+    key: "hyeonpan",
+    label: `${plate2 === INK ? "먹" : "유백"} 판 + 건물 포인트`,
+    why: `벽과 확실히 갈리는 ${plate2 === INK ? "먹" : "유백"} 판에 ${face2 === MILK ? "유백" : "먹"} 글자라 멀리서도 가장 잘 읽힙니다.${point2 ? ` 테두리는 건물의 ${colorName(accent!)}에서 땄습니다.` : ""}`,
+    wall,
+    plate: plate2,
+    face: face2,
+    point: point2,
+    ratio: contrast(face2, plate2),
+  });
+
+  // ③ 한 색 판 — 건물에서 가장 눈에 띄는 색(없으면 벽 색을 한 단 진하게)
+  const base3 = accent ?? toneOn(wall, 1.8);
+  let plate3 = base3;
+  if (contrast(plate3, wall) < 1.5) plate3 = fitContrast(base3, wall, 1.5);
+  const face3 = contrast(MILK, plate3) >= contrast(INK, plate3) ? MILK : INK;
+  out.push({
+    key: "onecolor",
+    label: accent ? `${colorName(accent)} 한 색 판` : "벽보다 한 단 진한 판",
+    why: accent
+      ? `건물에서 가장 눈에 띄는 ${colorName(accent)}을 판 전체에 — 한 색으로 끝내는 간판입니다. 글자는 ${face3 === MILK ? "유백" : "먹"}.`
+      : `건물에 눈에 띄는 색이 없어 벽 색을 한 단 진하게 판으로 — 튀지 않고 건물과 이어집니다.`,
+    wall,
+    plate: plate3,
+    face: face3,
+    ratio: contrast(face3, plate3),
+  });
+
+  const order: Rec["key"][] = ["tone", "onecolor", "hyeonpan"];
+  const pick = order.map((k) => out.find((r) => r.key === k)!).find((r) => r.ratio >= READ_GOOD) ?? out.find((r) => r.key === "hyeonpan")!;
+  pick.best = true;
+  return [pick, ...out.filter((r) => r !== pick)];
 }
 
 /* ================================================================== 건물 색 찾기 — 사진 속 «자리» 로 고르기 (F26-h · 2026-09-26) */

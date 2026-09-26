@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { INCOMING_PALETTE_KEY } from "@/config/maker";
 import { download, inkOn } from "@/lib/maker/design";
 import { giveToEditor } from "@/lib/maker/handoff";
-import { colorName, MOODS, pickSpots, readLabel, sampleAt, shareOf, skyShare, suggestCombos, type Mood, type Spot } from "@/lib/maker/palette";
+import { colorName, MOODS, pickSpots, readLabel, recommend, sampleAt, shareOf, skyShare, type Mood, type Rec, type Spot } from "@/lib/maker/palette";
 import { imageDataOf } from "@/lib/maker/trace";
 
 /**
@@ -46,6 +46,8 @@ export default function ColorStudio({ base }: { base: string }) {
   const [drag, setDrag] = useState<number | null>(null);
   const [err, setErr] = useState("");
   const [note, setNote] = useState("");
+  /** 추천 미리보기에 쓸 상호 — 에디터로 넘길 때 첫 글자 줄이 됩니다 */
+  const [shop, setShop] = useState("가게 이름");
   const imgRef = useRef<HTMLImageElement>(null);
   const [disp, setDisp] = useState({ w: 0, h: 0 });
 
@@ -130,7 +132,10 @@ export default function ColorStudio({ base }: { base: string }) {
 
   /* ---------------------------------------------------------- 내보내기 · 에디터로 */
   const hexes = spots.map((s) => s.hex.toUpperCase());
-  const combos = suggestCombos(spots.map((s) => ({ hex: s.hex, share: s.share })));
+  const recs = useMemo(() => recommend(spots.map((s) => ({ hex: s.hex, share: s.share }))), [spots]);
+  /** 추천 미리보기의 바탕 — 가장 넓은 건물 색이 있던 사진 자리(그 벽 위에 간판을 얹어 봅니다) */
+  const wallSpot = [...spots].sort((a, b) => b.share - a.share)[0];
+  const wallBg = wallSpot && src && disp.w ? { src, x: wallSpot.x, y: wallSpot.y, dw: disp.w, dh: disp.h } : null;
 
   async function copyAll() {
     try {
@@ -190,9 +195,13 @@ export default function ColorStudio({ base }: { base: string }) {
     download(`건물색_${(file?.name ?? "사진").replace(/\.[^.]+$/, "")}.jpg`, cv.toDataURL("image/jpeg", 0.9));
   }
 
-  function toEditor(withPhoto: boolean) {
+  function toEditor(withPhoto: boolean, rec?: Rec) {
     if (!spots.length) return;
-    giveToEditor({ palette: spots.map((s) => s.hex), photo: withPhoto && src ? { url: src, w: nat.w, h: nat.h, name: file?.name ?? "건물" } : undefined });
+    giveToEditor({
+      palette: spots.map((s) => s.hex),
+      photo: withPhoto && src ? { url: src, w: nat.w, h: nat.h, name: file?.name ?? "건물" } : undefined,
+      rec: rec ? { plate: rec.plate, face: rec.face, point: rec.point, name: shop.trim() || undefined } : undefined,
+    });
     try {
       localStorage.setItem(INCOMING_PALETTE_KEY, JSON.stringify(spots.map((s) => s.hex)));
     } catch {
@@ -342,8 +351,58 @@ export default function ColorStudio({ base }: { base: string }) {
       </section>
 
       <aside className="border-l border-line bg-white lg:min-h-0 lg:overflow-y-auto">
+        {/* 추천이 먼저 — 사람 지적(2026-09-26): «색 찾는 건 좋은데 그래서 추천을 해야 할 거 아냐, 색 몇 개 정도» */}
+        {!!recs.length && (
+          <section className="border-b border-line px-4 pb-4 pt-3">
+            <h2 className="text-[12px] font-black tracking-[0.08em] text-ink-500">추천 간판 색</h2>
+            <p className="mt-1 text-[13px] leading-relaxed">
+              간판에는 <b>2~3색</b>만 씁니다 — 바탕(판 또는 건물 벽) · 글자 · 포인트. 이 건물에는 이렇게 권합니다.
+            </p>
+            <label className="mt-2 flex items-center gap-2 text-[12px] font-bold text-ink-500">
+              상호
+              <input value={shop} maxLength={12} onChange={(e) => setShop(e.target.value)} className="min-w-0 flex-1 border-b border-line px-1 py-1 text-[14px] font-bold text-ink outline-none focus:border-brand-700" />
+            </label>
+            <ol className="mt-3 space-y-4">
+              {recs.map((r) => (
+                <li key={r.key}>
+                  <RecPreview rec={r} shop={shop || "가게 이름"} bg={wallBg} />
+                  <div className="mt-2 flex items-baseline justify-between gap-2">
+                    <b className="text-[14px]">{r.label}</b>
+                    {r.best && <span className="shrink-0 text-[12px] font-black text-brand-700">추천</span>}
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
+                    {(
+                      [
+                        [r.plate ? "판" : "바탕(벽)", r.plate ?? r.wall],
+                        ["글자", r.face],
+                        ...(r.point ? [["포인트", r.point]] : []),
+                      ] as [string, string][]
+                    ).map(([role, hex]) => (
+                      <span key={role} className="flex items-center gap-1.5">
+                        <span className="inline-block h-4 w-4 border border-black/15" style={{ background: hex }} aria-hidden="true" />
+                        <span className="text-ink-500">{role}</span>
+                        <span className="font-mono font-bold">{hex.toUpperCase()}</span>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-ink-500">{r.why}</p>
+                  <p className={`mt-0.5 text-[12px] font-bold ${r.ratio < 3 ? "text-accent-600" : "text-ink-500"}`}>
+                    글자 대비 {r.ratio.toFixed(1)} · {readLabel(r.ratio)}
+                  </p>
+                  <button type="button" onClick={() => toEditor(true, r)} className={`mt-2 w-full px-3 py-2.5 text-[13px] font-bold ${r.best ? "bg-brand-700 text-white hover:bg-brand-600" : "border border-brand-700 text-brand-700 hover:bg-brand-50"}`}>
+                    이 안으로 간판 만들기
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-500">
+              «추천»은 글자 대비 4.5 이상인 안 중 건물과 가장 한 벌인 것입니다(톤온톤 → 한 색 판 → 먹·유백 판 순). 규칙으로 고른 제안이라, 최종 색은 현장 견본으로 정합니다.
+            </p>
+          </section>
+        )}
+
         <div className="flex items-center justify-between px-4 pb-2 pt-3">
-          <h2 className="text-[12px] font-black tracking-[0.08em] text-ink-500">우리 가게 색</h2>
+          <h2 className="text-[12px] font-black tracking-[0.08em] text-ink-500">건물에서 찾은 색</h2>
           {src && (
             <label className="cursor-pointer text-[12px] font-bold text-ink-500 underline">
               다른 사진
@@ -358,14 +417,14 @@ export default function ColorStudio({ base }: { base: string }) {
         ) : (
           <ul>
             {spots.map((s, i) => {
-              const ink = inkOn(s.hex), D = 64;
+              const ink = inkOn(s.hex), D = 52;
               return (
                 <li key={i}>
                   <button
                     type="button"
                     onClick={() => setSel(i)}
                     aria-pressed={sel === i}
-                    className="flex h-[92px] w-full items-center gap-3.5 px-4 text-left"
+                    className="flex h-[74px] w-full items-center gap-3.5 px-4 text-left"
                     style={{ background: s.hex, color: ink, boxShadow: sel === i ? `inset 5px 0 0 ${ink === "#ffffff" ? "#ffffff" : "#0f1a19"}` : undefined }}
                   >
                     <span
@@ -376,7 +435,7 @@ export default function ColorStudio({ base }: { base: string }) {
                       <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 border border-white outline outline-1 outline-black/50" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block font-mono text-[19px] font-black tracking-wide">{s.hex.toUpperCase()}</span>
+                      <span className="block font-mono text-[17px] font-black tracking-wide">{s.hex.toUpperCase()}</span>
                       <span className="block text-[12px] font-bold opacity-80">
                         {i + 1} · {colorName(s.hex)} · 사진의 {Math.max(1, Math.round(s.share * 100))}%
                       </span>
@@ -419,30 +478,9 @@ export default function ColorStudio({ base }: { base: string }) {
             )}
 
             <section className="mt-3 border-t border-line px-4 pb-4 pt-3">
-              <h2 className="mb-2 text-[12px] font-black tracking-[0.08em] text-ink-500">간판에 쓰면</h2>
-              <ul className="space-y-2">
-                {combos.map((c) => (
-                  <li key={c.key} className="flex items-center gap-3">
-                    <span className="grid h-11 w-24 shrink-0 place-items-center text-[16px] font-black tracking-[0.1em]" style={{ background: c.bg, color: c.face }} aria-hidden="true">
-                      가게명
-                    </span>
-                    <span className="min-w-0 text-[12px] leading-snug">
-                      <b className="block text-[13px]">{c.label}</b>
-                      <span className={c.ratio < 3 ? "text-accent-600" : "text-ink-500"}>
-                        대비 {c.ratio.toFixed(1)} · {readLabel(c.ratio)}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 space-y-2">
-                <button type="button" onClick={() => toEditor(true)} className="w-full bg-brand-700 px-4 py-3 font-bold text-white hover:bg-brand-600">
-                  이 사진과 색으로 간판 만들기
-                </button>
-                <button type="button" onClick={() => toEditor(false)} className="w-full px-4 py-2 text-[13px] font-bold text-ink-500 underline">
-                  색만 가져가기 (지금 벽 그대로)
-                </button>
-              </div>
+              <button type="button" onClick={() => toEditor(true)} className="w-full border border-line px-4 py-2.5 text-[13px] font-bold hover:bg-paper">
+                사진과 색만 가져가기 (간판은 에디터에서)
+              </button>
               <p className="mt-3 text-[11px] leading-relaxed text-ink-500">
                 색 이름은 KS 계통색 이름을 흉내 낸 어림이고, 대비는 화면 글자 기준(WCAG)을 빌린 값입니다. 사진 색은 날씨·노출을 타서 실물과 다르며, 최종 색은 견본으로 정합니다.
               </p>
@@ -450,6 +488,41 @@ export default function ColorStudio({ base }: { base: string }) {
           </>
         )}
       </aside>
+    </div>
+  );
+}
+
+/**
+ * 추천 한 안의 미리보기 — **실제 건물 사진의 벽 자리**를 바탕으로 깔고 그 위에 간판을 얹습니다(색 칩만 보면 «이 건물에서» 어떤지 안 보입니다).
+ * 판이 있으면 판(+ 포인트 테두리), 없으면 벽 위에 글자만. 사진이 아직 안 재졌으면 벽 색으로 칠합니다.
+ */
+function RecPreview({ rec, shop, bg }: { rec: Rec; shop: string; bg: { src: string; x: number; y: number; dw: number; dh: number } | null }) {
+  const W = 348, H = 118, Z = bg ? W / (bg.dw * 0.42) : 1;
+  const style: React.CSSProperties = bg
+    ? {
+        backgroundImage: `url(${bg.src})`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: `${bg.dw * Z}px ${bg.dh * Z}px`,
+        backgroundPosition: `${W / 2 - bg.x * bg.dw * Z}px ${H / 2 - bg.y * bg.dh * Z}px`,
+        backgroundColor: rec.wall,
+      }
+    : { background: rec.wall };
+  const text = (
+    <span className="whitespace-nowrap text-[22px] font-black leading-none tracking-[0.14em]" style={{ color: rec.face }}>
+      {shop}
+    </span>
+  );
+  return (
+    <div className="relative grid w-full max-w-[348px] place-items-center overflow-hidden" style={{ height: H, ...style }} aria-label={`${rec.label} 미리보기`} role="img">
+      {/* 사진이 바탕일 때 벽 색을 살짝 덮어 «그 벽» 을 또렷이 — 사진 결은 남깁니다 */}
+      {bg && <span className="absolute inset-0" style={{ background: rec.wall, opacity: 0.35 }} aria-hidden="true" />}
+      {rec.plate ? (
+        <span className="relative px-5 py-3 shadow-[0_2px_6px_rgba(0,0,0,0.3)]" style={{ background: rec.plate, outline: rec.point ? `3px solid ${rec.point}` : undefined, outlineOffset: -7 }}>
+          {text}
+        </span>
+      ) : (
+        <span className="relative drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]">{text}</span>
+      )}
     </div>
   );
 }

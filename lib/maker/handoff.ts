@@ -6,7 +6,12 @@
  * 에디터가 처음 뜰 때 한 번 꺼내 갑니다(꺼내면 비웁니다). 새로고침하면 사라집니다 — 가게 사진이 원래 그렇습니다(F26).
  * 색 값(hex)은 사진이 아니라서 `localStorage` 로도 한 번 더 건넵니다(새 탭으로 열어도 색은 남게).
  */
-export type Handoff = { palette: string[]; photo?: { url: string; w: number; h: number; name: string } };
+export type Handoff = {
+  palette: string[];
+  photo?: { url: string; w: number; h: number; name: string };
+  /** «이 안으로 간판 만들기»(F26-i) — 판 색(없으면 판 없이) · 글자 색 · 포인트(판 테두리) · 상호 */
+  rec?: { plate?: string; face: string; point?: string; name?: string };
+};
 
 let pending: Handoff | null = null;
 
