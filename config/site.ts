@@ -44,6 +44,11 @@ export const site = {
   nameEn: "Susanna Design",
   legalName: "(주) 수산나디자인",
 
+  // 로고 경로. `?v=` 는 캐시 무효화용입니다 — public/_headers 가 로고를 1일 + stale-while-revalidate 7일
+  // 캐시하므로, 로고 파일을 바꾸면 이 날짜도 같이 올려야 재방문자에게 바로 보입니다 (2026-09-28 실측).
+  logo: "/logo.svg?v=20260928",
+  logoWhite: "/logo-white.svg?v=20260928",
+
   tagline: "옥내외광고물 · 간판디자인 · 철구조물 전문업체",
   catchphrase: "2012년부터, 대전에서 대형 사인을 만들고 세워왔습니다",
   description:

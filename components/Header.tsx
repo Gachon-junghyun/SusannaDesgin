@@ -138,7 +138,7 @@ export default function Header({
         <div className="wrap flex h-16 items-center justify-between md:h-20">
           <Link href="/" className="flex items-center" aria-label={`${site.name} 홈`}>
             <Image
-              src={clear ? "/logo-white.svg" : "/logo.svg"}
+              src={clear ? site.logoWhite : site.logo}
               alt={`${site.legalName} ${site.nameEn}`}
               width={1000}
               height={251}

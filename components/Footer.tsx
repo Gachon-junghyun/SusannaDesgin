@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="flex flex-col gap-6 border-b border-white/10 pb-10 md:flex-row md:items-center md:justify-between">
           <div>
             <Image
-              src="/logo-white.svg"
+              src={site.logoWhite}
               alt={site.legalName}
               width={1000}
               height={251}

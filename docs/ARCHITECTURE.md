@@ -41,7 +41,7 @@ schema.org 표준 `ItemList`/`Thing` 으로 갔습니다(Google 캐러셀과 같
 | CMS 실동작 | ✅ 첫 슬라이드가 **관리자에서 업로드한 스토리지 사진**을 서비스 중 |
 | `robots.txt` | ✅ 운영 모드 (`isProductionDomain=true`) · `/api/` `/admin` 차단 · sitemap 정상 |
 | `sitemap.xml` | ✅ 전 주소가 `https://susannadesign.co.kr` |
-| 정적 자산 캐시 (`public/_headers`) | ✅ 적용됨 — `logo.svg` `icon.png` = `max-age=86400` |
+| 정적 자산 캐시 (`public/_headers`) | ✅ 적용됨 — `logo.svg` `icon.png` = `max-age=86400` (+ `stale-while-revalidate` 7일). 🔴 **로고를 바꾸면 `config/site.ts` 의 `logo`/`logoWhite` 의 `?v=` 날짜도 올려야** 재방문자에게 바로 보입니다 — 2026-09-28 로고 교체 때 서버는 새 파일인데 브라우저가 옛 로고를 계속 보여줬습니다 |
 | `/rss.xml` 캐시 (`next.config.ts`) | ✅ 적용됨 — `s-maxage=3600` |
 | **공개 HTML 캐시** | ❌ **없음** — `private, no-cache, no-store, must-revalidate` (§7 부채 실증) |
 | **`www` → 비`www` 301** | ✅ **배포 확인** — 루트·다단경로·쿼리스트링 전부 301 + 주소 보존 (F13) |
