@@ -7,10 +7,11 @@ import MakerShowcase from "@/components/MakerShowcase";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
 import { SHOW_FABRICATION, makerShowcase } from "@/config/content";
-import { MAKER_BETA, SHOW_MAKER } from "@/config/maker";
+import { MAKER_BETA, MAKER_ON_HOME, SHOW_MAKER } from "@/config/maker";
 import { site } from "@/config/site";
 import { getBlocks, getSlides, getWorks } from "@/lib/cms";
 import { imageExists } from "@/lib/images";
+import { getPreview } from "@/lib/preview";
 
 /**
  * 요청 시 렌더링합니다.
@@ -56,10 +57,11 @@ function Lines({ text }: { text: string }) {
 }
 
 export default async function Home() {
-  const [slides, works, blocks] = await Promise.all([
+  const [slides, works, blocks, preview] = await Promise.all([
     getSlides(),
     getWorks(),
     getBlocks(),
+    getPreview(),
   ]);
   const heroSlides = slides.map((s) => ({ ...s, available: imageExists(s.image) }));
 
@@ -283,12 +285,15 @@ export default async function Home() {
       )}
 
       {/* 수산나 메이커 (F30) — 청록 띠를 아래로 밀고 그 위에 새로 낸 자리.
-          메이커가 손님에게 닫혀 있으면(SHOW_MAKER) 단추·카드가 견적으로 갑니다 — /maker 는 404 라서. */}
-      <MakerShowcase
-        copy={copy("home-maker")}
-        cards={makerShowcase.cards}
-        cta={SHOW_MAKER ? { ...makerShowcase.open, beta: MAKER_BETA } : makerShowcase.closed}
-      />
+          메이커가 손님에게 닫혀 있으면(SHOW_MAKER) 단추·카드가 견적으로 갑니다 — /maker 는 404 라서.
+          구역 자체는 MAKER_ON_HOME 이 꺼져 있으면 미리보기(F23) 중인 관리자에게만 그립니다 (2026-09-28). */}
+      {(MAKER_ON_HOME || preview.on) && (
+        <MakerShowcase
+          copy={copy("home-maker")}
+          cards={makerShowcase.cards}
+          cta={SHOW_MAKER ? { ...makerShowcase.open, beta: MAKER_BETA } : makerShowcase.closed}
+        />
+      )}
 
       {/* 마무리 CTA */}
       <section className="bg-brand py-16 text-white md:py-20">
