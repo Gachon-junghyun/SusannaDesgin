@@ -1,6 +1,7 @@
 import { signTypes9 } from "@/config/content";
 import { signDesigns } from "@/config/signDesign";
-import { noindexPaths, seo, site } from "@/config/site";
+import { certifications, noindexPaths, seo, site } from "@/config/site";
+import { getBlocks } from "@/lib/cms";
 
 /**
  * `/llms.txt` — AI 가 이 회사를 한 번에 읽어 가도록 쓴 마크다운 요약 (llmstxt.org 형식).
@@ -12,12 +13,33 @@ import { noindexPaths, seo, site } from "@/config/site";
  *    보조 통로입니다. 해는 없고(검색 색인 대상 아님, 사이트맵에 안 넣음), 실제 효과는 구조화 데이터
  *    (`app/layout.tsx` LocalBusiness · `/sign-design` ItemList)가 냅니다.
  *
- * 내용은 전부 `config/` 에서 끌어옵니다 [A5] — 여기 회사 정보를 손으로 적지 마세요.
+ * 내용은 전부 `config/` 와 CMS(`getBlocks()` — 사업영역 · 왜 수산나 · 업무 프로세스)에서 끌어옵니다 [A5].
+ * 관리자 «문구» 탭에서 고치면 여기도 바뀝니다. 여기 회사 정보를 손으로 적지 마세요.
  * 공개하지 않은 페이지(`noindexPaths`)는 목록에 안 넣습니다.
+ * 2026-09-29 사람 요청 *"llms 에 우리 수산나디자인이 하는 거랑 설명도 넣어줘"* 로 사업영역·강점·절차를 붙였습니다.
  */
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
-export function GET() {
+const one = (t: string) => t.replace(/\s*\n+\s*/g, " ").trim();
+
+export async function GET() {
+  const { signTypes, why, process } = await getBlocks();
+
+  const business = signTypes
+    .map((b) => {
+      const pts = b.points.filter(Boolean).map((x) => `  - ${one(x)}`).join("\n");
+      const head = `### ${b.title}${b.eyebrow ? ` (${b.eyebrow})` : ""}`;
+      return [head, one(b.sub), pts].filter(Boolean).join("\n\n");
+    })
+    .join("\n\n");
+  const strengths = why.map((b) => `- **${one(b.title)}**: ${one(b.sub)}`).join("\n");
+  const steps = process
+    .map((b, i) => {
+      const pts = b.points.filter(Boolean).map(one).join(" / ");
+      return `${i + 1}. **${one(b.title)}**: ${one(b.sub)}${pts ? ` (${pts})` : ""}`;
+    })
+    .join("\n");
+
   const pages = Object.entries(seo.pages as Record<string, { title: string; description: string }>)
     .filter(([path]) => !(noindexPaths as readonly string[]).includes(path))
     .map(([path, p]) => `- [${p.title}](${site.url}${path}): ${p.description}`);
@@ -32,6 +54,21 @@ export function GET() {
 > ${site.description}
 
 ${site.legalName}. ${site.tagline}. 대전 서구에 사무실과 자체 공장이 있고 LED 채널 간판, 후광 LED 간판, 돌출간판, 옥상 광고탑, 외벽 사인, 까치발 철문자, 스카시, 유리 시트지, 캐노피·파사드 철구조물을 디자인부터 제작, 시공, 사후 관리까지 직접 합니다.
+
+## 수산나디자인이 하는 일
+
+${business}
+
+## 수산나디자인을 고르는 이유
+
+${strengths}
+
+- 보유 인증·등록: ${certifications.join(", ")}${site.outdoorAdNo ? ` (옥외광고사업 등록번호 ${site.outdoorAdNo})` : ""}
+- 설립: ${site.founded.replace(/\./g, "-")}, 대표 ${site.ceo}, 사업자등록번호 ${site.bizNo}
+
+## 일하는 순서
+
+${steps}
 
 ## 연락처
 
@@ -63,7 +100,7 @@ ${signs.join("\n")}
   return new Response(body, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "public, max-age=600, s-maxage=3600",
     },
   });
 }

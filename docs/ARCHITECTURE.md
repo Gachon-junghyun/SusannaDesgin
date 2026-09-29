@@ -158,7 +158,7 @@ Susanna/
 | **P8** | `/privacy` `/terms` `/no-email-collect` | 각 `page.tsx` | **요청 시 SSR** (F23) | 하드코딩 ⚠️법률 검토 필요 |
 | — | `/robots.txt` `/sitemap.xml` | `app/robots.ts` `sitemap.ts` | 정적 | `config/site.ts` |
 | — | `/rss.xml` | `app/rss.xml/route.ts` | 요청 시 생성 + **CDN 캐시 1h** | **CMS** `getWorks()` — 네이버 서치어드바이저 제출용 |
-| — | `/llms.txt` | `app/llms.txt/route.ts` | 정적 | `config/site.ts`·`signDesign.ts` — AI 에이전트용 마크다운 요약(2026-09-29 사람 요청, `docs/SEO.md` 의 «안 만든다» 예외). 사이트맵엔 안 넣음 |
+| — | `/llms.txt` | `app/llms.txt/route.ts` | **요청 시** + CDN 캐시 1h | `config/site.ts`·`signDesign.ts` + **CMS** `getBlocks()`(사업영역 · 왜 수산나 · 업무 프로세스) — AI 에이전트용 마크다운 요약(2026-09-29 사람 요청, `docs/SEO.md` 의 «안 만든다» 예외). 사이트맵엔 안 넣음 |
 | — | `/indexnow.txt` | `app/indexnow.txt/route.ts` | 정적 | `site.indexNowKey` — 색인 통보 소유확인 키 (F17) |
 | — | 404 | `app/not-found.tsx` | **요청 시 SSR** (F23) | — |
 
