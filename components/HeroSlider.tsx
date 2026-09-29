@@ -368,13 +368,13 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
           </p>
           <h1
             key={`title-${i}`}
-            className="rise text-[36px] leading-[1.2] font-normal tracking-tight whitespace-pre-line sm:text-[44px] md:text-[76px]"
+            className="rise text-[36px] leading-[1.2] font-normal tracking-tight whitespace-pre-line sm:text-[44px] md:text-[48px] lg:text-[56px] 2xl:text-[64px]"
           >
             {current.title}
           </h1>
           <p
             key={`sub-${i}`}
-            className="rise mt-6 max-w-xl text-base leading-relaxed text-white/80 md:text-[19px]"
+            className="rise mt-6 max-w-xl text-base leading-relaxed text-white/80 md:text-[17px]"
           >
             {current.sub}
           </p>
