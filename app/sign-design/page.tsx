@@ -154,6 +154,8 @@ export default async function SignDesignPage() {
       <section id="inquiry" className="border-t border-line bg-paper py-20 md:py-28">
         <div className="wrap">
           <SignDesignInquiry items={items.map(({ key, name, shop }) => ({ key, name, shop }))} />
+          {/* 2026-09-29 사람 결정: 페이지 끝에 회색 참조 한 줄 */}
+          <p className="mt-16 text-[13px] text-ink-500/80">※ 이 페이지의 이미지는 AI를 통해 만들었습니다.</p>
         </div>
       </section>
     </>
