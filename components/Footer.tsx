@@ -66,6 +66,7 @@ export default function Footer() {
             title="사업"
             links={[
               { href: "/signs", label: "사업영역" },
+              { href: "/sign-design", label: "간판디자인" },
               { href: "/process", label: "업무프로세스" },
               { href: "/works", label: "주요실적" },
             ]}

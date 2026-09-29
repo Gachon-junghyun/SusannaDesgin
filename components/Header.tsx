@@ -9,6 +9,8 @@ import { site } from "@/config/site";
 const NAV = [
   { href: "/about", label: "회사소개" },
   { href: "/signs", label: "사업영역" },
+  // 간판디자인 (F31, 2026-09-29 사람 결정 «네비게이션 바에도 넣어줘») — 사업영역 바로 뒤
+  { href: "/sign-design", label: "간판디자인" },
   { href: "/works", label: "주요실적" },
   { href: "/process", label: "업무프로세스" },
   { href: "/support", label: "고객지원" },
@@ -63,10 +65,11 @@ export default function Header({
   const nav: { href: string; label: string; tag?: string }[] = [
     NAV[0],
     NAV[1],
+    NAV[2],
     ...(productsVisible ? [PRODUCTS_NAV] : []),
     ...(fontsVisible ? [FONTS_NAV] : []),
     ...(makerVisible ? [{ ...MAKER_NAV, tag: makerBeta || undefined }] : []),
-    ...NAV.slice(2),
+    ...NAV.slice(3),
   ];
 
   /** 홈은 히어로 사진 위에 헤더가 투명하게 얹힙니다 */
