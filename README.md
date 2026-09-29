@@ -43,8 +43,16 @@ npm run lint    # 린트
 **Noto Sans KR 굵기 600** 으로 근사했고, `(주)` 는 원본처럼 세로 막대 두 개로 그렸습니다.
 글자는 전부 패스라 폰트 설치 없이 열리고, **크게 출력해도 깨지지 않습니다.**
 
-> ⚠️ Berlin Sans FB 는 Monotype 폰트(MS Office 동봉)입니다. 상업 로고 사용 범위는 확인하지
-> 못했습니다 — 원본 로고도 이 폰트로 보여 새로 생긴 위험은 아니지만, 대형 인쇄 전에 한 번 확인하세요.
+> ⚠️ **글꼴 라이선스 — 2026-09-29 원문 확인**
+> - **고운바탕**(사이트 글꼴): 류양희 · SIL OFL 1.1(제작자 GitHub `yangheeryu/Gowun-Batang` 의 OFL.txt). 상업 · 웹 임베딩 · 서버 배포 허용,
+>   예약 이름 없음. 우리 서버가 내보내는 파일은 구글 폰트가 내보내는 파일과 같은 고지(저작권 줄 + OFL 주소)를 담고 있습니다.
+> - **Noto Sans KR**(로고 한글 줄): SIL OFL 1.1(`notofonts/noto-cjk`). 로고 같은 결과물은 제한 없음.
+> - 🔴 **Berlin Sans FB Demi**(로고 영문): © 1997 The Font Bureau · 디자이너 David Berlow · **윈도우가 아니라 Office 동봉 폰트**.
+>   폰트 파일 안엔 라이선스 문구가 없고(이름표 13·14 비어 있음), 권리는 설치한 Office 라이선스를 따릅니다 —
+>   Microsoft Product Terms «Font Components»: *"use the fonts included with or installed by that software to display and print content"*.
+>   «회사 로고 제작 허용»을 명시한 MS 문서(Font redistribution FAQ)는 **윈도우 동봉 폰트**에 대한 것이라 이 폰트에 그대로 적용된다고 못 합니다.
+>   이 PC 의 Office 는 Professional Plus 2016(가정·학생용 비상업판 아님)이지만 **누구 명의의 라이선스인지는 확인 못 했습니다.**
+>   가장 깔끔한 길은 회사 명의로 Berlin Sans 데스크톱 라이선스를 사 두는 것(Font Bureau · MyFonts 등)입니다.
 
 ---
 

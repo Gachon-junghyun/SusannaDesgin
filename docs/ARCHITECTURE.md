@@ -2283,7 +2283,7 @@ Workers Builds 는 `npx wrangler deploy` 로 배포하고, 그 명령은 `wrangl
 | 문서 | **`scripts/formtest.mjs` 가 저장소에 없습니다** — F5 설명이 "회귀 테스트 12건(`formtest.mjs`)" 이라고 적고 있는데 파일이 존재하지 않습니다. 문서가 낡았거나 파일이 유실된 것이라, 폼을 고칠 때 기댈 회귀 검사가 사실상 없습니다 | F5 |
 | 🔴 부채 | **제품 카드 6장이 실적 사진을 다시 씁니다** (2026-08-17 F24). 제품 전용 촬영본이 없어서고, 빈 "사진 준비 중" 상자를 여섯 개 내보내지 않으려는 선택입니다. **`public/images/work-NN.jpg` 는 번호와 현장이 짝**이라 그 파일을 다른 현장으로 갈아 끼우면 **제품 사진도 같이 바뀝니다.** 제품 전용 사진이 생기면 관리자 화면 "제품" 탭에서 갈아 끼우세요(배포 불필요) | F24 · `public/images/README.md` |
 | 부채 | `sort_order` 가 같으면 순서 변경이 동작하지 않음. **관리자 화면은 여전히 그렇습니다** — 걸리면 `npm run cms -- works renumber` 로 풉니다 (F18). **`content_blocks`(F19)에는 `renumber` 가 없습니다** — 초기 데이터가 10 단위라 당장은 안 걸리지만, 항목을 많이 넣고 지우다 겹치면 손으로 `sort_order` 를 고쳐야 합니다 | F9 · F19 |
-| ✅ 해소 | ~~로고 SVG 가 저해상도 래스터 트레이싱본~~ → 2026-09-28 폰트 외곽선으로 재작도(영문 Berlin Sans FB Demi · 한글 Noto Sans KR 600 근사). 남은 것: Berlin Sans FB 상업 사용 라이선스 미확인 | `public/logo.svg` |
+| ✅ 해소 | ~~로고 SVG 가 저해상도 래스터 트레이싱본~~ → 2026-09-28 폰트 외곽선으로 재작도(영문 Berlin Sans FB Demi · 한글 Noto Sans KR 600 근사). 남은 것: Berlin Sans FB 상업 사용 — 2026-09-29 원문 확인: Office 동봉 폰트라 Product Terms «display and print content» 범위, 로고 명시 허용은 윈도우 동봉 폰트 FAQ 에만 있음 → 회사 명의 라이선스 구매가 깔끔(README 로고 절) | `public/logo.svg` |
 | 미도입 | **시공사례 개별 페이지** — 로컬 SEO 최대 자산이나, 지금 데이터로 만들면 "얇은 콘텐츠" 페널티. 사례별 상세(위치·간판종류·기간·자재·현장 메모) 확보가 선행 | [`SEO.md`](SEO.md) B-1 |
 | 미도입 | **회사 개요·연혁·비전은 아직 CMS 미연결** — 사업영역·공정·프로세스·구역 제목은 2026-08-06 F19 로 연결됐습니다. 남은 셋은 바뀌는 빈도가 낮아 `config/` 에 둡니다 | `config/content.ts` `config/site.ts` |
 
