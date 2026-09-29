@@ -49,14 +49,10 @@ export default function CatalogTabs({
               type="button"
               aria-pressed={active}
               onClick={() => setOn(t.key)}
-              className={`rounded-full border px-5 py-2.5 text-[14px] font-bold transition-colors ${
-                active
-                  ? "border-brand bg-brand text-white"
-                  : "border-line bg-white text-ink-500 hover:border-ink-500 hover:text-ink"
-              }`}
+              className="chip px-5 py-2.5 text-[14px]"
             >
               {t.label}
-              <span className={`ml-1.5 text-[12px] ${active ? "text-white/70" : "text-ink-500"}`}>
+              <span className="ml-1.5 text-[12px] opacity-70">
                 {t.count}
               </span>
             </button>

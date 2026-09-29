@@ -32,7 +32,7 @@ export default function Footer() {
           <div className="flex flex-wrap gap-3">
             <Link
               href="/quote"
-              className="rounded-lg bg-brand px-6 py-3 font-bold text-white transition-colors hover:bg-brand-600"
+              className="btn px-6 py-3"
             >
               무료 견적 신청
             </Link>
@@ -41,7 +41,7 @@ export default function Footer() {
                 href={site.kakaoChannelUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg border border-white/25 px-6 py-3 font-bold text-white transition-colors hover:bg-white/10"
+                className="btn btn-kakao px-6 py-3"
               >
                 카카오톡 상담
               </a>

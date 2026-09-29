@@ -17,19 +17,19 @@ export default function NotFound() {
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link
           href="/"
-          className="rounded-xl bg-ink px-7 py-3.5 font-bold text-white transition-colors hover:bg-ink-800"
+          className="btn btn-quiet px-7 py-3.5"
         >
           홈으로
         </Link>
         <Link
           href="/quote"
-          className="rounded-xl bg-brand px-7 py-3.5 font-bold text-white transition-colors hover:bg-brand-600"
+          className="btn px-7 py-3.5"
         >
           무료 견적 신청
         </Link>
         <a
           href={site.phoneHref}
-          className="rounded-xl border-2 border-line px-7 py-3.5 font-bold transition-colors hover:border-ink"
+          className="btn btn-quiet px-7 py-3.5"
         >
           {site.phone}
         </a>

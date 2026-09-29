@@ -37,11 +37,7 @@ export default function WorksGrid({
               role="tab"
               aria-selected={on}
               onClick={() => setCat(c)}
-              className={`rounded-full border px-4 py-2 text-[14px] font-bold transition-colors ${
-                on
-                  ? "border-ink bg-ink text-white"
-                  : "border-line text-ink-500 hover:border-ink-500"
-              }`}
+              className="chip px-4 py-2 text-[14px]"
             >
               {c}
             </button>

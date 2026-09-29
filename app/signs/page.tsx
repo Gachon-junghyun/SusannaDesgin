@@ -73,7 +73,7 @@ export default async function SignsPage() {
 
                 <Link
                   href="/quote"
-                  className="mt-7 inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-3 font-bold text-white transition-colors hover:bg-brand-600"
+                  className="btn mt-7 px-6 py-3"
                 >
                   {t.title} 견적 문의 <span aria-hidden="true">→</span>
                 </Link>

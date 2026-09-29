@@ -1,12 +1,13 @@
 ﻿import Link from "next/link";
 import HeroSlider from "@/components/HeroSlider";
+import HomeWorks from "@/components/HomeWorks";
 import QuickQuoteForm from "@/components/QuickQuoteForm";
 import Img from "@/components/Img";
 import JsonLd from "@/components/JsonLd";
 import MakerShowcase from "@/components/MakerShowcase";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
-import { SHOW_FABRICATION, makerShowcase } from "@/config/content";
+import { SHOW_FABRICATION, makerShowcase, workCategories } from "@/config/content";
 import { MAKER_BETA, MAKER_ON_HOME, SHOW_MAKER } from "@/config/maker";
 import { site } from "@/config/site";
 import { getBlocks, getSlides, getWorks } from "@/lib/cms";
@@ -52,6 +53,9 @@ const websiteJsonLd = {
  * 구역 제목은 관리자 화면에서 줄바꿈을 넣을 수 있습니다(F19).
  * 화면에서도 같은 자리에서 줄이 나뉘도록 `whitespace-pre-line` 로 감쌉니다.
  */
+/** 공장 띠의 큰 평수 숫자 — 2026-09-29 «일단 안 보이게». true 로 두면 다시 나옵니다 */
+const SHOW_FACTORY_NUMBER = false;
+
 function Lines({ text }: { text: string }) {
   return <span className="block whitespace-pre-line">{text}</span>;
 }
@@ -151,55 +155,63 @@ export default async function Home() {
         </div>
       </Section>
 
-      {/* 제작 공정 */}
+      {/*
+        제작 공정 — 2026-09-29 사람 결정(«2안»의 프로세스). 왼쪽에 제목(넓은 화면에서 따라 내려옴),
+        오른쪽에 STEP 01~05 를 세로 줄로 잇고 단계마다 할 일(`points`)을 적습니다 — 한샘 리하우스
+        «상담부터 시공까지 프로세스 안내»의 세로 흐름(reference/reference.md 부록 B).
+        `points` 가 비어 있는 단계는 한 줄 소개(`sub`)를 대신 보여 줍니다 [A1].
+      */}
       <Section className="bg-paper">
-        <SectionHeading
-          eyebrow={copy("home-process").eyebrow}
-          title={<Lines text={copy("home-process").title} />}
-          desc={copy("home-process").desc}
-          center
-        />
+        <div className="grid gap-12 lg:grid-cols-[360px_1fr] lg:gap-20">
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <SectionHeading
+              eyebrow={copy("home-process").eyebrow}
+              title={<Lines text={copy("home-process").title} />}
+              desc={copy("home-process").desc}
+            />
+            <Link href="/process" className="btn btn-quiet mt-8 px-7 py-3.5">
+              공정 자세히 보기 <span aria-hidden="true">→</span>
+            </Link>
+          </div>
 
-        <ol className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-          {blocks.process.map((s, idx) => (
-            <Reveal
-              as="li"
-              key={s.eyebrow || idx}
-              delay={idx * 90}
-              className="overflow-hidden rounded-2xl bg-white"
-            >
-              {/*
-                사진 칸을 뺐습니다 (2026-08-07 요청). 5칸 중 실사진이 0장이라
-                "사진 준비 중" 회색 상자만 다섯 개 늘어서 있었습니다 — 빈 자리를
-                보여 주느니 글 상자만 두는 편이 낫습니다.
-                **`/process` 도 같은 이유로 뒤이어 걷어냈습니다** — 이제 단계 사진을
-                쓰는 화면이 없습니다(그전까지는 여기 "업무프로세스 페이지에서 계속
-                씁니다" 라고 적혀 있었는데, 그 페이지가 정리되면서 틀린 말이 됐습니다).
-                관리자 화면(F19)의 "업무 프로세스 → 사진" 칸과 DB 는 그대로 살아 있습니다.
-                되살릴 때는 git 이력에서 Img 블록을 꺼내 오면 됩니다.
-              */}
-              <div className="p-6">
-                <p className="text-[13px] font-black tracking-widest text-brand">
-                  {s.eyebrow}
-                </p>
-                <h3 className="mt-1 text-lg font-black">{s.title}</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-ink-500">{s.sub}</p>
-              </div>
-            </Reveal>
-          ))}
-        </ol>
-
-        <div className="mt-10 text-center">
-          <Link
-            href="/process"
-            className="inline-flex items-center gap-2 rounded-lg border-2 border-ink px-7 py-3.5 font-bold transition-colors hover:bg-ink hover:text-white"
-          >
-            공정 자세히 보기 <span aria-hidden="true">→</span>
-          </Link>
+          <ol className="relative pl-10 before:absolute before:top-4 before:bottom-10 before:left-[7px] before:w-px before:bg-line md:pl-11">
+            {blocks.process.map((s, idx) => {
+              const lines = s.points.length ? s.points : [s.sub];
+              return (
+                <Reveal
+                  as="li"
+                  key={s.eyebrow || idx}
+                  delay={idx * 80}
+                  className="relative mb-3.5 border border-line bg-white px-6 py-6 md:px-8 md:py-7"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-[30px] -left-[40px] block h-[15px] w-[15px] rounded-full border-[3px] border-brand bg-white md:top-[34px] md:-left-[44px]"
+                  />
+                  <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-6">
+                    <p className="shrink-0 text-[13px] font-bold tracking-[0.18em] text-brand-700 md:w-20">
+                      STEP {s.eyebrow || String(idx + 1).padStart(2, "0")}
+                    </p>
+                    <h3 className="text-[20px] font-bold md:text-[22px]">{s.title}</h3>
+                  </div>
+                  <ul className="mt-3 space-y-1 md:ml-[104px]">
+                    {lines.map((line) => (
+                      <li
+                        key={line}
+                        className="relative pl-3.5 text-[15px] leading-relaxed text-ink-500 before:absolute before:top-[0.8em] before:left-0 before:h-px before:w-1.5 before:bg-ink-500"
+                      >
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </Reveal>
+              );
+            })}
+          </ol>
         </div>
       </Section>
 
-      {/* 시공 실적 */}
+      {/* 시공 실적 — 2026-09-29 사람 결정: 칩 + 큰 사진 하나와 작은 사진 넷(components/HomeWorks.tsx) */}
       <Section>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionHeading
@@ -207,40 +219,60 @@ export default async function Home() {
             title={<Lines text={copy("home-works").title} />}
             desc={copy("home-works").desc}
           />
-          <Link
-            href="/works"
-            className="text-[15px] font-bold text-brand underline underline-offset-4"
-          >
-            전체 실적 보기 →
+          <Link href="/works" className="btn btn-quiet px-7 py-3.5">
+            실적 전체 보기 <span aria-hidden="true">→</span>
           </Link>
         </div>
 
-        <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {works.slice(0, 6).map((w, idx) => (
-            <Reveal as="li" key={w.slug} delay={(idx % 3) * 100} className="group">
-              <div className="relative aspect-4/3 overflow-hidden rounded-xl bg-paper">
-                <Img
-                  src={w.image}
-                  alt={w.title}
-                  width={1200}
-                  height={900}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
-                  label={`${w.category} · ${w.title}`}
-                  className="transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
-              <div className="mt-3">
-                <p className="text-[13px] font-bold text-brand">{w.category}</p>
-                <h3 className="mt-0.5 font-bold">{w.title}</h3>
-                <p className="mt-0.5 text-[13px] text-ink-500">
-                  {[w.location, ...w.tags].filter(Boolean).join(" · ")}
-                </p>
-              </div>
-            </Reveal>
-          ))}
-        </ul>
+        <div className="mt-10">
+          <HomeWorks
+            works={works.map((w) => ({ ...w, available: imageExists(w.image) }))}
+            categories={workCategories}
+          />
+        </div>
       </Section>
+
+      {/*
+        공장 띠 — 2026-09-29 사람 결정(«2안»). 사진을 가득 깔고 «공장을 가졌다는 건…» 문구 + 큰 숫자.
+        문구는 CMS 의 `home-fabrication` 머리말이고 숫자는 `site.factory` 에서 옵니다 [A5].
+        아래 «보유 장비» 목록(SHOW_FABRICATION)과는 다른 물건입니다 — 그건 여전히 꺼져 있습니다.
+      */}
+      <section className="relative isolate overflow-hidden bg-ink text-white">
+        <Img
+          src="/images/about-factory.jpg"
+          alt="수산나디자인 자체 공장에서 제작한 채널문자와 크레인 고소작업 현장"
+          width={1600}
+          height={1200}
+          fill
+          sizes="100vw"
+          label="자체 공장"
+          dark
+          className="-z-10 object-cover"
+        />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-ink/60" />
+        <div className="wrap flex flex-col gap-10 py-24 md:flex-row md:items-center md:justify-between md:py-36">
+          <Reveal>
+            <p className="mb-4 text-[13px] font-bold tracking-[0.24em] text-brand-400">
+              {copy("home-fabrication").eyebrow}
+            </p>
+            <h2 className="text-3xl leading-snug font-normal tracking-tight md:text-5xl">
+              <Lines text={copy("home-fabrication").title} />
+            </h2>
+            <p className="mt-5 max-w-xl leading-relaxed text-white/85 md:text-lg">
+              {copy("home-fabrication").desc}
+            </p>
+          </Reveal>
+          {/* 큰 숫자(평수) — 2026-09-29 사람 결정 «일단 안 보이게». 다시 켜려면 SHOW_FACTORY_NUMBER */}
+          {SHOW_FACTORY_NUMBER && (
+            <Reveal delay={120} className="md:text-right">
+              <p className="text-7xl leading-none font-normal md:text-8xl">
+                {site.factory.replace(/[^0-9]/g, "")}
+              </p>
+              <p className="mt-3 text-white/80">{site.factory.replace(/[0-9]/g, "")} 자체 제작 공장</p>
+            </Reveal>
+          )}
+        </div>
+      </section>
 
       {/* 보유 장비 — config/content.ts 의 SHOW_FABRICATION 로 여닫습니다 (지금은 닫힘).
           `/about` 의 같은 구역과 스위치를 공유하므로 한 번 켜면 양쪽이 같이 켜집니다. */}
@@ -295,30 +327,20 @@ export default async function Home() {
         />
       )}
 
-      {/* 마무리 CTA */}
-      <section className="bg-brand py-16 text-white md:py-20">
-        <div className="wrap flex flex-col items-center gap-8 text-center md:flex-row md:justify-between md:text-left">
-          <div>
-            <h2 className="text-3xl font-black tracking-tight whitespace-pre-line md:text-4xl">
-              {copy("home-cta").title}
-            </h2>
-            {/* ⚠️ 청록 위의 `white/85` 는 2.55:1 로 기준 미달입니다(불투명 흰색도 2.99).
-                색 톤 유지 결정에 따라 그대로 둡니다 — app/globals.css `@theme` 머리말 */}
-            <p className="mt-3 leading-relaxed whitespace-pre-line text-white/85">
-              {copy("home-cta").desc}
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/quote"
-              className="rounded-xl bg-white px-8 py-4 text-lg font-black text-brand transition-transform hover:scale-105"
-            >
-              무료 견적 신청
+      {/* 마무리 CTA — 2026-09-29 사람 결정(«2안»): 청록 띠 대신 흰 바탕 가운데 정렬 + 먹 버튼 둘 */}
+      <section className="border-t border-line py-20 text-center md:py-24">
+        <div className="wrap">
+          <h2 className="text-3xl font-normal tracking-tight whitespace-pre-line md:text-[42px]">
+            {copy("home-cta").title}
+          </h2>
+          <p className="mt-3 leading-relaxed whitespace-pre-line text-ink-500">
+            {copy("home-cta").desc}
+          </p>
+          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/quote" className="btn px-8 py-4 text-lg">
+              무료 견적 신청 <span aria-hidden="true">→</span>
             </Link>
-            <a
-              href={site.phoneHref}
-              className="rounded-xl border-2 border-white/60 px-8 py-4 text-lg font-black transition-colors hover:bg-white/10"
-            >
+            <a href={site.phoneHref} className="btn btn-quiet px-8 py-4 text-lg">
               {site.phone}
             </a>
           </div>

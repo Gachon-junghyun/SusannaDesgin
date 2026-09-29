@@ -190,7 +190,7 @@ export default function Header({
 
             <Link
               href="/quote"
-              className="hidden rounded-lg bg-brand px-5 py-2.5 text-[15px] font-bold text-white shadow-sm transition-colors hover:bg-brand-600 sm:inline-flex"
+              className="btn hidden px-5 py-2.5 text-[15px] sm:inline-flex"
             >
               무료 견적
               <span aria-hidden="true" className="ml-1">↗</span>
@@ -257,14 +257,14 @@ export default function Header({
             <Link
               href="/quote"
               onClick={() => setOpen(false)}
-              className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand px-5 py-4 text-lg font-bold text-white"
+              className="btn mt-6 flex w-full px-5 py-4 text-lg"
             >
               무료 견적 신청
             </Link>
 
             <a
               href={site.phoneHref}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-ink px-5 py-4 text-lg font-bold"
+              className="btn btn-quiet mt-3 flex w-full px-5 py-4 text-lg"
             >
               <PhoneIcon /> {site.phone}
             </a>

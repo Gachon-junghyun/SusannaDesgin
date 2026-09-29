@@ -92,7 +92,7 @@ export default async function QuotePage({
                   href={site.kakaoChannelUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 flex items-center justify-center rounded-lg bg-[#FEE500] px-4 py-3 font-bold text-[#3C1E1E]"
+                  className="btn btn-kakao mt-4 flex w-full px-4 py-3"
                 >
                   카카오톡으로 상담하기
                 </a>

@@ -149,7 +149,7 @@ export default async function ProductsPage() {
               </a>
               <Link
                 href="/quote"
-                className="rounded-xl bg-brand px-8 py-4 font-black text-white transition-colors hover:bg-brand-600"
+                className="btn px-8 py-4 font-black"
               >
                 무료 견적 신청
               </Link>

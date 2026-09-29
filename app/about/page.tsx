@@ -232,7 +232,7 @@ export default async function AboutPage() {
         <div className="mt-14 text-center">
           <Link
             href="/quote"
-            className="inline-block rounded-xl bg-brand px-8 py-4 font-black text-white transition-colors hover:bg-brand-600"
+            className="btn px-8 py-4 font-black"
           >
             견적 문의하기
           </Link>

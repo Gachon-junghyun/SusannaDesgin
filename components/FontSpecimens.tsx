@@ -197,14 +197,10 @@ export default function FontSpecimens({
               type="button"
               aria-pressed={active}
               onClick={() => setOn(t.key)}
-              className={`rounded-full border px-5 py-2.5 text-[14px] font-bold transition-colors ${
-                active
-                  ? "border-brand bg-brand text-white"
-                  : "border-line bg-white text-ink-500 hover:border-ink-500 hover:text-ink"
-              }`}
+              className="chip px-5 py-2.5 text-[14px]"
             >
               {t.label}
-              <span className={`ml-1.5 text-[12px] ${active ? "text-white/70" : "text-ink-500"}`}>
+              <span className="ml-1.5 text-[12px] opacity-70">
                 {t.count}
               </span>
             </button>
@@ -276,7 +272,7 @@ export function CustomFontCard() {
 
       <button
         type="submit"
-        className="mt-6 flex w-full items-center justify-center rounded-xl bg-white px-5 py-3.5 text-[16px] font-black text-brand-700 transition-colors hover:bg-brand-50"
+        className="btn btn-on-brand mt-6 flex w-full px-5 py-3.5 text-[16px] font-black"
       >
         이걸로 견적 넣기 →
       </button>

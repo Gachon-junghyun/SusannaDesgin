@@ -313,3 +313,131 @@ body {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/*
+ * 버튼 — 2026-09-29 사람 결정: «① 먹 솔리드». 평소 먹으로 꽉 찬 각진 버튼, 올리면 브랜드 청록.
+ * 거쳐 간 것: A안(각진 2px + 흰 바탕 → 청록)을 적용해 보고 «너무 별로» → 후보 넷
+ *   (① 먹 솔리드 · ② 간판 받침 · ③ 에디토리얼 밑줄 · ④ 채널 깊이)을 실제 화면에 입혀 찍어 ① 로.
+ * 비교 근거: 건설·대기업 공식 사이트 실측(현대·GS건설 0px · 삼성물산 6px · LX하우시스 8px),
+ *   그 전 이 사이트는 8px·12px·캡슐이 섞여 있었습니다.
+ *
+ * 🔴 **공개 페이지의 버튼·칩은 이 클래스만 씁니다.** 모서리·배경·테·호버를 컴포넌트에
+ *    손으로 박지 마세요 — 한 곳이라도 박으면 다음에 또 섞입니다. 크기(px/py/글자)만 자리마다.
+ * ⚠️ 채워진 청록(호버) 위 흰 글씨는 2.99:1 — 원래 CTA 와 같은 조합이고 F12 에 «알고 남긴 것»으로 적혀 있습니다.
+ *    평소 상태(먹 위 흰 글씨)는 17:1 이라 전보다 잘 읽힙니다.
+ * ⚠️ **터치 화면엔 호버가 없습니다** — 폰에서는 누르는 순간(`:active`)에만 청록이 됩니다.
+ *
+ *   .btn          주 버튼 — 먹 바탕
+ *   .btn-quiet    보조 버튼 — 먹 테만 (호버는 같은 청록)
+ *   .btn-on-brand 청록 바탕 구역 위 — 먹 바탕, 호버는 흰 바탕 + 청록 글자(같은 청록이면 사라지므로)
+ *   .btn-kakao    카카오 — 카카오 노랑 그대로(남의 브랜드색이라 먹으로 바꾸지 않음), 모서리만 맞춤
+ *   .btn-brand    어두운 사진 위 주 버튼(홈 첫 화면) — 청록으로 채움, 올리면 한 단계 짙게. 먹 버튼은 어두운 사진에 묻혀서 이 자리만 청록
+ *   .btn-light    어두운 사진 위 보조 버튼 — 흰 테만, 올리면 흰 바탕 + 먹 글자
+ *   .chip         필터·탭 — 켜진 것(aria-pressed / aria-selected)은 먹으로 채움, 올리면 먹 테
+ */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0;
+    border: 2px solid var(--color-ink);
+    background-color: var(--color-ink);
+    color: #fff;
+    font-weight: 700;
+    transition:
+      background-color 0.15s,
+      color 0.15s,
+      border-color 0.15s;
+  }
+  .btn-quiet {
+    background-color: transparent;
+    color: var(--color-ink);
+  }
+  .btn:hover,
+  .btn:focus-visible,
+  .btn:active {
+    background-color: var(--color-brand);
+    border-color: var(--color-brand);
+    color: #fff;
+  }
+  .btn-on-brand:hover,
+  .btn-on-brand:focus-visible,
+  .btn-on-brand:active {
+    background-color: #fff;
+    border-color: #fff;
+    color: var(--color-brand-700);
+  }
+  .btn-kakao {
+    border-color: #fee500;
+    background-color: #fee500;
+    color: #3c1e1e;
+  }
+  .btn-kakao:hover,
+  .btn-kakao:focus-visible,
+  .btn-kakao:active {
+    background-color: #f2d900;
+    border-color: #f2d900;
+    color: #3c1e1e;
+  }
+  .btn-brand {
+    background-color: var(--color-brand);
+    border-color: var(--color-brand);
+    color: #fff;
+  }
+  .btn-brand:hover,
+  .btn-brand:focus-visible,
+  .btn-brand:active {
+    background-color: var(--color-brand-700);
+    border-color: var(--color-brand-700);
+    color: #fff;
+  }
+  .btn-light {
+    background-color: transparent;
+    border-color: rgb(255 255 255 / 0.8);
+    color: #fff;
+  }
+  .btn-light:hover,
+  .btn-light:focus-visible,
+  .btn-light:active {
+    background-color: #fff;
+    border-color: #fff;
+    color: var(--color-ink);
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .btn:disabled:hover {
+    background-color: var(--color-ink);
+    border-color: var(--color-ink);
+    color: #fff;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0;
+    border: 1px solid var(--color-line);
+    background-color: #fff;
+    color: var(--color-ink-500);
+    font-weight: 700;
+    transition:
+      background-color 0.15s,
+      color 0.15s,
+      border-color 0.15s;
+  }
+  .chip:hover,
+  .chip:focus-visible {
+    border-color: var(--color-ink);
+    color: var(--color-ink);
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-selected="true"] {
+    background-color: var(--color-ink);
+    border-color: var(--color-ink);
+    color: #fff;
+  }
+}

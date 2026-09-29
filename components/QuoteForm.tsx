@@ -342,7 +342,7 @@ ${note}` }));
             <button
               type="button"
               onClick={openPostcode}
-              className="shrink-0 rounded-lg bg-ink px-5 py-3 text-[15px] font-bold text-white transition-colors hover:bg-ink-800"
+              className="btn btn-quiet shrink-0 px-5 py-3 text-[15px]"
             >
               우편번호 찾기
             </button>
@@ -553,7 +553,7 @@ ${note}` }));
         <button
           type="submit"
           disabled={state === "sending"}
-          className="w-full rounded-xl bg-brand px-6 py-4 text-[17px] font-black text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+          className="btn w-full px-6 py-4 text-[17px] font-black"
         >
           {state === "sending" ? "전송 중…" : "견적 문의하기"}
         </button>

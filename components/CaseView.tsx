@@ -112,7 +112,7 @@ export default function CaseView({ site: s, photos }: { site: PublicSite; photos
           <p className="mt-3 leading-relaxed text-ink-500">현장을 알려주시면 이 사례와 비교해 사양과 예상 견적을 보내드립니다. 현장 확인·시안은 무료입니다.</p>
           <Link
             href="/quote"
-            className="mt-6 inline-block rounded-xl bg-brand px-8 py-4 font-black text-white transition-colors hover:bg-brand-600"
+            className="btn mt-6 px-8 py-4 font-black"
           >
             무료 견적 신청
           </Link>

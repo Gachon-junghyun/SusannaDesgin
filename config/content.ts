@@ -73,7 +73,7 @@ export const signTypes: SignType[] = [
     en: "SIGNAGE",
     desc: "상가, 오피스, 상업시설 등 공간에 맞춘 간판을 디자인하고 시공합니다.",
     points: [
-      "채널 · 스카시 · 돌출 간판",
+      "LED 채널 · 스카시 · 돌출 간판",
       "CI 교체 및 브랜드 통일 작업",
       "다점포 일괄 시공",
     ],

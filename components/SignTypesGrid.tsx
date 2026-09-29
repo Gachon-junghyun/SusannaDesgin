@@ -120,7 +120,7 @@ export default function SignTypesGrid({ signTypes }: { signTypes: SignModelWithF
                 */}
                 <Link
                   href={`/quote?item=${encodeURIComponent(t.slug)}`}
-                  className="block rounded-xl bg-brand px-4 py-3 text-center text-[14px] font-black text-white transition-colors hover:bg-brand-600"
+                  className="btn flex w-full px-4 py-3 text-[14px] font-black"
                 >
                   이 간판 견적 받기
                 </Link>

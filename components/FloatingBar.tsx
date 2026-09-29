@@ -28,7 +28,7 @@ export default function FloatingBar() {
         </a>
         <Link
           href="/quote"
-          className="flex flex-col items-center justify-center gap-0.5 bg-brand py-2.5 text-[11px] font-bold text-white"
+          className="flex flex-col items-center justify-center gap-0.5 bg-ink py-2.5 text-[11px] font-bold text-white transition-colors active:bg-brand"
         >
           <DocIcon />
           무료견적
@@ -41,7 +41,7 @@ export default function FloatingBar() {
           href={site.kakaoChannelUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed right-6 bottom-6 z-40 hidden items-center gap-2 rounded-full bg-[#FEE500] px-5 py-3.5 font-bold text-[#3C1E1E] shadow-lg transition-transform hover:scale-105 md:flex"
+          className="btn btn-kakao fixed right-6 bottom-6 z-40 hidden px-5 py-3.5 shadow-lg md:flex"
         >
           <ChatIcon />
           톡상담

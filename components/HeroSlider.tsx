@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Placeholder from "./Placeholder";
-import QuickQuoteForm from "./QuickQuoteForm";
+import Link from "next/link";
 import type { Slide } from "@/config/content";
 
 type SlideWithFlag = Slide & { available: boolean };
@@ -239,7 +239,13 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
             )}
           </div>
         ))}
-        <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/65 to-ink/25" />
+        {/* 모바일 — 예전 그대로의 고른 어둠(2026-09-29 사람 결정: «휴대폰 히어로는 예전 디자인») */}
+        <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/65 to-ink/25 md:hidden" />
+        {/* 데스크톱 — 왼쪽은 짙게(문구 자리) · 오른쪽은 사진 그대로 · 위는 메뉴 자리만 살짝 (1안, 2026-09-29) */}
+        <div className="absolute inset-0 hidden bg-gradient-to-r from-ink/90 via-ink/55 via-40% to-transparent to-75% md:block" />
+        <div className="absolute inset-x-0 top-0 hidden h-40 bg-gradient-to-b from-ink/60 to-transparent md:block" />
+        {/* 아래도 살짝 — 오른쪽 아래 «01 ── 04»·단추가 밝은 사진(흰 채널 글자) 위에서 묻혔다(2026-09-29 캡처) */}
+        <div className="absolute inset-x-0 bottom-0 hidden h-72 bg-gradient-to-t from-ink/75 to-transparent md:block" />
         <div
           className="absolute inset-0 bg-ink"
           style={{ opacity: ease * 0.55 }}
@@ -247,8 +253,15 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
         />
       </div>
 
-      {/* 콘텐츠 */}
-      <div className="wrap relative grid gap-10 pt-28 pb-24 md:min-h-[100svh] md:grid-cols-[1fr_380px] md:items-center md:pt-32 md:pb-28">
+      {/*
+        모바일 콘텐츠 — 2026-09-29 사람 결정: «휴대폰 랜딩 히어로는 예전 디자인으로».
+        1안(아래 데스크톱 블록)은 좁은 화면에서 제목이 작아지고 버튼·표시가 한 화면에 몰려서,
+        휴대폰은 1안 이전의 배치(굵은 제목 + 막대 인디케이터, 견적 폼은 히어로 아래)를 그대로 씁니다.
+        단추 모서리만 «먹 솔리드» 결정에 맞춰 각지게 둡니다.
+        ⚠️ 두 블록이 DOM 에 같이 있고 CSS 로 하나만 보입니다(display:none 은 접근성 트리에서도 빠집니다).
+           matchMedia 로 가르면 서버 렌더와 첫 화면이 어긋나 깜빡입니다.
+      */}
+      <div className="wrap relative pt-28 pb-24 md:hidden">
         <div
           className="text-white"
           style={{
@@ -258,7 +271,7 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
           }}
         >
           <p
-            key={`eyebrow-${i}`}
+            key={`m-eyebrow-${i}`}
             className="rise mb-3 text-[15px] font-black tracking-[0.3em] text-accent"
           >
             {current.eyebrow}
@@ -266,42 +279,30 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
                 색 톤 유지 결정에 따라 그대로 둡니다 — globals.css `@theme` 머리말 */}
             <span className="ml-2 text-white/35">/ 0{slides.length}</span>
           </p>
+          {/* 제목이 h1 로 두 벌 있지만 화면마다 하나만 보이고, 숨은 쪽은 display:none 이라 읽히지 않습니다 */}
           <h1
-            key={`title-${i}`}
-            className="rise text-4xl leading-[1.15] font-black tracking-tight whitespace-pre-line md:text-6xl"
+            key={`m-title-${i}`}
+            className="rise text-4xl leading-[1.15] font-black tracking-tight whitespace-pre-line"
           >
             {current.title}
           </h1>
           <p
-            key={`sub-${i}`}
-            className="rise mt-5 max-w-lg text-base leading-relaxed text-white/75 md:text-lg"
+            key={`m-sub-${i}`}
+            className="rise mt-5 max-w-lg text-base leading-relaxed text-white/75"
           >
             {current.sub}
           </p>
 
-          {/*
-            인디케이터 — 막대형.
-
-            ⚠️ **막대는 4px 이지만 버튼은 24px 입니다.** 예전에는 `<button>` 자체가
-               `h-1`(4px) 이라 손가락으로 누를 수가 없었습니다(실측 15×5px).
-               WCAG 2.2 «Target Size (Minimum)» 는 24×24 CSS px 를 요구합니다.
-               보이는 막대는 그대로 두고 **버튼에 투명 여백만 붙여** 크기를 만듭니다 —
-               막대를 두껍게 만들면 디자인이 바뀌므로 이 방식이 맞습니다.
-
-            ⚠️ `role="tab"` 을 걷어냈습니다. 탭 역할은 `tabpanel` 과 짝이어야 하는데
-               슬라이드는 패널이 아니라서, 스크린리더에 "탭 4개"라고 잘못 알려 주고
-               있었습니다. 지금은 평범한 버튼 + `aria-current` 입니다.
-          */}
+          {/* 인디케이터 — 막대형. 막대는 4px 이지만 버튼은 24px(WCAG 2.2 Target Size) */}
           <div className="mt-10 flex items-center gap-3">
             <button
               type="button"
               onClick={() => go(i - 1)}
               aria-label="이전 슬라이드"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+              className="flex h-9 w-9 items-center justify-center rounded-[2px] border border-white/25 text-white transition-colors active:bg-brand focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
             >
               <ChevronIcon dir="left" />
             </button>
-
             <div className="flex items-center gap-1.5" aria-label="슬라이드 선택">
               {slides.map((s, idx) => (
                 <button
@@ -315,52 +316,131 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
                   <span
                     aria-hidden="true"
                     className={`block h-1 rounded-full transition-all ${
-                      idx === i ? "w-10 bg-brand-400" : "w-6 bg-white/30 hover:bg-white/50"
+                      idx === i ? "w-10 bg-brand-400" : "w-6 bg-white/30"
                     }`}
                   />
                 </button>
               ))}
             </div>
-
             <button
               type="button"
               onClick={() => go(i + 1)}
               aria-label="다음 슬라이드"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+              className="flex h-9 w-9 items-center justify-center rounded-[2px] border border-white/25 text-white transition-colors active:bg-brand focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
             >
               <ChevronIcon dir="right" />
             </button>
-
-            {/*
-              자동 넘김 정지 — 6초마다 스스로 바뀌는 화면에는 멈출 방법이 있어야 합니다.
-              마우스 올리기·포커스로도 멈추지만, 그건 **손을 대고 있는 동안만** 이라
-              읽는 사람이 손을 떼면 다시 움직입니다. 터치 화면에는 hover 가 아예 없습니다.
-              움직임 줄이기(prefers-reduced-motion)면 처음부터 안 도니까 이 버튼도 숨깁니다.
-            */}
             {!reduced && slides.length > 1 && (
               <button
                 type="button"
                 onClick={() => setStopped((v) => !v)}
                 aria-label={stopped ? "자동 넘김 시작" : "자동 넘김 정지"}
-                className="ml-1 flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+                className="ml-1 flex h-9 w-9 items-center justify-center rounded-[2px] border border-white/25 text-white transition-colors active:bg-brand focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
               >
                 {stopped ? <PlayIcon /> : <PauseIcon />}
               </button>
             )}
           </div>
         </div>
+      </div>
 
-        {/* 견적 폼 — 데스크톱은 히어로 안, 모바일은 히어로 아래 */}
+      {/*
+        콘텐츠 — 2026-09-29 사람 결정(«1안 기업형 정석»의 첫 화면). 대기업 공식 홈페이지 10곳 실측의 결:
+        사진을 가득 깔고 문구는 **왼쪽 아래**, 슬라이드 표시는 **오른쪽 아래 «01 ── 04»**, 제목은 크고 가늘게(400).
+        근거 → reference/reference.md 부록 B.
+        🔴 **데스크톱 간편 견적 폼을 뺐습니다**(사람이 고른 시안에 폼이 없음). 모바일은 page.tsx 의
+           «히어로 아래 폼» 이 그대로 살아 있습니다. 대신 첫 화면에 «무료 견적 신청» 버튼을 둡니다.
+      */}
+      <div className="wrap relative hidden min-h-[100svh] flex-row items-end justify-between gap-10 pt-28 pb-36 md:flex">
         <div
-          className="hidden md:block"
+          className="text-white"
           style={{
-            transform: `translate3d(0, ${-ease * 28}px, 0)`,
-            opacity: 1 - ease * 0.9,
+            transform: `translate3d(0, ${-ease * 70}px, 0)`,
+            opacity: 1 - ease * 1.15,
+            willChange: "transform, opacity",
           }}
         >
-          {/* 같은 폼이 홈에 두 벌 들어갑니다(데스크톱=여기, 모바일=히어로 아래).
-              id 가 겹치면 라벨이 엉뚱한 칸을 가리키므로 접두어를 다르게 줍니다. */}
-          <QuickQuoteForm idPrefix="hero" />
+          <p
+            key={`eyebrow-${i}`}
+            className="rise mb-5 text-[13px] font-bold tracking-[0.24em] text-brand-400"
+          >
+            {current.eyebrow}
+          </p>
+          <h1
+            key={`title-${i}`}
+            className="rise text-[36px] leading-[1.2] font-normal tracking-tight whitespace-pre-line sm:text-[44px] md:text-[76px]"
+          >
+            {current.title}
+          </h1>
+          <p
+            key={`sub-${i}`}
+            className="rise mt-6 max-w-xl text-base leading-relaxed text-white/80 md:text-[19px]"
+          >
+            {current.sub}
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link href="/quote" className="btn btn-brand px-7 py-3.5">
+              무료 견적 신청 <span aria-hidden="true">→</span>
+            </Link>
+            <Link href="/works" className="btn btn-light px-7 py-3.5">
+              시공 사례 보기
+            </Link>
+          </div>
+        </div>
+
+        {/*
+          슬라이드 표시 — «01 ── 04» 막대 + 이전·정지·다음.
+
+          ⚠️ 예전의 «막대 버튼 네 개»(슬라이드 바로 고르기)는 뺐습니다 — 시안이 진행 막대 하나였습니다.
+             이전·다음으로 모든 슬라이드에 닿으니 조작은 잃지 않습니다.
+          ⚠️ **정지 버튼은 남깁니다.** 6초마다 스스로 바뀌는 화면에는 멈출 방법이 있어야 하고(F12),
+             마우스 올리기로 멈추는 건 손을 댄 동안뿐이라 대신이 안 됩니다.
+          ⚠️ 버튼은 36×36 — WCAG 2.2 «Target Size (Minimum)» 24×24 를 넘습니다.
+        */}
+        <div
+          className="flex items-center gap-3 text-white"
+          style={{ opacity: 1 - ease * 1.15 }}
+        >
+          <span className="text-[14px] tracking-[0.1em] tabular-nums">
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <span aria-hidden="true" className="relative block h-0.5 w-32 bg-white/30 md:w-40">
+            <span
+              className="absolute inset-y-0 left-0 bg-white transition-[width] duration-500"
+              style={{ width: `${((i + 1) / slides.length) * 100}%` }}
+            />
+          </span>
+          {/* ⚠️ white/60 은 사진 위에서 명암비가 들쭉날쭉합니다 — 장식용 총 개수라 그대로 둡니다 */}
+          <span className="text-[14px] tracking-[0.1em] text-white/60 tabular-nums">
+            {String(slides.length).padStart(2, "0")}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => go(i - 1)}
+            aria-label="이전 슬라이드"
+            className="ml-3 flex h-9 w-9 items-center justify-center rounded-[2px] border border-white/25 text-white transition-colors hover:border-brand hover:bg-brand focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          >
+            <ChevronIcon dir="left" />
+          </button>
+          {!reduced && slides.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setStopped((v) => !v)}
+              aria-label={stopped ? "자동 넘김 시작" : "자동 넘김 정지"}
+              className="flex h-9 w-9 items-center justify-center rounded-[2px] border border-white/25 text-white transition-colors hover:border-brand hover:bg-brand focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+            >
+              {stopped ? <PlayIcon /> : <PauseIcon />}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => go(i + 1)}
+            aria-label="다음 슬라이드"
+            className="flex h-9 w-9 items-center justify-center rounded-[2px] border border-white/25 text-white transition-colors hover:border-brand hover:bg-brand focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          >
+            <ChevronIcon dir="right" />
+          </button>
         </div>
       </div>
 

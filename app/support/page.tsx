@@ -108,7 +108,7 @@ export default function SupportPage() {
             </p>
             <Link
               href="/quote"
-              className="mt-4 inline-block rounded-lg bg-white px-5 py-2.5 font-bold text-brand"
+              className="btn btn-on-brand mt-4 px-5 py-2.5"
             >
               신청하기 →
             </Link>
@@ -178,7 +178,7 @@ export default function SupportPage() {
                     href={site.naverPlaceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full bg-brand px-5 py-3 text-[14px] font-bold text-white transition-transform hover:scale-105"
+                    className="btn px-5 py-3 text-[14px]"
                   >
                     네이버 지도에서 보기
                   </a>
@@ -187,13 +187,13 @@ export default function SupportPage() {
                   href={`https://map.kakao.com/link/to/${encodeURIComponent(site.name)},${site.geo.lat},${site.geo.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full border border-line bg-white px-5 py-3 text-[14px] font-bold transition-transform hover:scale-105"
+                  className="btn btn-quiet px-5 py-3 text-[14px]"
                 >
                   카카오맵 길찾기
                 </a>
                 <a
                   href={site.phoneHref}
-                  className="rounded-full border border-line bg-white px-5 py-3 text-[14px] font-bold transition-transform hover:scale-105"
+                  className="btn btn-quiet px-5 py-3 text-[14px]"
                 >
                   전화 {site.phone}
                 </a>

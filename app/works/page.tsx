@@ -95,7 +95,7 @@ export default async function WorksPage() {
           </p>
           <Link
             href="/quote"
-            className="mt-6 inline-block rounded-xl bg-brand px-8 py-4 font-black text-white transition-colors hover:bg-brand-600"
+            className="btn mt-6 px-8 py-4 font-black"
           >
             무료 견적 신청
           </Link>

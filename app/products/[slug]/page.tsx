@@ -225,13 +225,13 @@ export default async function ProductDetailPage({
             {/* 참고 화면의 «Add to Bag» 자리 — 우리는 사는 게 아니라 견적입니다 */}
             <Link
               href={`/quote?item=${encodeURIComponent(model.slug)}`}
-              className="block rounded-xl bg-brand px-6 py-4 text-center text-[17px] font-black text-white transition-colors hover:bg-brand-600"
+              className="btn flex w-full px-6 py-4 text-[17px] font-black"
             >
               이 간판으로 견적 받기
             </Link>
             <a
               href={site.phoneHref}
-              className="block rounded-xl border border-line px-6 py-4 text-center text-[16px] font-bold transition-colors hover:border-ink-500"
+              className="btn btn-quiet flex w-full px-6 py-4 text-[16px]"
             >
               전화로 물어보기 {site.phone}
             </a>

@@ -155,7 +155,7 @@ export default function QuickQuoteForm({
       <button
         type="submit"
         disabled={state === "sending"}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3.5 text-[16px] font-black text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+        className="btn mt-4 flex w-full px-5 py-3.5 text-[16px] font-black"
       >
         {state === "sending" ? "전송 중…" : "무료 견적 신청"}
       </button>
