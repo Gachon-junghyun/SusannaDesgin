@@ -141,9 +141,10 @@ export default async function SignDesignPage() {
                   ))}
                 </dl>
 
-                <a href={`#ask-${it.key}`} className="btn mt-8 px-7 py-3.5">
+                {/* 2026-09-29 사람 결정: 전체 견적 폼(/quote)으로 — 고른 간판이 «보고 온 것» 칸에 채워집니다 */}
+                <Link href={`/quote?design=${it.key}`} className="btn mt-8 px-7 py-3.5">
                   이 간판으로 문의하기 <span aria-hidden="true">→</span>
-                </a>
+                </Link>
               </Reveal>
             </article>
           ))}

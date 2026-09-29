@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import QuickQuoteForm from "./QuickQuoteForm";
 
 /**
  * 간판디자인 페이지 맨 아래 «문의하기» (F31).
  *
- * 위의 간판마다 붙은 «이 간판으로 문의하기» 는 `#ask-<key>` 로 걸려 있습니다. 그 주소가 되면
- * 여기서 그 간판을 골라 두고 폼으로 내려옵니다(그 id 를 가진 요소는 일부러 없습니다 —
- * 브라우저가 엉뚱한 곳으로 뛰지 않게). 고른 간판은 간편 견적 폼의 `product` 로
- * 조용히 실려 갑니다(F24-c 와 같은 칸 — 입력칸을 늘리지 않습니다).
+ * 간판마다 붙은 «이 간판으로 문의하기» 는 전체 견적 폼(`/quote?design=<key>`)으로 갑니다
+ * (2026-09-29 사람 결정). 여기는 목록을 끝까지 본 사람을 위한 간편 폼 — 칩으로 고른 간판이
+ * `product` 로 조용히 실려 갑니다(F24-c 와 같은 칸 — 입력칸을 늘리지 않습니다).
  */
 export default function SignDesignInquiry({
   items,
@@ -17,24 +16,11 @@ export default function SignDesignInquiry({
   items: { key: string; name: string; shop: string }[];
 }) {
   const [picked, setPicked] = useState("");
-  const box = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const read = () => {
-      const m = decodeURIComponent(window.location.hash).match(/^#ask-(.+)$/);
-      if (!m) return;
-      if (items.some((it) => it.key === m[1])) setPicked(m[1]);
-      box.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    };
-    read();
-    window.addEventListener("hashchange", read);
-    return () => window.removeEventListener("hashchange", read);
-  }, [items]);
 
   const cur = items.find((it) => it.key === picked);
 
   return (
-    <div ref={box} className="scroll-mt-40 grid gap-10 lg:grid-cols-[1fr_420px] lg:gap-20">
+    <div className="grid gap-10 lg:grid-cols-[1fr_420px] lg:gap-20">
       <div>
         <p className="text-[13px] font-bold tracking-[0.24em] text-brand-700">INQUIRY</p>
         <h2 className="mt-3 text-3xl leading-snug font-normal tracking-tight md:text-[42px]">

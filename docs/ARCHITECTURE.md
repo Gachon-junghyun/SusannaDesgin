@@ -154,7 +154,7 @@ Susanna/
 | **P4** | `/works` | `app/works/page.tsx` | **요청 시 SSR** (`dynamic="force-dynamic"`) | **CMS** `getWorks()` |
 | **P5** | `/process` | `app/process/page.tsx` | **요청 시 SSR** (F19) | **CMS** `getBlocks().process` (상세 항목 = `points`) |
 | **P6** | `/support` | `app/support/page.tsx` | **요청 시 SSR** (F23) | `config/site.ts` (FAQ·오시는길) |
-| **P7** | `/quote` | `app/quote/page.tsx` | **요청 시 SSR** (F23) | `content.ts` 선택지 + `?item=` 이 있으면 **CMS** `getBlocks().signModels` 로 대조 (F24-c) |
+| **P7** | `/quote` | `app/quote/page.tsx` | **요청 시 SSR** (F23) | `content.ts` 선택지 + `?item=` 이 있으면 **CMS** `getBlocks().signModels` 로 대조 (F24-c) · `?design=` 이면 `config/signDesign.ts` 와 대조 (F31) |
 | **P8** | `/privacy` `/terms` `/no-email-collect` | 각 `page.tsx` | **요청 시 SSR** (F23) | 하드코딩 ⚠️법률 검토 필요 |
 | — | `/robots.txt` `/sitemap.xml` | `app/robots.ts` `sitemap.ts` | 정적 | `config/site.ts` |
 | — | `/rss.xml` | `app/rss.xml/route.ts` | 요청 시 생성 + **CDN 캐시 1h** | **CMS** `getWorks()` — 네이버 서치어드바이저 제출용 |
@@ -1982,7 +1982,7 @@ public/images/design-*.jpg      연출 사진 10장 (ChatGPT 로 그림, 1600px 
 - **사람 결정**(2026-09-29): *"간판 종류별로 수산나디자인이라는 걸로 이쁜 카페처럼 … 까치발은 제일 잘 어울리는 시멘트에 … 간판 설명 + 옵션 + 아래에 문의하기 … 네비게이션 바에도"*.
   첫 짝(까치발 + 시멘트 + 카페)은 사람이, 나머지 여덟은 에이전트가 골랐습니다. 짝의 근거는 `STARTUP/aidesigner` 디자인 나무 «간판으로는?» 가지(어떤 방식 · 어떤 벽에 · 무엇으로 · 밤에는).
 - 🔴 **사진은 AI 연출입니다** — 목차 줄에 «사진은 AI로 그린 연출 이미지입니다 · 실제 시공 사진 보기» 를 늘 붙입니다. 실제 시공 사진인 척하지 않습니다.
-- **«이 간판으로 문의하기»** 는 `#ask-<key>` 링크입니다. 그 id 를 가진 요소는 일부러 없고, `SignDesignInquiry` 가 `hashchange` 로 받아 칩을 고르고 폼으로 내려옵니다. 고른 간판은 `product` 칸(F24-c 와 같은 칸, `간판디자인 / <이름>`)으로 실려 가 관리자 문의함·메일에 보입니다 — 입력칸은 안 늘렸습니다.
+- **«이 간판으로 문의하기»** 는 전체 견적 폼 `/quote?design=<key>` 로 갑니다(2026-09-29 사람 결정 *"quote 로 가야지"*). `app/quote/page.tsx` 의 `resolveDesign()` 이 key 를 `signDesigns` 와 대조해 `간판디자인: <이름> (<가게> 연출)` 로 바꿔 «보고 온 것»(`product`) 칸에 채웁니다 — 주소 글자를 그대로 쓰지 않는 `?item=` 과 같은 규칙. 맨 아래 간편 폼(`SignDesignInquiry`)은 칩으로 고른 간판을 `간판디자인 / <이름>` 으로 싣습니다.
 - 이름·설명은 `sign_model`(관리자 화면)을 먼저 읽습니다 — 거기서 고치면 여기도 바뀝니다. 두 벌로 적지 않았습니다.
 - **LED 이름**(2026-09-29 사람 결정 *"LED 말 들어가게 — 후광 LED 이런 느낌으로"*): 빛나는 여섯 종류는 `signDesigns[].name` 으로 이 페이지에서만 «후광 LED 채널» 처럼 덮어씁니다. 관리자 화면(`sign_model`) 이름은 그대로라 `/products` 는 안 바뀝니다.
 - **AI·검색엔진용 구조화 데이터**: `ItemList` 안에 `Service` 10개(이름 · 설명 · 사진 · 어울리는 가게 · 제공자 `#business`). 가격은 없습니다. 같은 날 `/llms.txt` 도 생겼습니다(§2.1).

@@ -2,6 +2,7 @@
 import { PageHero } from "@/components/Section";
 import { CUSTOM_FONT_SLUG, specimenFonts } from "@/config/fonts";
 import { MAKER_INTEREST } from "@/config/maker";
+import { signDesigns } from "@/config/signDesign";
 import { site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 import { pageMetadata } from "@/lib/seo";
@@ -35,6 +36,19 @@ async function resolveItem(slug: string | undefined): Promise<string> {
 }
 
 /**
+ * `/sign-design`(간판디자인, F31)의 «이 간판으로 문의하기» 에서 넘어온 간판 (2026-09-29 사람 결정
+ * *"이걸로 문의하기는 quote 로 가야지"*). `resolveItem` 과 같은 규칙 — 주소의 글자를 그대로 쓰지 않고
+ * `signDesigns` 의 key 와 대조해 **그 페이지에 보이는 이름**(LED 이름 포함)으로 바꿉니다.
+ */
+async function resolveDesign(key: string | undefined): Promise<string> {
+  const d = signDesigns.find((x) => x.key === key?.trim());
+  if (!d) return "";
+  const { signModels } = await getBlocks();
+  const name = d.name || signModels.find((m) => m.slug === d.key)?.title || d.key;
+  return `간판디자인: ${name} (${d.shop} 연출)`;
+}
+
+/**
  * `/fonts` 카드에서 넘어온 글꼴 (F25, 2026-09-23). `resolveItem` 과 같은 규칙입니다 —
  * **주소의 글자를 그대로 쓰지 않고** `config/fonts.ts` 목록과 대조해 이름으로 바꿉니다.
  * 칸을 새로 파지 않고 「보고 온 제품」(`product`)에 `글꼴: 이름` 으로 싣습니다 —
@@ -50,12 +64,16 @@ export default async function QuotePage({
   searchParams,
 }: {
   /** `/products` 카드에서 넘어올 때만 붙습니다 — 직접 들어오면 비어 있습니다 */
-  searchParams: Promise<{ item?: string; font?: string; maker?: string }>;
+  searchParams: Promise<{ item?: string; font?: string; maker?: string; design?: string }>;
 }) {
-  const { item, font, maker } = await searchParams;
+  const { item, font, maker, design } = await searchParams;
   // 간판 메이커(F26)에서 오면 `?maker=1` 하나뿐입니다 — 디자인 내용은 주소가 아니라
   // 브라우저 저장소로 건너옵니다(`config/maker.ts` 의 MAKER_STORAGE_KEY). 여기선 고정 문구만 씁니다.
-  const interest = (await resolveItem(item)) || resolveFont(font) || (maker === "1" ? MAKER_INTEREST : "");
+  const interest =
+    (await resolveItem(item)) ||
+    (await resolveDesign(design)) ||
+    resolveFont(font) ||
+    (maker === "1" ? MAKER_INTEREST : "");
 
   return (
     <>
