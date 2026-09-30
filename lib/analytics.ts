@@ -70,15 +70,19 @@ export function claritySkipped(pathname: string): boolean {
  *
  * - `lazyOnload` = 페이지 `load` 가 끝나고 브라우저가 한가할 때 실행 → 첫 화면·첫 터치와 겹치지 않습니다.
  *   (실측 2026-09-30: 켜지는 순간 화면 전체를 한 번 찍느라 0.12초 멈춤 1회, 그 뒤 스크롤 중 멈춤 0.)
- * - 내부자 표시(`INTERNAL_KEY`)나 관리자 로그인이면 아예 안 불러옵니다 — GA 부트스트랩이 `afterInteractive`
- *   라 이보다 먼저 돌아 표시를 세워 둡니다.
+ * - 내부자 표시(`INTERNAL_KEY`)나 관리자 로그인이면 아예 안 불러옵니다.
+ *   🔴 **GA 부트스트랩보다 먼저 돌 수 있습니다** — 빨리 뜬 페이지는 `load`(→ `lazyOnload`)가 하이드레이션
+ *   (→ `afterInteractive`)보다 먼저 옵니다(2026-09-30 운영 실측). 그래서 `?internal=` 은 GA 가 표시를
+ *   고쳐 놓기를 기다리지 않고 여기서도 직접 읽습니다. 안 그러면 가족 폰이 `?internal=1` 을 처음 연 그 한 번이 녹화됩니다.
  * - 들어온 첫 페이지가 `CLARITY_SKIP` 이면 안 불러옵니다. 중간에 들어가면 `ClarityGate` 가 멈춥니다.
  */
 export function clarityBootstrap(projectId: string, isAdmin: boolean): string {
   return (
     "(function(){" +
     (isAdmin ? "return;" : "") +
-    `try{if(localStorage.getItem('${INTERNAL_KEY}')==='1')return;}catch(e){}` +
+    "var q=null;try{q=new URLSearchParams(location.search).get('internal');}catch(e){}" +
+    "if(q==='1')return;" +
+    `if(q!=='0'){try{if(localStorage.getItem('${INTERNAL_KEY}')==='1')return;}catch(e){}}` +
     `if(${CLARITY_SKIP}.test(location.pathname))return;` +
     '(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};' +
     't=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;' +
