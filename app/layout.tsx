@@ -250,7 +250,9 @@ export default async function RootLayout({
         */}
         {site.isProductionDomain && site.clarityProjectId && (
           <>
-            <Script id="clarity" strategy="lazyOnload">
+            {/* 🔴 id 를 "clarity" 로 두지 마세요 — 요소 id 는 window 속성이 되어 `window.clarity` 가 이 태그를 가리키고,
+                Clarity 가 «이미 있다»로 보고 조용히 죽습니다(2026-09-30 첫 배포에서 밟음). */}
+            <Script id="ms-clarity-tag" strategy="lazyOnload">
               {clarityBootstrap(site.clarityProjectId, preview.isAdmin)}
             </Script>
             <ClarityGate />

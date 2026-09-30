@@ -1144,7 +1144,7 @@ lib/analytics.ts   ★ 규칙은 여기 한 곳 (서버·브라우저 공용, se
   ```
   config/site.ts → site.clarityProjectId   "yq6e0y948l"  비우면 꺼짐
   app/layout.tsx
-  ├── <Script id="clarity" strategy="lazyOnload">  {clarityBootstrap(id, preview.isAdmin)}
+  ├── <Script id="ms-clarity-tag" strategy="lazyOnload">  {clarityBootstrap(id, preview.isAdmin)}
   │                        └ 내부자 표시·관리자 로그인·첫 페이지가 /admin·/maker 면 안 불러옴
   └── <ClarityGate />   클라이언트 이동으로 /admin·/maker 에 들어가면 clarity("pause"), 나오면 "resume"
   ```
@@ -1152,6 +1152,9 @@ lib/analytics.ts   ★ 규칙은 여기 한 곳 (서버·브라우저 공용, se
     600KB/전송 196KB) · 켜지는 순간 화면을 한 번 찍느라 멈춤 **0.12초**(PC) / **0.12+0.05초**(CPU 4배 늦춘 폰 화면) ·
     그 뒤 끝까지 스크롤해도 멈춤 **0** · 첫 업로드 압축 16KB, 스크롤 한 바퀴 6.7KB.
     그래서 **`lazyOnload`**(페이지 `load` 뒤 한가할 때)로만 불러 첫 화면·첫 터치와 안 겹치게 했습니다.
+  - 🔴 **`<Script>` 의 id 를 `"clarity"` 로 두지 마세요** (2026-09-30 첫 배포에서 밟음) — 요소 id 는 `window` 의 이름 속성이 돼서
+    `window.clarity` 가 그 script 요소가 되고, 공식 태그의 `c[a]=c[a]||function…` 가 «이미 있다»로 넘어가 **조용히 죽습니다**
+    (태그와 `c.gif` 만 받고 본 스크립트·업로드 0). 운영에서 업로드 요청이 0 인 걸 보고 잡았습니다.
   - 🔴 **`lazyOnload` 가 `afterInteractive` 보다 먼저 돌 수 있습니다** (2026-09-30 배포 직후 운영에서 밟음) — 빨리 뜬 페이지는
     `load` 가 하이드레이션보다 먼저 옵니다. 그래서 Clarity 문지기는 GA 가 고친 표시를 믿지 않고 **`?internal=` 을 직접 읽습니다.**
     두 스크립트의 순서에 기대는 코드를 새로 짜지 마세요.
