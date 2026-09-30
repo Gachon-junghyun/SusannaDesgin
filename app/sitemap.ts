@@ -49,8 +49,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     (r) => !(noindexPaths as readonly string[]).includes(r.path),
   );
 
+  /**
+   * 🔴 홈은 **끝 슬래시를 붙여** `https://susannadesign.co.kr/` 로 적습니다 (2026-09-30).
+   * 구글이 색인한 주소가 슬래시 붙은 쪽이고, 슬래시 없이 적었더니 Search Console URL 검사가
+   * 홈을 «감지된 참조 사이트맵이 없습니다»로 보였습니다. 나머지 주소는 슬래시 없이 그대로입니다.
+   */
   const base = publicRoutes.map((r) => ({
-    url: `${site.url}${r.path}`,
+    url: r.path ? `${site.url}${r.path}` : `${site.url}/`,
     lastModified: now,
     changeFrequency: r.freq,
     priority: r.priority,
