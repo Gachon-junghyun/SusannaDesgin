@@ -7,11 +7,13 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingBar from "@/components/FloatingBar";
 import PreviewBar from "@/components/PreviewBar";
+import ClarityGate from "@/components/ClarityGate";
 import SiteChrome from "@/components/SiteChrome";
 import { SHOW_PRODUCTS } from "@/config/content";
 import { SHOW_FONTS } from "@/config/fonts";
 import { MAKER_BETA, MAKER_IN_NAV, SHOW_MAKER } from "@/config/maker";
 import { seo, site } from "@/config/site";
+import { clarityBootstrap, gaBootstrap } from "@/lib/analytics";
 import { getPreview } from "@/lib/preview";
 import { ogImage } from "@/lib/seo";
 
@@ -227,6 +229,8 @@ export default async function RootLayout({
           🔴 간판 메이커 공유 링크(`/maker/s/<토큰>`, F26-b)로 «들어온» 방문은 `config` 를 안 부릅니다 —
           GA 는 주소를 통째로 보내서, 부르면 비밀 토큰이 구글에 남습니다. 그 방문 한 번이 통계에서 빠질 뿐입니다.
           (공유 주소는 사이트 안 어디에도 링크가 없어 «다른 페이지에서 건너가는» 길은 없습니다.)
+          🔴 `/admin/*` 도 `config` 를 안 부르고, 내부자(관리자·가족) 브라우저는 `traffic_type: 'internal'` 로
+          보냅니다 — 규칙 전체는 `lib/analytics.ts` 한 곳에 있습니다.
         */}
         {site.isProductionDomain && site.gaMeasurementId && (
           <>
@@ -235,8 +239,21 @@ export default async function RootLayout({
               strategy="afterInteractive"
             />
             <Script id="ga4" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());if(location.pathname.indexOf('/maker/s/')!==0)gtag('config','${site.gaMeasurementId}');`}
+              {gaBootstrap(site.gaMeasurementId, preview.isAdmin)}
             </Script>
+          </>
+        )}
+        {/*
+          Microsoft Clarity — 스크롤·클릭 지도와 방문 녹화 (F22). 🔴 손님 화면을 막지 않는 게 먼저라
+          `lazyOnload`(페이지가 다 뜨고 한가할 때)로만 부르고, 내부자·`/admin`·`/maker` 에서는 안 켭니다.
+          입력칸은 Clarity 가 기본으로 가리고, 입력값을 «글자로» 다시 찍는 곳에는 `data-clarity-mask` 를 붙입니다.
+        */}
+        {site.isProductionDomain && site.clarityProjectId && (
+          <>
+            <Script id="clarity" strategy="lazyOnload">
+              {clarityBootstrap(site.clarityProjectId, preview.isAdmin)}
+            </Script>
+            <ClarityGate />
           </>
         )}
       </body>

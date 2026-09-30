@@ -169,6 +169,17 @@ export const site = {
   gaMeasurementId: "G-NNT57E6S9L",
 
   /**
+   * Microsoft Clarity 프로젝트 ID — 스크롤·클릭 지도와 방문 녹화 (2026-09-30).
+   *
+   * GA 와 같은 이유로 비밀이 아니고, `site.isProductionDomain` 일 때만 붙습니다. **비우면 꺼집니다.**
+   * clarity.microsoft.com 에서 프로젝트를 만들면 «설정 → 개요»에 10자 안팎의 ID 가 나옵니다.
+   *
+   * 🔴 **손님 화면을 막지 않는 게 먼저입니다** — 켜고 끄는 규칙은 `lib/analytics.ts` 의 `clarityBootstrap()`:
+   * 페이지가 다 뜨고 한가해진 뒤에야 불러오고, 내부자·`/admin`·`/maker` 에서는 안 켭니다.
+   */
+  clarityProjectId: "yq6e0y948l",
+
+  /**
    * 사업장 좌표 — 구조화 데이터(LocalBusiness.geo)에 쓰입니다.
    * 구글 지도에서 주소를 찍고 우클릭하면 위도, 경도 순으로 나옵니다.
    * 로컬 검색은 "거리"가 순위 요인이라 정확할수록 좋습니다.

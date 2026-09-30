@@ -9,6 +9,7 @@ import Field, { inputCls } from "./Field";
 import PrivacyConsent from "./PrivacyConsent";
 import { floorOptions, signTypeOptions, timingOptions } from "@/config/content";
 import { site } from "@/config/site";
+import { trackLead } from "@/lib/analytics";
 import {
   ACCEPTED_FILE_LABEL,
   ACCEPTED_FILE_TYPES,
@@ -221,6 +222,8 @@ ${note}` }));
 
       const res = await fetch("/api/quote", { method: "POST", body: fd });
       if (!res.ok) throw new Error("failed");
+      // 허니팟에 걸린 제출은 서버가 저장 없이 200 을 돌려줍니다 — 전환으로 세지 않습니다
+      if (!form.trap) trackLead("full");
       setState("done");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -238,7 +241,7 @@ ${note}` }));
         </div>
         <h2 className="text-2xl font-black">견적 문의가 접수됐습니다</h2>
         <p className="mt-3 leading-relaxed text-ink-500">
-          담당자가 내용을 확인한 뒤 <b className="text-ink">{form.phone}</b> 으로
+          담당자가 내용을 확인한 뒤 <b className="text-ink" data-clarity-mask="true">{form.phone}</b> 으로
           연락드리겠습니다.
           <br />
           급하신 경우 <a href={site.phoneHref} className="font-bold text-brand underline underline-offset-4">{site.phone}</a> 으로 바로 전화 주세요.
@@ -495,7 +498,8 @@ ${note}` }));
         </p>
 
         {files.length > 0 && (
-          <ul className="mt-2 space-y-1.5">
+          // 파일 이름은 손님이 붙인 이름이라(«홍길동_사업자등록증.pdf») 방문 녹화에서 가립니다 (F22 Clarity)
+          <ul className="mt-2 space-y-1.5" data-clarity-mask="true">
             {files.map((f, i) => (
               <li
                 key={`${f.name}-${i}`}

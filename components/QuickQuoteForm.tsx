@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import PrivacyConsent from "./PrivacyConsent";
 import { formatPhone, validateQuick, type Errors } from "@/lib/validate";
+import { trackLead } from "@/lib/analytics";
 
 /**
  * 히어로 인라인 간편 상담 (3필드).
@@ -59,6 +60,8 @@ export default function QuickQuoteForm({
 
       const res = await fetch("/api/quote", { method: "POST", body: fd });
       if (!res.ok) throw new Error("failed");
+      // 허니팟에 걸린 제출은 서버가 저장 없이 200 을 돌려줍니다 — 전환으로 세지 않습니다
+      if (!form.trap) trackLead("quick");
       setState("done");
     } catch {
       setState("error");
