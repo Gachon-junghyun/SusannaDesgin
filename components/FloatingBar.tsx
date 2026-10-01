@@ -18,7 +18,10 @@ export default function FloatingBar() {
         안 띄우면 버튼의 아래 절반이 인디케이터 띠에 물려 스와이프로 먹힙니다.
         ⚠️ `app/layout.tsx` 의 `viewportFit: "cover"` 가 있어야 이 값이 0 이 아닙니다.
       */}
-      <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-line bg-white pb-[env(safe-area-inset-bottom,0px)] md:hidden">
+      <div
+        data-track-place="floating"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-line bg-white pb-[env(safe-area-inset-bottom,0px)] md:hidden"
+      >
         <a
           href={site.phoneHref}
           className="flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px] font-bold"
