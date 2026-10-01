@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Placeholder from "./Placeholder";
 import Link from "next/link";
 import type { Slide } from "@/config/content";
@@ -270,28 +270,25 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
             willChange: "transform, opacity",
           }}
         >
-          <p
-            key={`m-eyebrow-${i}`}
-            className="rise mb-3 text-[15px] font-black tracking-[0.3em] text-accent"
-          >
-            {current.eyebrow}
-            {/* ⚠️ white/35 는 ink 배경에서 3.21:1 로 기준 미달입니다(장식용 슬라이드 수).
-                색 톤 유지 결정에 따라 그대로 둡니다 — globals.css `@theme` 머리말 */}
-            <span className="ml-2 text-white/35">/ 0{slides.length}</span>
-          </p>
           {/* 제목이 h1 로 두 벌 있지만 화면마다 하나만 보이고, 숨은 쪽은 display:none 이라 읽히지 않습니다 */}
-          <h1
-            key={`m-title-${i}`}
-            className="rise text-4xl leading-[1.15] font-black tracking-tight whitespace-pre-line"
-          >
-            {current.title}
-          </h1>
-          <p
-            key={`m-sub-${i}`}
-            className="rise mt-5 max-w-lg text-base leading-relaxed text-white/75"
-          >
-            {current.sub}
-          </p>
+          <SlideStack
+            slides={slides}
+            i={i}
+            render={(s, Heading) => (
+              <>
+                <p className="mb-3 text-[15px] font-black tracking-[0.3em] text-accent">
+                  {s.eyebrow}
+                  {/* ⚠️ white/35 는 ink 배경에서 3.21:1 로 기준 미달입니다(장식용 슬라이드 수).
+                      색 톤 유지 결정에 따라 그대로 둡니다 — globals.css `@theme` 머리말 */}
+                  <span className="ml-2 text-white/35">/ 0{slides.length}</span>
+                </p>
+                <Heading className="text-4xl leading-[1.15] font-black tracking-tight whitespace-pre-line">
+                  {s.title}
+                </Heading>
+                <p className="mt-5 max-w-lg text-base leading-relaxed text-white/75">{s.sub}</p>
+              </>
+            )}
+          />
 
           {/* 인디케이터 — 막대형. 막대는 4px 이지만 버튼은 24px(WCAG 2.2 Target Size) */}
           <div className="mt-10 flex items-center gap-3">
@@ -360,24 +357,19 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
             willChange: "transform, opacity",
           }}
         >
-          <p
-            key={`eyebrow-${i}`}
-            className="rise mb-5 text-[13px] font-bold tracking-[0.24em] text-brand-400"
-          >
-            {current.eyebrow}
-          </p>
-          <h1
-            key={`title-${i}`}
-            className="rise text-[36px] leading-[1.2] font-normal tracking-tight whitespace-pre-line sm:text-[44px] md:text-[48px] lg:text-[56px] 2xl:text-[64px]"
-          >
-            {current.title}
-          </h1>
-          <p
-            key={`sub-${i}`}
-            className="rise mt-6 max-w-xl text-base leading-relaxed text-white/80 md:text-[17px]"
-          >
-            {current.sub}
-          </p>
+          <SlideStack
+            slides={slides}
+            i={i}
+            render={(s, Heading) => (
+              <>
+                <p className="mb-5 text-[13px] font-bold tracking-[0.24em] text-brand-400">{s.eyebrow}</p>
+                <Heading className="text-[36px] leading-[1.2] font-normal tracking-tight whitespace-pre-line sm:text-[44px] md:text-[48px] lg:text-[56px] 2xl:text-[64px]">
+                  {s.title}
+                </Heading>
+                <p className="mt-6 max-w-xl text-base leading-relaxed text-white/80 md:text-[17px]">{s.sub}</p>
+              </>
+            )}
+          />
           <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/quote" className="btn btn-brand px-7 py-3.5">
               무료 견적 신청 <span aria-hidden="true">→</span>
@@ -481,6 +473,44 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
         {i + 1} / {slides.length} — {current.alt}
       </p>
     </section>
+  );
+}
+
+/**
+ * 슬라이드 문구를 **전부** HTML 에 그립니다 — 보이는 건 지금 한 장뿐이고 나머지는 같은 칸에 겹쳐 투명하게 둡니다.
+ *
+ * 🔴 **왜 (2026-10-01):** 예전엔 지금 슬라이드 한 장만 글자로 그려서, 2~4번 문구가 서버 HTML 본문에 없고
+ *    자바스크립트 데이터(RSC) 속에만 있었습니다. 구글·AI 검색은 첫 화면 기준으로 읽으므로 그 문구를 못 봤습니다.
+ *    DB(CMS)에서 오는 건 그대로라 **관리자에서 고치면 지금처럼 곧바로 반영됩니다.**
+ * - 겹친 칸은 CSS grid 한 칸(`[grid-area:1/1]`)이라 높이는 가장 긴 슬라이드에 맞춰집니다 — 넘길 때 버튼이 덜컥이지 않습니다.
+ * - 안 보이는 장은 `aria-hidden` · `pointer-events-none` — 스크린리더와 클릭에서 빠집니다.
+ * - 제목 태그는 **첫 장만 h1**, 나머지는 h2 — 문서에 h1 이 슬라이드 수만큼 생기지 않게 합니다.
+ * - 보이는 장은 `key` 가 바뀌어 다시 붙으므로 `rise` 등장 효과가 넘길 때마다 다시 돕니다(예전과 같음).
+ */
+function SlideStack({
+  slides,
+  i,
+  render,
+}: {
+  slides: SlideWithFlag[];
+  i: number;
+  render: (s: SlideWithFlag, Heading: "h1" | "h2") => ReactNode;
+}) {
+  return (
+    <div className="grid">
+      {slides.map((s, idx) => {
+        const on = idx === i;
+        return (
+          <div
+            key={on ? `on-${i}` : `off-${idx}`}
+            aria-hidden={!on}
+            className={`[grid-area:1/1] ${on ? "rise" : "pointer-events-none opacity-0"}`}
+          >
+            {render(s, idx === 0 ? "h1" : "h2")}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
