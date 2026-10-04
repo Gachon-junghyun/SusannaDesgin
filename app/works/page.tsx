@@ -31,7 +31,7 @@ export default async function WorksPage() {
       <PageHero
         eyebrow="OUR WORK"
         title="주요실적"
-        desc="관공서, 기업, 상업시설 등 다양한 분야에서 직접 제작하고 시공했습니다."
+        desc="관공서 · 금융 · 기업 · 상업시설 등 다양한 분야에서 직접 제작하고 시공했습니다."
         path="/works"
       />
 
