@@ -1,4 +1,5 @@
-﻿import QuoteForm from "@/components/QuoteForm";
+﻿import QuickQuoteForm from "@/components/QuickQuoteForm";
+import QuoteForm from "@/components/QuoteForm";
 import { PageHero } from "@/components/Section";
 import { CUSTOM_FONT_SLUG, specimenFonts } from "@/config/fonts";
 import { MAKER_INTEREST } from "@/config/maker";
@@ -87,7 +88,26 @@ export default async function QuotePage({
       <div className="wrap py-14 md:py-20">
         <div className="grid gap-12 lg:grid-cols-[1fr_300px] lg:gap-16">
           <div>
-            <QuoteForm interest={interest} />
+            {/*
+              2026-10-04 — 첫 화면을 «짧은 폼»으로 바꿨습니다. 2026-10-03 Clarity 녹화에서 11칸 폼의
+              첫 칸(상호·담당자명)에서 멈추고 나간 손님이 있었습니다. 짧은 폼은 성함·연락처·지역 + 사진(선택)이고,
+              나머지는 회신 통화에서 받습니다(`QuickQuoteForm` 머리말과 같은 이유).
+              🔴 간판 메이커에서 오면(`?maker=1`) 디자인 파일이 긴 폼에 실려 오므로 긴 폼을 펼친 채로 엽니다.
+            */}
+            <QuickQuoteForm idPrefix="quote" product={interest} withPhoto moreHref={null} />
+
+            <details className="group mt-10 rounded-2xl border border-line" open={maker === "1"}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 [&::-webkit-details-marker]:hidden">
+                <span>
+                  <span className="block text-[16px] font-black">크기·층수까지 자세히 적어 보내기</span>
+                  <span className="mt-0.5 block text-[13px] text-ink-500">주소, 층수, 시기, 도면·로고 파일까지 한 번에 보내실 분</span>
+                </span>
+                <span aria-hidden="true" className="text-xl font-black text-ink-500 transition-transform group-open:rotate-45">+</span>
+              </summary>
+              <div className="border-t border-line px-6 py-8">
+                <QuoteForm interest={interest} />
+              </div>
+            </details>
           </div>
 
           <aside className="lg:pt-2">

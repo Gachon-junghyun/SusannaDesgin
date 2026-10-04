@@ -664,7 +664,7 @@ export const sectionCopy: Record<string, SectionCopy> = {
   "home-works": {
     eyebrow: "OUR WORK",
     title: "주요 실적",
-    desc: "관공서 · 금융 · 기업 · 상업시설 등 다양한 분야에서 시공했습니다.",
+    desc: "관공서, 기업, 상업시설 등 다양한 분야에서 시공했습니다.",
   },
   "home-fabrication": {
     eyebrow: "FABRICATION",

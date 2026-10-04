@@ -3,7 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import PrivacyConsent from "./PrivacyConsent";
-import { formatPhone, validateQuick, type Errors } from "@/lib/validate";
+import {
+  ACCEPTED_FILE_TYPES,
+  MAX_FILES,
+  MAX_FILE_BYTES,
+  MAX_TOTAL_BYTES,
+  formatPhone,
+  isAcceptedFile,
+  validateQuick,
+  type Errors,
+} from "@/lib/validate";
 import { trackLead } from "@/lib/analytics";
 
 /**
@@ -23,6 +32,8 @@ import { trackLead } from "@/lib/analytics";
 export default function QuickQuoteForm({
   idPrefix = "q",
   product = "",
+  withPhoto = false,
+  moreHref = "/quote",
 }: {
   idPrefix?: string;
   /**
@@ -32,11 +43,49 @@ export default function QuickQuoteForm({
    * 적어 두고(상세페이지의 제목이 이미 그 말을 합니다) 값만 조용히 실어 보냅니다.
    */
   product?: string;
+  /**
+   * 「사진 (선택)」 칸 하나를 더 붙입니다 — `/quote` 맨 위에서만 켭니다 (2026-10-04).
+   * 2026-10-03 Clarity 녹화에서 견적 폼(11칸) 첫 칸에서 멈추고 나간 손님이 있어,
+   * `/quote` 첫 화면을 «연락처 + 사진 한 장» 으로 줄였습니다. 사진은 **선택**이라 칸 수는 늘지 않습니다.
+   * 서버(`/api/quote`)는 `kind` 와 상관없이 `files` 를 같은 규칙으로 검사합니다.
+   */
+  withPhoto?: boolean;
+  /** 접수 완료 뒤 «상세 견적도 남기기» 링크. `/quote` 안에서는 `null` 로 숨깁니다(같은 페이지라). */
+  moreHref?: string | null;
 }) {
   const [form, setForm] = useState({ name: "", phone: "", region: "", trap: "" });
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState("");
+
+  /** 규칙은 `QuoteForm` 의 `onFiles` 와 같습니다 — 서버도 같은 함수로 다시 검사합니다. */
+  function onFiles(list: FileList | null) {
+    if (!list) return;
+    const picked = [...list];
+    setFileError("");
+    if (files.length + picked.length > MAX_FILES) {
+      setFileError(`사진은 최대 ${MAX_FILES}장까지 가능합니다.`);
+      return;
+    }
+    const tooBig = picked.find((f) => f.size > MAX_FILE_BYTES);
+    if (tooBig) {
+      setFileError(`'${tooBig.name}' 은(는) ${Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB를 넘습니다.`);
+      return;
+    }
+    const total = [...files, ...picked].reduce((n, f) => n + f.size, 0);
+    if (total > MAX_TOTAL_BYTES) {
+      setFileError(`사진을 합쳐 ${Math.round(MAX_TOTAL_BYTES / 1024 / 1024)}MB 까지 보낼 수 있습니다.`);
+      return;
+    }
+    const badType = picked.find((f) => !isAcceptedFile(f.name));
+    if (badType) {
+      setFileError(`'${badType.name}' 은(는) 받을 수 없는 형식입니다.`);
+      return;
+    }
+    setFiles((prev) => [...prev, ...picked]);
+  }
 
   const set = (k: keyof typeof form) => (v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -57,6 +106,7 @@ export default function QuickQuoteForm({
       if (product) fd.set("product", product);
       fd.set("agree", "true");
       fd.set("company_website", form.trap);
+      files.forEach((f) => fd.append("files", f));
 
       const res = await fetch("/api/quote", { method: "POST", body: fd });
       if (!res.ok) throw new Error("failed");
@@ -80,12 +130,14 @@ export default function QuickQuoteForm({
         <p className="mt-1.5 text-[14px] leading-relaxed text-ink-500">
           담당자가 확인 후 빠르게 연락드리겠습니다.
         </p>
-        <Link
-          href="/quote"
-          className="mt-4 inline-block text-[14px] font-bold text-accent underline underline-offset-4"
-        >
-          상세 견적도 남기기 →
-        </Link>
+        {moreHref && (
+          <Link
+            href={moreHref}
+            className="mt-4 inline-block text-[14px] font-bold text-accent underline underline-offset-4"
+          >
+            상세 견적도 남기기 →
+          </Link>
+        )}
       </div>
     );
   }
@@ -131,6 +183,54 @@ export default function QuickQuoteForm({
           error={errors.region}
         />
       </div>
+
+      {withPhoto && (
+        <div className="mt-2.5">
+          <p className="mb-1 block text-[12px] font-bold text-ink-500">
+            간판 자리 사진 <span className="font-medium">(선택)</span>
+          </p>
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-line px-4 py-3 text-[14px] font-medium text-ink-500 transition-colors hover:border-ink-500 hover:text-ink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            사진 찍기 · 고르기
+            <input
+              type="file"
+              multiple
+              accept={ACCEPTED_FILE_TYPES}
+              onChange={(e) => {
+                onFiles(e.target.files);
+                e.target.value = "";
+              }}
+              className="sr-only"
+            />
+          </label>
+          {files.length > 0 && (
+            // 파일 이름은 손님이 붙인 이름이라 방문 녹화에서 가립니다 (F22 Clarity — QuoteForm 과 같은 규칙)
+            <ul className="mt-2 space-y-1.5" data-clarity-mask="true">
+              {files.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-3 rounded-lg bg-paper px-3 py-2 text-[13px]">
+                  <span className="truncate">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="shrink-0 font-bold text-ink-500 hover:text-brand"
+                    aria-label={`${f.name} 삭제`}
+                  >
+                    삭제
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {fileError ? (
+            <p role="alert" className="mt-1 text-[13px] font-medium text-accent">{fileError}</p>
+          ) : (
+            <p className="mt-1 text-[12px] text-ink-500">사진이 있으면 통화 전에 크기와 재질을 미리 봐 둡니다.</p>
+          )}
+        </div>
+      )}
 
       {/* 봇 트랩 — 화면에 보이지 않습니다 */}
       <div className="absolute -left-[9999px]" aria-hidden="true">

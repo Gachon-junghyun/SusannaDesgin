@@ -16,6 +16,15 @@ export default function WorksGrid({
 }) {
   const [cat, setCat] = useState("전체");
 
+  /**
+   * 실적이 0건인 업종 탭은 숨깁니다 — HomeWorks 와 같은 규칙.
+   * 2026-10-03 Clarity 녹화: 6쪽을 보던 손님이 «금융»을 눌러 빈 화면을 보고 바로 나갔습니다.
+   */
+  const cats = useMemo(
+    () => categories.filter((c) => c === "전체" || works.some((w) => w.category === c)),
+    [categories, works]
+  );
+
   const shown = useMemo(
     () => (cat === "전체" ? works : works.filter((w) => w.category === cat)),
     [cat, works]
@@ -29,7 +38,7 @@ export default function WorksGrid({
         aria-label="업종별 실적 필터"
         className="flex flex-wrap gap-2"
       >
-        {categories.map((c) => {
+        {cats.map((c) => {
           const on = c === cat;
           return (
             <button
