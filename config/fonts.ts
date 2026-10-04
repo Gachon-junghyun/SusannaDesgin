@@ -105,7 +105,10 @@ export const CUSTOM_FONT_STORAGE_KEY = "susanna-custom-font";
 export const FONTS_CHECKED_AT = "2026-09-23";
 
 /**
- * 🔴 **손님에게 연 페이지입니다** (2026-09-24, 대표님 결정으로 켬). `SHOW_PRODUCTS` 와 같은
+ * 🔴 **다시 닫았습니다 — 관리자만 봅니다** (2026-10-04, 사람 결정 «글꼴 페이지 관리자만 보이게»).
+ * 관리자는 «새 디자인 미리보기»(F23)를 켜면 메뉴·페이지가 그대로 보입니다. 다시 열 땐 `true` 한 글자.
+ *
+ * (이전) **손님에게 연 페이지였습니다** (2026-09-24, 대표님 결정으로 켬). `SHOW_PRODUCTS` 와 같은
  * 모양의 스위치입니다 — 꺼면 `/fonts` 는 관리자(새 디자인 미리보기, F23) 말고는 404 이고,
  * `noindexPaths` 에 들어가 사이트맵에서도 빠집니다.
  *
@@ -116,4 +119,4 @@ export const FONTS_CHECKED_AT = "2026-09-23";
  * 주 메뉴 「글꼴」(`components/Header.tsx` 의 `fontsVisible`) ·
  * 사이트맵 등재(`noindexPaths` 에서 빠짐 → `app/sitemap.ts` 가 저절로 싣습니다).
  */
-export const SHOW_FONTS: boolean = true;
+export const SHOW_FONTS: boolean = false;

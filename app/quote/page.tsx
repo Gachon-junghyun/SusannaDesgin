@@ -100,7 +100,7 @@ export default async function QuotePage({
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 [&::-webkit-details-marker]:hidden">
                 <span>
                   <span className="block text-[16px] font-black">크기·층수까지 자세히 적어 보내기</span>
-                  <span className="mt-0.5 block text-[13px] text-ink-500">주소, 층수, 시기, 도면·로고 파일까지 한 번에 보내실 분</span>
+                  <span className="mt-0.5 block text-[13px] text-ink-500">설치 주소와 층수, 희망 시기, 도면이나 로고 파일을 함께 보내 주시면 보다 정확한 견적을 신속하게 안내해 드립니다.</span>
                 </span>
                 <span aria-hidden="true" className="text-xl font-black text-ink-500 transition-transform group-open:rotate-45">+</span>
               </summary>
