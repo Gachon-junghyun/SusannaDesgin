@@ -44,6 +44,13 @@ const gowunBatang = Gowun_Batang({
   subsets: ["latin"],
   weight: ["400", "700"],
   display: "swap",
+  /**
+   * 미리 받기(preload) 끔 (2026-10-05). 켜 두면 HTML 이 글꼴 조각 46개를 «최우선»으로
+   * 받게 시켜서(약 1.5MB), 신호가 약한 휴대폰(1.6Mbps)에선 그걸 다 받을 때까지
+   * 첫 글자가 9초 동안 안 떴습니다. 끄면 CSS 가 화면에 실제로 쓰인 글자 범위의 조각만
+   * 받고, 그동안 글자는 기본 글꼴로 먼저 보였다가(`swap`) 고운바탕으로 바뀝니다.
+   */
+  preload: false,
 });
 
 export const metadata: Metadata = {
