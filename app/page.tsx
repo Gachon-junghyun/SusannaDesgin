@@ -53,8 +53,6 @@ const websiteJsonLd = {
  * 구역 제목은 관리자 화면에서 줄바꿈을 넣을 수 있습니다(F19).
  * 화면에서도 같은 자리에서 줄이 나뉘도록 `whitespace-pre-line` 로 감쌉니다.
  */
-/** 공장 띠의 큰 평수 숫자 — 2026-09-29 «일단 안 보이게». true 로 두면 다시 나옵니다 */
-const SHOW_FACTORY_NUMBER = false;
 
 function Lines({ text }: { text: string }) {
   return <span className="block whitespace-pre-line">{text}</span>;
@@ -233,11 +231,11 @@ export default async function Home() {
       </Section>
 
       {/*
-        공장 띠 — 2026-09-29 사람 결정(«2안»). 사진을 가득 깔고 «공장을 가졌다는 건…» 문구 + 큰 숫자.
-        문구는 CMS 의 `home-fabrication` 머리말이고 숫자는 `site.factory` 에서 옵니다 [A5].
-        아래 «보유 장비» 목록(SHOW_FABRICATION)과는 다른 물건입니다 — 그건 여전히 꺼져 있습니다.
+        공장 띠 — 2026-10-07 사람 결정: «글씨는 없애고 사진만 띠처럼». 막은 60% → 45% 로 옅게.
+        예전(2026-09-29 «2안»)엔 CMS `home-fabrication` 머리말 + 큰 평수 숫자가 사진 위에 있었고,
+        되살리려면 git 이력에서 이 구역을 가져옵니다. 그 머리말은 아래 «보유 장비»(SHOW_FABRICATION)가 계속 씁니다.
       */}
-      <section className="relative isolate overflow-hidden bg-ink text-white">
+      <section aria-label="자체 공장 사진" className="relative h-[220px] overflow-hidden bg-ink md:h-[420px]">
         <Img
           src="/images/about-factory.jpg"
           alt="수산나디자인 자체 공장에서 제작한 채널문자와 크레인 고소작업 현장"
@@ -247,31 +245,10 @@ export default async function Home() {
           sizes="100vw"
           label="자체 공장"
           dark
-          className="-z-10 object-cover"
+          className="object-cover"
         />
-        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-ink/60" />
-        <div className="wrap flex flex-col gap-10 py-24 md:flex-row md:items-center md:justify-between md:py-36">
-          <Reveal>
-            <p className="mb-4 text-[13px] font-bold tracking-[0.24em] text-brand-400">
-              {copy("home-fabrication").eyebrow}
-            </p>
-            <h2 className="text-3xl leading-snug font-normal tracking-tight md:text-5xl">
-              <Lines text={copy("home-fabrication").title} />
-            </h2>
-            <p className="mt-5 max-w-xl leading-relaxed text-white/85 md:text-lg">
-              {copy("home-fabrication").desc}
-            </p>
-          </Reveal>
-          {/* 큰 숫자(평수) — 2026-09-29 사람 결정 «일단 안 보이게». 다시 켜려면 SHOW_FACTORY_NUMBER */}
-          {SHOW_FACTORY_NUMBER && (
-            <Reveal delay={120} className="md:text-right">
-              <p className="text-7xl leading-none font-normal md:text-8xl">
-                {site.factory.replace(/[^0-9]/g, "")}
-              </p>
-              <p className="mt-3 text-white/80">{site.factory.replace(/[0-9]/g, "")} 자체 제작 공장</p>
-            </Reveal>
-          )}
-        </div>
+        {/* 글씨는 없지만 사진이 위아래 흰 구역과 부딪히지 않게 살짝 눌러 둡니다(사람: «약간 짙게») */}
+        <div aria-hidden="true" className="absolute inset-0 bg-ink/45" />
       </section>
 
       {/* 보유 장비 — config/content.ts 의 SHOW_FABRICATION 로 여닫습니다 (지금은 닫힘).
