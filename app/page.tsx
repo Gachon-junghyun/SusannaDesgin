@@ -21,7 +21,10 @@ import { getPreview } from "@/lib/preview";
  * 있어야 하는데, 없으면 요청마다 재생성을 시도하다 타임아웃이 납니다.
  * 덕분에 관리자가 사진을 바꾸면 10분 기다릴 필요 없이 곧바로 반영됩니다.
  *
- * ⚠️ 대신 **HTML 캐시가 없습니다.** `next.config.ts` 의 `headers()` 는 동적 페이지에
+ * 🟢 2026-10-11 부터 **HTML 캐시는 Next 바깥, 워커 앞(`worker.mjs`)에 있습니다** — 손님
+ *    화면만 60초 담고 뒤에서 새로 그립니다. 아래 문단은 «Next 안에서는» 왜 안 되는지의 기록입니다.
+ *
+ * ⚠️ Next 안에는 **HTML 캐시가 없습니다.** `next.config.ts` 의 `headers()` 는 동적 페이지에
  *    적용되지 않고(Next 가 `no-cache` 를 직접 붙임), `public/_headers` 는 정적 자산
  *    전용입니다. 즉 방문 1회 = SSR 1회 + DB 조회 1~2회.
  *    지역 업체 트래픽에선 무료 한도에 한참 못 미치지만, 커지면 Cloudflare Cache Rules
