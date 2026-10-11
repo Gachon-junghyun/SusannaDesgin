@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import Placeholder from "./Placeholder";
+import { DetailTrigger } from "./DetailDialog";
+import { workDetail } from "./HomeWorks";
 import type { Work } from "@/config/content";
 
 type WorkWithFlag = Work & { available: boolean };
@@ -10,9 +12,12 @@ type WorkWithFlag = Work & { available: boolean };
 export default function WorksGrid({
   works,
   categories,
+  detail = false,
 }: {
   works: WorkWithFlag[];
   categories: string[];
+  /** F32 — 카드를 눌러 크게 보기 (지금은 관리자 미리보기만) */
+  detail?: boolean;
 }) {
   const [cat, setCat] = useState("전체");
 
@@ -61,6 +66,7 @@ export default function WorksGrid({
       <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((w) => (
           <li key={w.slug} className="group">
+            <DetailTrigger enabled={detail && w.available} detail={workDetail(w)}>
             <div className="relative aspect-4/3 overflow-hidden rounded-xl bg-paper">
               {w.available ? (
                 <Image
@@ -87,6 +93,7 @@ export default function WorksGrid({
                 {[w.location, ...w.tags].filter(Boolean).join(" · ")}
               </p>
             </div>
+            </DetailTrigger>
           </li>
         ))}
       </ul>

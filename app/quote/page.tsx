@@ -4,8 +4,10 @@ import { PageHero } from "@/components/Section";
 import { CUSTOM_FONT_SLUG, specimenFonts } from "@/config/fonts";
 import { MAKER_INTEREST } from "@/config/maker";
 import { signDesigns } from "@/config/signDesign";
+import { SHOW_DETAIL_POPUPS } from "@/config/content";
 import { site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
+import { getPreview } from "@/lib/preview";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata("/quote");
@@ -68,6 +70,8 @@ export default async function QuotePage({
   searchParams: Promise<{ item?: string; font?: string; maker?: string; design?: string }>;
 }) {
   const { item, font, maker, design } = await searchParams;
+  /** F32 — 손님에겐 꺼져 있고 관리자 미리보기에서만 */
+  const detail = SHOW_DETAIL_POPUPS || (await getPreview()).on;
   // 간판 메이커(F26)에서 오면 `?maker=1` 하나뿐입니다 — 디자인 내용은 주소가 아니라
   // 브라우저 저장소로 건너옵니다(`config/maker.ts` 의 MAKER_STORAGE_KEY). 여기선 고정 문구만 씁니다.
   const interest =
@@ -112,7 +116,10 @@ export default async function QuotePage({
 
           <aside className="lg:pt-2">
             <div className="rounded-2xl border border-line p-6">
-              <h2 className="text-lg font-black">전화가 더 편하시면</h2>
+              {/* F32 — 이 제목이 눌리고 끝났습니다(Clarity 30일 2). 켜지면 번호와 같이 전화로 잇습니다 */}
+              <h2 className="text-lg font-black">
+                {detail ? <a href={site.phoneHref} className="hover:text-brand-700">전화가 더 편하시면</a> : "전화가 더 편하시면"}
+              </h2>
               <a
                 href={site.phoneHref}
                 className="mt-2 block text-2xl font-black tracking-tight text-brand"

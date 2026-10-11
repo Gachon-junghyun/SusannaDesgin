@@ -142,3 +142,16 @@ export function trackLead(form: "quick" | "full"): void {
     // 통계가 실패해도 접수 화면은 그대로 뜹니다 [A1]
   }
 }
+
+/**
+ * «눌러서 크게 보기» 팝업이 열릴 때 한 번 (F32, 2026-10-11) — 어느 실적·간판이 열렸는지 셀 수 있게.
+ * 실리는 건 종류와 **화면에 이미 공개된 제목** 뿐입니다(개인정보 없음).
+ */
+export function trackDetailOpen(kind: string, name: string): void {
+  try {
+    const gtag = (window as unknown as { gtag?: Gtag }).gtag;
+    if (typeof gtag === "function") gtag("event", "detail_open", { detail_type: kind, detail_name: name.slice(0, 100) });
+  } catch {
+    // 통계가 실패해도 팝업은 그대로 뜹니다 [A1]
+  }
+}

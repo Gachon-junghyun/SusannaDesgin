@@ -455,6 +455,14 @@ export const signTypes9: SignModel[] = [
  */
 export const SHOW_PRODUCTS: boolean = false;
 
+/**
+ * «눌러서 크게 보기» 팝업 + 눌리는데 반응 없던 자리 손보기 (F32, 2026-10-11 신설).
+ * Clarity 30일에 /signs·/sign-design 클릭의 3/4 이 반응 없는 클릭이었습니다.
+ * 🔴 **지금은 꺼져 있습니다 — 관리자 미리보기(`preview.on`)에서만 보입니다**(사람 지시 «일단 관리자만»).
+ * 켜면 실적 카드·간판디자인 사진·사업영역 카드가 팝업을 열고, 홈 STEP 카드가 /process 로 갑니다.
+ */
+export const SHOW_DETAIL_POPUPS: boolean = false;
+
 export type Step = {
   no: string;
   title: string;

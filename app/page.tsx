@@ -7,7 +7,7 @@ import JsonLd from "@/components/JsonLd";
 import MakerShowcase from "@/components/MakerShowcase";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
-import { SHOW_FABRICATION, makerShowcase, workCategories } from "@/config/content";
+import { SHOW_DETAIL_POPUPS, SHOW_FABRICATION, makerShowcase, workCategories } from "@/config/content";
 import { MAKER_BETA, MAKER_ON_HOME, SHOW_MAKER } from "@/config/maker";
 import { site } from "@/config/site";
 import { getBlocks, getSlides, getWorks } from "@/lib/cms";
@@ -69,6 +69,8 @@ export default async function Home() {
     getPreview(),
   ]);
   const heroSlides = slides.map((s) => ({ ...s, available: imageExists(s.image) }));
+  /** F32 — 눌러서 크게 보기 · STEP 카드 링크. 손님에겐 꺼져 있고 관리자 미리보기에서만 */
+  const detail = SHOW_DETAIL_POPUPS || preview.on;
 
   /** 없는 구역을 불러도 화면이 깨지지 않게 빈 문구를 돌려줍니다 [A1] */
   const copy = (slug: string) =>
@@ -189,6 +191,10 @@ export default async function Home() {
                     aria-hidden="true"
                     className="absolute top-[30px] -left-[40px] block h-[15px] w-[15px] rounded-full border-[3px] border-brand bg-white md:top-[34px] md:-left-[44px]"
                   />
+                  {/* F32 — 휴대폰에서 STEP 카드가 눌리고 끝났습니다(Clarity 30일 7탭). 켜지면 카드 전체가 /process 로 */}
+                  {detail && (
+                    <Link href="/process" aria-label={`${s.title} 공정 자세히 보기`} className="absolute inset-0 z-10 transition-colors hover:bg-brand-50/40" />
+                  )}
                   <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-6">
                     <p className="shrink-0 text-[13px] font-bold tracking-[0.18em] text-brand-700 md:w-20">
                       STEP {s.eyebrow || String(idx + 1).padStart(2, "0")}
@@ -229,6 +235,7 @@ export default async function Home() {
           <HomeWorks
             works={works.map((w) => ({ ...w, available: imageExists(w.image) }))}
             categories={workCategories}
+            detail={detail}
           />
         </div>
       </Section>

@@ -3,10 +3,11 @@ import WorksGrid from "@/components/WorksGrid";
 import JsonLd from "@/components/JsonLd";
 import { PageHero } from "@/components/Section";
 import { site } from "@/config/site";
-import { workCategories } from "@/config/content";
+import { SHOW_DETAIL_POPUPS, workCategories } from "@/config/content";
 import { getWorks } from "@/lib/cms";
 import { getPublishedSites, photoUrl } from "@/lib/sites";
 import { imageExists } from "@/lib/images";
+import { getPreview } from "@/lib/preview";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata("/works");
@@ -15,7 +16,7 @@ export const metadata = pageMetadata("/works");
 export const dynamic = "force-dynamic";
 
 export default async function WorksPage() {
-  const [works, cases] = await Promise.all([getWorks(), getPublishedSites()]);
+  const [works, cases, preview] = await Promise.all([getWorks(), getPublishedSites(), getPreview()]);
   const list = works.map((w) => ({ ...w, available: imageExists(w.image) }));
 
   /**
@@ -84,7 +85,7 @@ export default async function WorksPage() {
           </section>
         )}
 
-        <WorksGrid works={list} categories={workCategories} />
+        <WorksGrid works={list} categories={workCategories} detail={SHOW_DETAIL_POPUPS || preview.on} />
 
         <div className="mt-16 rounded-2xl bg-paper px-6 py-12 text-center">
           <h2 className="text-2xl font-black tracking-tight">

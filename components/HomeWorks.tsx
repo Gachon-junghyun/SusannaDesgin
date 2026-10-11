@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import Placeholder from "./Placeholder";
+import { DetailTrigger, type Detail } from "./DetailDialog";
 import type { Work } from "@/config/content";
 
 type WorkWithFlag = Work & { available: boolean };
@@ -14,13 +15,31 @@ type WorkWithFlag = Work & { available: boolean };
  * - 칩은 **실적이 한 건이라도 있는 업종만** 보입니다. 빈 업종을 누르면 빈 칸만 남아서입니다.
  * - 한 번에 다섯 장까지. 전체 목록은 `/works`(WorksGrid)가 맡습니다.
  * - 카드 자체는 링크가 아닙니다(실적 상세 페이지가 아직 없음 — SEO.md B-1). 예전 홈 카드도 그랬습니다.
+ *   `detail` 이 켜지면(F32 — 지금은 관리자 미리보기만) 카드를 눌러 크게 보는 팝업이 열립니다.
  */
+export function workDetail(w: Work, more?: boolean): Detail {
+  return {
+    kind: "work",
+    image: w.image,
+    alt: w.title,
+    eyebrow: w.category,
+    title: w.title,
+    meta: [w.location, ...w.tags].filter(Boolean).join(", "),
+    actions: [
+      { href: "/quote", label: "이런 간판 견적 문의" },
+      ...(more ? [{ href: "/works", label: "실적 전체 보기", quiet: true }] : []),
+    ],
+  };
+}
+
 export default function HomeWorks({
   works,
   categories,
+  detail = false,
 }: {
   works: WorkWithFlag[];
   categories: string[];
+  detail?: boolean;
 }) {
   const [cat, setCat] = useState("전체");
 
@@ -61,6 +80,7 @@ export default function HomeWorks({
               idx === 0 ? "col-span-2 aspect-4/3 lg:col-span-1 lg:row-span-2 lg:aspect-auto" : "aspect-square lg:aspect-auto"
             }`}
           >
+            <DetailTrigger enabled={detail && w.available} detail={workDetail(w, true)} className="relative h-full">
             {w.available ? (
               <Image
                 src={w.image}
@@ -86,6 +106,7 @@ export default function HomeWorks({
                 {[w.category, ...w.tags.slice(0, 1)].filter(Boolean).join(" · ")}
               </p>
             </div>
+            </DetailTrigger>
           </li>
         ))}
       </ul>

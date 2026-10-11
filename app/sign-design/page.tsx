@@ -1,13 +1,15 @@
 import Link from "next/link";
+import { DetailTrigger } from "@/components/DetailDialog";
 import Img from "@/components/Img";
 import JsonLd from "@/components/JsonLd";
 import Reveal from "@/components/Reveal";
 import SignDesignInquiry from "@/components/SignDesignInquiry";
 import { PageHero } from "@/components/Section";
-import { signTypes9 } from "@/config/content";
+import { SHOW_DETAIL_POPUPS, signTypes9 } from "@/config/content";
 import { signDesigns } from "@/config/signDesign";
 import { seo, site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
+import { getPreview } from "@/lib/preview";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata("/sign-design");
@@ -22,7 +24,9 @@ export const dynamic = "force-dynamic";
  * 내용은 `config/signDesign.ts` [A5], 이름·설명은 `sign_model`(없으면 `signTypes9`) [A1].
  */
 export default async function SignDesignPage() {
-  const { signModels } = await getBlocks();
+  const [{ signModels }, preview] = await Promise.all([getBlocks(), getPreview()]);
+  /** F32 — 사진을 눌러 크게 보기. Clarity 30일 PC 클릭 74% 가 반응 없는 클릭이었습니다 */
+  const detail = SHOW_DETAIL_POPUPS || preview.on;
 
   const items = signDesigns.map((d) => {
     const db = signModels.find((m) => m.slug === d.key);
@@ -100,6 +104,24 @@ export default async function SignDesignPage() {
               className="grid scroll-mt-28 gap-8 lg:grid-cols-[1.35fr_1fr] lg:items-start lg:gap-16"
             >
               <Reveal className={`relative aspect-3/2 overflow-hidden bg-paper lg:sticky lg:top-32 ${i % 2 === 1 ? "lg:order-2" : ""}`}>
+                <DetailTrigger
+                  enabled={detail}
+                  className="relative h-full"
+                  detail={{
+                    kind: "sign_design",
+                    image: it.image,
+                    alt: it.alt,
+                    eyebrow: `${String(i + 1).padStart(2, "0")} / ${String(items.length).padStart(2, "0")}`,
+                    title: it.name,
+                    meta: `잘 어울리는 가게 ${it.shop}`,
+                    lead: it.why,
+                    lines: [it.desc, ...it.options.map((o) => `${o.label}: ${o.choices.join(", ")}`)].filter(Boolean),
+                    actions: [
+                      { href: `/quote?design=${it.key}`, label: "이 간판으로 문의하기" },
+                      { href: "/works", label: "실제 시공 사진 보기", quiet: true },
+                    ],
+                  }}
+                >
                 <Img
                   src={it.image}
                   alt={it.alt}
@@ -110,6 +132,7 @@ export default async function SignDesignPage() {
                   sizes="(max-width: 1024px) 100vw, 740px"
                   label={`${it.name} 연출`}
                 />
+                </DetailTrigger>
               </Reveal>
 
               <Reveal delay={100}>
