@@ -152,7 +152,7 @@ function receivedAtKST(iso: string): string {
 function fileHint(f: QuoteNotice["files"][number]): string {
   if (f.attached) return "이 메일에 첨부";
   if (f.stored) return "용량이 커서 관리자 화면에서 내려받기";
-  return "파일을 받지 못했습니다 — 고객께 다시 요청하세요";
+  return "파일을 받지 못했습니다. 고객께 다시 요청하세요";
 }
 
 /** 사람이 읽는 한 덩어리 텍스트 — 웹훅과 메일 대체본문에서 씁니다. */
@@ -195,75 +195,114 @@ function esc(s: string): string {
  * 견적 문의는 먼저 거는 쪽이 가져가므로, 받은 사람이 화면을 옮겨 다니지 않고
  * 그 자리에서 통화로 넘어갈 수 있어야 합니다.
  *
+ * 2026-10-11 — 모양을 형제 사이트 gicfolio 의 «수료증 발급 안내» 메일(`scripts/gm_cert.py` 의 `mail_html`)
+ * 틀에서 가져와 수산나 청록으로 바꿨습니다: 위 회색 안내 줄 → 짙은 색 머리(로고·이름·제목) → 청록 띠 →
+ * 인사 문장 → 왼쪽 회색 이름표 표 → 안내 문장 → 바닥 글. 담는 정보는 예전과 같고, 메이커 디자인 링크만 뺐습니다
+ * (사람 결정 «수산나 메이커는 없애줘» — 링크는 관리자 화면 견적함에 그대로 있습니다). 접수 시각과 첨부는 표 맨 아래입니다.
+ *
  * 메일 클라이언트는 외부 CSS·스크립트를 지우므로 인라인 스타일만 씁니다.
+ * 🔴 **Gmail 은 style 의 `background` 줄임말을 지웁니다** — 칠할 칸은 `bgcolor` 속성 + `background-color`
+ *    둘 다, 버튼은 `<a>` 자신에게도 `background-color` 를 줍니다(gicfolio 에서 칸과 버튼이 하얗게 빠진 적 있음).
+ * 🔴 로고는 SVG 를 못 씁니다(Gmail 이 지움) — 이미 운영에 있는 `apple-icon.png` 를 절대 주소로 부릅니다.
  */
 export function asHtml(q: QuoteNotice): string {
-  const rowHtml = (label: string, html: string) =>
-    `<tr>
-       <td style="padding:6px 12px 6px 0;color:#6b7280;font-size:13px;white-space:nowrap;vertical-align:top">${esc(label)}</td>
-       <td style="padding:6px 0;color:#0F1A19;font-size:15px">${html}</td>
-     </tr>`;
+  const C = {
+    head: "#00726C", // 머리 바탕 (brand-700)
+    strip: "#00A79D", // 머리 아래 띠 · 전화 버튼 (brand)
+    sky: "#9FE3DC", // 짙은 바탕 위 작은 글씨
+    ink: "#0F1A19",
+    sub: "#5A6B69",
+    line: "#E3E6E4",
+    label: "#F5F5F2",
+    muted: "#8A9896",
+    warn: "#D9480F",
+  };
+  const SANS = "-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',sans-serif";
 
-  const row = (label: string, v?: string) => (v ? rowHtml(label, esc(v)) : "");
+  const at = new Date(q.receivedAt);
+  const part = (o: Intl.DateTimeFormatOptions) => at.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", ...o });
+  // 실행 환경마다 hour12 표기가 «AM»·«오전»으로 갈려서(로컬 node 에서 AM 이 나왔습니다) 직접 씁니다
+  const hh = Number(part({ hour: "numeric", hour12: false }).replace(/\D/g, "")) % 24;
+  const mm = part({ minute: "2-digit" }).replace(/\D/g, "").padStart(2, "0");
+  const when =
+    `${part({ year: "numeric" }).replace(/\D/g, "")}년 ${part({ month: "numeric" }).replace(/\D/g, "")}월 ` +
+    `${part({ day: "numeric" }).replace(/\D/g, "")}일 (${part({ weekday: "short" })}) ${hh < 12 ? "오전" : "오후"} ${hh % 12 || 12}:${mm}`;
+  const kind = q.kind === "quick" ? "간편 문의" : "전체 문의";
+
+  const tr = (label: string, html: string) =>
+    `<tr><td width="112" bgcolor="${C.label}" style="background-color:${C.label};padding:15px 16px;border-top:1px solid ${C.line};font-size:13.5px;font-weight:700;color:${C.sub};vertical-align:top;">${esc(label)}</td>` +
+    `<td style="padding:15px 18px;border-top:1px solid ${C.line};font-size:14.5px;line-height:1.65;font-weight:500;color:${C.ink};">${html}</td></tr>`;
+  const row = (label: string, v?: string) => (v ? tr(label, esc(v)) : "");
 
   /** 첨부는 파일명과 **그 파일이 지금 어디 있는지**를 한 줄씩 적습니다 */
-  const fileRow = q.files.length
-    ? rowHtml(
-        "첨부",
+  const files = q.files.length
+    ? tr(
+        `첨부 ${q.files.length}개`,
         q.files
           .map(
             (f) =>
-              `${esc(f.name)}<br>` +
-              `<span style="color:${f.attached || f.stored ? "#6b7280" : "#FF5900"};font-size:13px">` +
-              `${esc(fileHint(f))}</span>`
+              `<b style="font-weight:700;">${esc(f.name)}</b><br>` +
+              `<span style="font-size:12.5px;color:${f.attached || f.stored ? C.muted : C.warn};">${esc(fileHint(f))}</span>`
           )
-          .join('<div style="height:8px"></div>')
+          .join('<div style="height:8px;line-height:8px;font-size:0;">&nbsp;</div>')
       )
     : "";
 
+  const rows = [
+    tr("성함", `<b style="font-weight:800;">${esc(q.name)}</b>`),
+    tr("연락처", `<a href="${telHref(q.phone)}" style="color:${C.head};font-weight:800;text-decoration:none;">${esc(q.phone)}</a>`),
+    row("보고 온 제품", q.product),
+    row("지역", q.region),
+    row("문의 분야", q.signType),
+    row("희망 시기", q.timing),
+    row("주소", q.address),
+    q.email ? tr("이메일", `<a href="mailto:${esc(q.email)}" style="color:${C.ink};text-decoration:none;">${esc(q.email)}</a>`) : "",
+    q.message ? tr("문의 내용", `<span style="white-space:pre-wrap;">${esc(q.message)}</span>`) : "",
+    // 접수 시각은 맨 아래 (2026-10-11 사람 결정)
+    tr("접수", `${esc(when)}<br><span style="font-size:12.5px;color:${C.muted};">${kind}</span>`),
+    // 첨부는 그 아래 맨 끝 (2026-10-11 사람 결정)
+    files,
+  ].join("");
+
+  const greet = [
+    `${q.name} 님의 견적 문의가 접수되었습니다.`,
+    "홈페이지 견적 폼으로 들어온 문의입니다.",
+    "아래 연락처로 먼저 연락하여 주시기 바랍니다.",
+  ];
+  const lines = [`<b style="color:${C.ink};">${esc(greet[0])}</b>`, ...greet.slice(1).map(esc)].join("<br>");
+
   // ⚠️ <meta charset> 를 빼면 메일 앱에 따라 한글이 전부 깨집니다(실제로 겪었습니다).
-  //    메일은 브라우저와 달리 HTTP 헤더의 charset 이 본문까지 따라가지 않는 경우가 있어,
-  //    본문 안에 직접 선언해 둡니다.
-  return `<meta charset="utf-8">
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;max-width:520px;margin:0 auto;padding:24px 20px;color:#0F1A19">
-  <p style="margin:0 0 4px;color:#FF5900;font-size:12px;font-weight:700;letter-spacing:.08em">새 견적 문의</p>
-  <h1 style="margin:0 0 20px;font-size:20px;font-weight:700">${esc(q.name)} 님 (${q.kind === "quick" ? "간편" : "전체"} 문의)</h1>
-
-  <a href="${telHref(q.phone)}"
-     style="display:block;background:#00A79D;color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:8px;font-size:17px;font-weight:700;margin-bottom:20px">
-    ${esc(q.phone)} 로 전화하기
-  </a>
-
-  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-    ${row("보고 온 제품", q.product)}
-    ${q.designUrl ? rowHtml("메이커 디자인", `<a href="${esc(q.designUrl)}" style="color:#00726C;font-weight:700">디자인 열기</a> <span style="color:#6b7280;font-size:13px">(주간·야간·확대, 90일)</span>`) : ""}
-    ${row("지역", q.region)}
-    ${row("문의 분야", q.signType)}
-    ${row("희망 시기", q.timing)}
-    ${row("주소", q.address)}
-    ${row("이메일", q.email)}
-    ${fileRow}
-    ${row("접수", receivedAtKST(q.receivedAt))}
-  </table>
-
-  ${
-    q.message
-      ? `<div style="background:#F5F5F2;border-radius:8px;padding:14px;margin-bottom:20px">
-           <p style="margin:0 0 6px;color:#6b7280;font-size:12px">문의 내용</p>
-           <p style="margin:0;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(q.message)}</p>
-         </div>`
-      : ""
-  }
-
-  <a href="${site.url}/admin/quotes"
-     style="display:block;text-align:center;padding:12px;border:1px solid #e5e7eb;border-radius:8px;color:#0F1A19;text-decoration:none;font-size:14px">
-    관리자 화면에서 보기
-  </a>
-
-  <p style="margin:20px 0 0;color:#9ca3af;font-size:12px;line-height:1.6">
-    ${esc(site.name)} 홈페이지 자동 발송 메일입니다. 이 메일에 답장하지 마시고 위 번호로 연락하세요.
-  </p>
-</div>`;
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>[${esc(site.name)}] 새 견적 문의</title></head>
+<body style="margin:0;padding:0;background-color:#ffffff;" bgcolor="#ffffff">
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#ffffff;">${esc(`${q.name} 님 ${q.phone} ${q.region ?? ""} ${q.signType ?? ""}`)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:20px 10px 30px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:620px;font-family:${SANS};word-break:keep-all;">
+<tr><td bgcolor="#f2f4f3" style="background-color:#f2f4f3;padding:12px 18px;font-size:12px;line-height:1.6;font-weight:500;color:${C.sub};">${esc(site.name)} 홈페이지 견적 폼에서 자동으로 보낸 알림입니다.</td></tr>
+<tr><td bgcolor="${C.head}" style="background-color:${C.head};padding:30px 28px 46px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td style="vertical-align:middle;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td bgcolor="#ffffff" style="background-color:#ffffff;border-radius:7px;padding:3px;"><img src="${site.url}/apple-icon.png" width="28" height="28" alt="${esc(site.name)}" style="display:block;border:0;width:28px;height:28px;border-radius:5px;"></td>
+      <td style="vertical-align:middle;padding-left:10px;font-size:14px;font-weight:800;color:#ffffff;">(주)${esc(site.name)}</td>
+    </tr></table></td>
+    <td align="right" style="vertical-align:middle;font-size:12.5px;color:${C.sky};">홈페이지</td>
+  </tr></table>
+  <div style="margin-top:44px;font-size:12px;font-weight:800;letter-spacing:2.5px;color:${C.sky};">QUOTE REQUEST</div>
+  <div style="margin-top:8px;font-size:28px;line-height:1.35;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">[${esc(site.name)}] 새 견적 문의</div>
+</td></tr>
+<tr><td height="4" bgcolor="${C.strip}" style="height:4px;background-color:${C.strip};font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="padding:36px 4px 0;"><p style="margin:0;font-size:15px;line-height:2;font-weight:500;color:${C.sub};">${lines}</p></td></tr>
+<tr><td style="padding:24px 4px 0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="${C.strip}" style="background-color:${C.strip};border-radius:6px;">
+    <a href="${telHref(q.phone)}" style="display:block;background-color:${C.strip};border-radius:6px;padding:15px 12px;font-size:16px;font-weight:800;color:#ffffff;text-decoration:none;">${esc(q.phone)} 로 전화하기</a>
+  </td></tr></table>
+</td></tr>
+<tr><td style="padding:30px 4px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-bottom:1px solid ${C.line};border-collapse:collapse;">${rows}</table></td></tr>
+<tr><td style="padding:28px 4px 0;font-size:13.5px;line-height:1.7;font-weight:500;color:${C.sub};">${
+    q.files.length ? "첨부 파일은 이 메일 아래쪽에 있습니다. 용량이 큰 파일은 관리자 화면에서 내려받아 주시기 바랍니다.<br>" : ""
+  }문의 기록 전체와 처리 상태는 <a href="${site.url}/admin/quotes" style="color:${C.head};font-weight:700;">관리자 화면</a>에서 확인할 수 있습니다.</td></tr>
+<tr><td style="padding:46px 4px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="${C.line}" style="height:1px;background-color:${C.line};font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+<tr><td style="padding:16px 4px 0;font-size:12px;line-height:1.7;color:${C.muted};">(주)${esc(site.name)} (Susanna Design) 홈페이지 <a href="${site.url}" style="color:${C.muted};">susannadesign.co.kr</a><br>본 메일은 발신 전용 주소에서 발송되었습니다. 이 메일에 답장하지 마시고 위 번호로 연락하여 주시기 바랍니다.</td></tr>
+</table></td></tr></table></body></html>`;
 }
 
 /**
