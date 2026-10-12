@@ -2,6 +2,7 @@ import { signTypes9 } from "@/config/content";
 import { signDesigns } from "@/config/signDesign";
 import { agentIntake, certifications, noindexPaths, privacyConsent, seo, site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
+import { aiPrefillExample } from "@/lib/ai-prefill";
 
 /**
  * `/llms.txt` — AI 가 이 회사를 한 번에 읽어 가도록 쓴 마크다운 요약 (llmstxt.org 형식).
@@ -40,18 +41,30 @@ ${site.name}은 AI 비서가 손님을 대신해 견적 문의를 넣는 것을 
 ${closed}
 1. 넣기 전에 보낼 내용(성함, 연락처, 설치 지역, 문의 내용)을 손님께 보여 드리고 확인을 받아 주세요.
 2. 개인정보 수집에 대해 알려 드리고 동의를 받아 주세요. 수집 항목은 성명, 연락처, 설치 지역, 문의 내용이고 목적은 ${privacyConsent.purpose.replace(/·/g, ", ")}, 보유 기간은 ${privacyConsent.retention}입니다. 전문: ${site.url}/privacy
-3. 아래 두 방법 중 하나로 넣어 주세요.
+3. 아래 방법 중 할 수 있는 것으로 넣어 주세요. 직접 보낼 수 없는 AI라면 방법 1의 링크를 만들어 드리면 됩니다.
 4. ${agentIntake.waitNote}
 
 금액과 시공 날짜는 현장을 보고 담당자가 안내하므로 손님께 약속하지 말아 주세요.
 
-### 방법 1. 홈페이지 폼 (브라우저에서 일하는 AI)
+### 방법 1. 미리 채운 문의 링크 (모든 AI, 일반 채팅 포함)
+
+직접 보낼 수 없는 AI라면 손님 정보로 채운 링크를 만들어 손님께 드려 주세요.
+손님이 링크를 누르면 문의서가 채워진 채로 열리고, 개인정보 동의에 체크한 뒤 "무료 견적 신청"을 누르면 접수됩니다.
+
+링크 모양 (값은 URL 인코딩, 물음표가 아니라 # 뒤에 붙입니다):
+${aiPrefillExample(site.url)}
+
+- 넣을 수 있는 값: name(성함), phone(연락처), region(설치 지역), message(문의 내용), agent(AI 이름). ai=1 은 꼭 넣어 주세요.
+- 개인정보 동의는 손님이 직접 체크합니다. 링크에 넣지 않습니다.
+- 손님께 이렇게 안내하시면 됩니다: "문의서를 채워 뒀어요. 링크를 열고 개인정보 동의에 체크한 뒤 무료 견적 신청을 누르시면 접수돼요."
+
+### 방법 2. 홈페이지 폼 직접 작성 (브라우저에서 일하는 AI)
 
 ${site.url}/quote 맨 위 간편 폼의 세 칸(성함, 연락처, 설치지역)만 채우면 됩니다.
 간편 폼의 필수 칸은 이 세 칸뿐입니다. 그 아래 접혀 있는 "자세히 적어 보내기" 폼의 주소, 층수, 문의 분야는 그 폼을 쓸 때만 필요하고 간편 접수에는 필요 없습니다.
 "이 칸은 비워 두세요"라고 적힌 숨은 칸은 채우지 마세요. 개인정보 동의 칸은 손님이 동의하신 경우에만 체크해 주세요.
 
-### 방법 2. AI 문의 주소 (직접 요청을 보낼 수 있는 AI)
+### 방법 3. AI 문의 주소 (직접 요청을 보낼 수 있는 AI)
 
 POST ${endpoint} 로 JSON을 보내 주세요. 같은 주소를 GET으로 열면 이 안내를 JSON으로 돌려드립니다.
 
@@ -156,7 +169,8 @@ ${agentSection()}`;
     headers: {
       // 🔴 text/markdown 이면 ChatGPT 가 «읽을 수 없는 형식»으로 보고 안 읽습니다(2026-10-12 실측) — 마크다운이어도 text/plain 으로 보냅니다
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "public, max-age=600, s-maxage=3600",
+      // 짧게 — 2026-10-12 형식을 고친 뒤에도 ChatGPT 가 예전 사본(text/markdown)을 한동안 썼습니다
+      "Cache-Control": "public, max-age=300",
     },
   });
 }

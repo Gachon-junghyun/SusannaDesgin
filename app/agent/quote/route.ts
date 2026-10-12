@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { agentIntake, privacyConsent, site } from "@/config/site";
+import { aiPrefillExample } from "@/lib/ai-prefill";
 import { notifyNewQuote } from "@/lib/notify";
 import { storeQuote, type QuoteRecord } from "@/lib/quote-store";
 import { clientIp, rateLimited } from "@/lib/rate-limit";
@@ -75,6 +76,12 @@ function guide() {
     wait_note: agentIntake.waitNote,
     phone: site.phone,
     form: `${site.url}/quote`,
+    prefill_link: {
+      when: "직접 POST 를 보낼 수 없는 AI(일반 채팅 등)",
+      how: "손님 정보로 채운 링크를 만들어 손님께 드리세요. 값은 URL 인코딩해서 # 뒤에, ai=1 필수. 손님이 링크를 열고 개인정보 동의에 체크한 뒤 보내면 접수됩니다.",
+      fields: ["name", "phone", "region", "message", "agent"],
+      example: aiPrefillExample(site.url),
+    },
   };
 }
 

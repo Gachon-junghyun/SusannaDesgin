@@ -15,7 +15,7 @@ import type { QuoteFile } from "@/lib/supabase/types";
  */
 
 /** 접수 경로 (`0019_quote_source.sql`). 빈 문자열 = 사람이 홈페이지 폼으로 넣은 것 */
-export type QuoteSource = "" | "trap" | "agent";
+export type QuoteSource = "" | "trap" | "agent" | "ai_link";
 
 export type QuoteRecord = {
   id: string;
@@ -43,6 +43,7 @@ export type QuoteRecord = {
 /** 견적함·메일에 붙는 접수 경로 이름 — 한 곳에서만 만듭니다 */
 export function sourceLabel(source: string, agent?: string): string {
   if (source === "agent") return `AI 경유${agent ? ` (${agent})` : ""}`;
+  if (source === "ai_link") return `AI 링크 경유${agent ? ` (${agent})` : ""}`;
   if (source === "trap") return "자동 입력 의심";
   return "";
 }

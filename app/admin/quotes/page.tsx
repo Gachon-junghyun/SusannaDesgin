@@ -157,7 +157,7 @@ export default async function AdminQuotesPage() {
               {sourceLabel(q.source ?? "", q.agent) && (
                 <span
                   className={`rounded-md px-2 py-1 text-[12px] font-bold ${
-                    q.source === "agent" ? "bg-brand/10 text-brand-700" : "bg-accent/10 text-accent"
+                    q.source === "trap" ? "bg-accent/10 text-accent" : "bg-brand/10 text-brand-700"
                   }`}
                 >
                   {sourceLabel(q.source ?? "", q.agent)}

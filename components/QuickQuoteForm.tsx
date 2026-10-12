@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import PrivacyConsent from "./PrivacyConsent";
 import {
@@ -14,6 +14,7 @@ import {
   type Errors,
 } from "@/lib/validate";
 import { trackLead } from "@/lib/analytics";
+import { clearAiPrefill, readAiPrefill } from "@/lib/ai-prefill";
 
 /**
  * 히어로 인라인 간편 상담 (3필드).
@@ -34,6 +35,7 @@ export default function QuickQuoteForm({
   product = "",
   withPhoto = false,
   moreHref = "/quote",
+  aiPrefill = false,
 }: {
   idPrefix?: string;
   /**
@@ -52,6 +54,11 @@ export default function QuickQuoteForm({
   withPhoto?: boolean;
   /** 접수 완료 뒤 «상세 견적도 남기기» 링크. `/quote` 안에서는 `null` 로 숨깁니다(같은 페이지라). */
   moreHref?: string | null;
+  /**
+   * «미리 채운 문의 링크»를 받습니다 (F33-b, `/quote` 에서만). AI 비서가 만든 `/quote#ai=1&name=…` 링크로
+   * 들어오면 칸을 채우고 «문의 내용»을 보여 줍니다. **동의 체크는 손님이 합니다** — 미리 체크하지 않습니다.
+   */
+  aiPrefill?: boolean;
 }) {
   const [form, setForm] = useState({ name: "", phone: "", region: "", trap: "" });
   const [agree, setAgree] = useState(false);
@@ -59,6 +66,25 @@ export default function QuickQuoteForm({
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");
+  /** AI 링크로 들어왔을 때만 채워집니다 — 접수 경로 «AI 링크 경유»와 문의 내용 칸이 여기서 갈립니다 */
+  const [fromAi, setFromAi] = useState<{ agent: string } | null>(null);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!aiPrefill) return;
+    const p = readAiPrefill();
+    if (!p) return;
+    // 저장소(브라우저 밖)에서 한 번 읽어 오는 것이라 첫 렌더에 둘 수 없습니다(서버 HTML 과 어긋남)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm((f) => ({
+      ...f,
+      name: p.name ?? f.name,
+      phone: p.phone ? formatPhone(p.phone) : f.phone,
+      region: p.region ?? f.region,
+    }));
+    setMessage(p.message ?? "");
+    setFromAi({ agent: p.agent ?? "" });
+  }, [aiPrefill]);
 
   /** 규칙은 `QuoteForm` 의 `onFiles` 와 같습니다 — 서버도 같은 함수로 다시 검사합니다. */
   function onFiles(list: FileList | null) {
@@ -106,12 +132,18 @@ export default function QuickQuoteForm({
       if (product) fd.set("product", product);
       fd.set("agree", "true");
       fd.set("company_website", form.trap);
+      if (fromAi) {
+        fd.set("via", "ai_link");
+        fd.set("agent", fromAi.agent);
+        if (message.trim()) fd.set("message", message.trim());
+      }
       files.forEach((f) => fd.append("files", f));
 
       const res = await fetch("/api/quote", { method: "POST", body: fd });
       if (!res.ok) throw new Error("failed");
       // 숨은 칸이 채워진 제출은 «자동 입력 의심»으로 저장되지만 사람 전환으로 세지 않습니다(F33)
       if (!form.trap) trackLead("quick");
+      if (fromAi) clearAiPrefill();
       setState("done");
     } catch {
       setState("error");
@@ -154,6 +186,12 @@ export default function QuickQuoteForm({
         성함, 연락처, 설치지역 세 칸만 적어 주시면 담당자가 연락드립니다.
       </p>
 
+      {fromAi && (
+        <p className="mt-3 rounded-lg bg-brand-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink">
+          AI 비서가 대화 내용으로 채워 둔 문의서입니다. 내용을 확인하시고 개인정보 동의에 체크한 뒤 보내 주세요.
+        </p>
+      )}
+
       <div className="mt-4 space-y-2.5">
         <Input
           id={`${idPrefix}-name`}
@@ -182,6 +220,20 @@ export default function QuickQuoteForm({
           placeholder="예: 대전 서구"
           error={errors.region}
         />
+        {fromAi && (
+          <div>
+            <label htmlFor={`${idPrefix}-message`} className="mb-1 block text-[12px] font-bold text-ink-500">
+              문의 내용 <span className="font-medium">(선택)</span>
+            </label>
+            <textarea
+              id={`${idPrefix}-message`}
+              value={message}
+              onChange={(e) => setMessage(e.target.value.slice(0, 1500))}
+              rows={3}
+              className="w-full resize-y rounded-lg border border-line px-4 py-3 text-[15px] leading-relaxed outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20"
+            />
+          </div>
+        )}
       </div>
 
       {withPhoto && (

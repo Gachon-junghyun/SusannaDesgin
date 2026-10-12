@@ -286,7 +286,9 @@ export function asHtml(q: QuoteNotice): string {
     `${q.name} 님의 견적 문의가 접수되었습니다.`,
     q.source === "agent"
       ? "손님의 AI 비서가 홈페이지 AI 문의 주소로 대신 넣은 문의입니다."
-      : "홈페이지 견적 폼으로 들어온 문의입니다.",
+      : q.source === "ai_link"
+        ? "손님이 AI 비서가 채워 준 링크로 들어와 직접 보낸 문의입니다."
+        : "홈페이지 견적 폼으로 들어온 문의입니다.",
     "아래 연락처로 먼저 연락하여 주시기 바랍니다.",
   ];
   const lines = [`<b style="color:${C.ink};">${esc(greet[0])}</b>`, ...greet.slice(1).map(esc)].join("<br>");

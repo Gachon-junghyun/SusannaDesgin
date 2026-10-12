@@ -1,4 +1,5 @@
 ﻿import QuickQuoteForm from "@/components/QuickQuoteForm";
+import { AI_PREFILL_SNIPPET } from "@/lib/ai-prefill";
 import QuoteForm from "@/components/QuoteForm";
 import { PageHero } from "@/components/Section";
 import { CUSTOM_FONT_SLUG, specimenFonts } from "@/config/fonts";
@@ -82,6 +83,8 @@ export default async function QuotePage({
 
   return (
     <>
+      {/* F33-b «미리 채운 문의 링크» — `#ai=1&…` 를 GA·Clarity 보다 먼저 저장소로 옮기고 주소창에서 지웁니다 (`lib/ai-prefill.ts`) */}
+      <script dangerouslySetInnerHTML={{ __html: AI_PREFILL_SNIPPET }} />
       <PageHero
         eyebrow="FREE ESTIMATE"
         title="무료 견적 문의"
@@ -98,7 +101,7 @@ export default async function QuotePage({
               나머지는 회신 통화에서 받습니다(`QuickQuoteForm` 머리말과 같은 이유).
               🔴 간판 메이커에서 오면(`?maker=1`) 디자인 파일이 긴 폼에 실려 오므로 긴 폼을 펼친 채로 엽니다.
             */}
-            <QuickQuoteForm idPrefix="quote" product={interest} withPhoto moreHref={null} />
+            <QuickQuoteForm idPrefix="quote" product={interest} withPhoto moreHref={null} aiPrefill />
 
             <details className="group mt-10 rounded-2xl border border-line" open={maker === "1"}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 [&::-webkit-details-marker]:hidden">
