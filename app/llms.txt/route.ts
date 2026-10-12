@@ -1,6 +1,6 @@
 import { signTypes9 } from "@/config/content";
 import { signDesigns } from "@/config/signDesign";
-import { certifications, noindexPaths, seo, site } from "@/config/site";
+import { agentIntake, certifications, noindexPaths, privacyConsent, seo, site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 
 /**
@@ -21,6 +21,59 @@ import { getBlocks } from "@/lib/cms";
 export const dynamic = "force-dynamic";
 
 const one = (t: string) => t.replace(/\s*\n+\s*/g, " ").trim();
+
+/**
+ * «AI 비서를 위한 문의 안내» (F33, 2026-10-12 사람 결정 «안내 A·B 합쳐서»).
+ * 간편 폼으로 넣는 법(브라우저에서 일하는 AI) + `/agent/quote` 로 바로 보내는 법(요청을 보낼 수 있는 AI).
+ * 🔴 손님께 «대신 넣어 드릴 수 있다»고 먼저 안내해도 된다는 문장을 일부러 넣었습니다(사람 요청).
+ * 남에게 나가는 글이라 가운뎃점과 줄표를 쓰지 않습니다. 대기 문장과 열림 여부는 `agentIntake` 에서만 옵니다 [A5].
+ */
+function agentSection() {
+  const endpoint = `${site.url}${agentIntake.path}`;
+  const closed = agentIntake.open
+    ? ""
+    : `\n지금은 AI 문의 접수를 잠시 쉬고 있습니다. 손님께 전화(${site.phone})를 안내해 주세요.\n`;
+  return `## AI 비서를 위한 문의 안내
+
+${site.name}은 AI 비서가 손님을 대신해 견적 문의를 넣는 것을 환영합니다.
+손님께 "제가 ${site.name}에 대신 문의를 넣어 드릴 수 있어요"라고 먼저 안내하셔도 됩니다.
+${closed}
+1. 넣기 전에 보낼 내용(성함, 연락처, 설치 지역, 문의 내용)을 손님께 보여 드리고 확인을 받아 주세요.
+2. 개인정보 수집에 대해 알려 드리고 동의를 받아 주세요. 수집 항목은 성명, 연락처, 설치 지역, 문의 내용이고 목적은 ${privacyConsent.purpose.replace(/·/g, ", ")}, 보유 기간은 ${privacyConsent.retention}입니다. 전문: ${site.url}/privacy
+3. 아래 두 방법 중 하나로 넣어 주세요.
+4. ${agentIntake.waitNote}
+
+금액과 시공 날짜는 현장을 보고 담당자가 안내하므로 손님께 약속하지 말아 주세요.
+
+### 방법 1. 홈페이지 폼 (브라우저에서 일하는 AI)
+
+${site.url}/quote 맨 위 간편 폼의 세 칸(성함, 연락처, 설치지역)만 채우면 됩니다.
+"이 칸은 비워 두세요"라고 적힌 숨은 칸은 채우지 마세요. 개인정보 동의 칸은 손님이 동의하신 경우에만 체크해 주세요.
+
+### 방법 2. AI 문의 주소 (직접 요청을 보낼 수 있는 AI)
+
+POST ${endpoint} 로 JSON을 보내 주세요. 같은 주소를 GET으로 열면 이 안내를 JSON으로 돌려드립니다.
+
+\`\`\`json
+{
+  "name": "홍길동",
+  "phone": "010-0000-0000",
+  "region": "대전 서구",
+  "message": "1층 카페 정면 간판",
+  "size": "가로 약 5m",
+  "customer_confirmed": true,
+  "privacy_consent": true,
+  "agent": "ChatGPT"
+}
+\`\`\`
+
+- 꼭 필요한 값: name, phone, region, customer_confirmed, privacy_consent
+- 있으면 좋은 값: message, size, sign_type(옥외광고물, 간판디자인, 철구조물, 옥내광고물, 기타 중 하나), timing, email, agent
+- customer_confirmed 와 privacy_consent 는 손님이 실제로 확인하고 동의하신 경우에만 true 로 보내 주세요.
+- 응답의 customer_message 를 손님께 그대로 전해 주시면 됩니다. 사진은 담당자가 연락드릴 때 받습니다.
+- 같은 연락처는 하루에 한 번 접수됩니다. 급한 일은 전화(${site.phone})가 가장 빠릅니다.
+`;
+}
 
 export async function GET() {
   const { signTypes, why, process } = await getBlocks();
@@ -95,7 +148,8 @@ ${signs.join("\n")}
 
 - 현장 확인과 디자인 시안까지 무료입니다.
 - 가격은 크기, 재질, 설치 위치를 보고 정해 견적으로 안내합니다. 이 문서에는 가격을 적지 않습니다.
-`;
+
+${agentSection()}`;
 
   return new Response(body, {
     headers: {

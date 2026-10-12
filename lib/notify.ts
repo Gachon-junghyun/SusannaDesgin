@@ -1,6 +1,13 @@
 import "server-only";
 import { site } from "@/config/site";
 import type { QuoteUpload } from "@/lib/quote-files";
+import { sourceLabel } from "@/lib/quote-store";
+
+/** 메일 제목에 붙는 «[AI 경유 (ChatGPT)]» — 사람이 넣은 문의면 빈 문자열 */
+function sourceTag(q: { source?: string; agent?: string }): string {
+  const label = sourceLabel(q.source ?? "", q.agent);
+  return label ? `[${label}]` : "";
+}
 
 /**
  * 견적 문의 실시간 알림.
@@ -39,6 +46,14 @@ export const MAX_MAIL_ATTACH_BYTES = 12 * 1024 * 1024;
 
 export type QuoteNotice = {
   kind: string;
+  /**
+   * 접수 경로 (`0019_quote_source.sql`, 2026-10-12). 빈 값 = 사람이 폼으로 넣은 것 ·
+   * `agent` = AI 비서가 `/agent/quote` 로 넣은 것 · `trap` = 숨은 칸이 채워진 채 온 것(자동 입력 의심).
+   * 제목과 표 맨 위에 보여서 받는 사람이 전화 전에 압니다.
+   */
+  source?: string;
+  /** AI 가 스스로 밝힌 이름(예: «ChatGPT») — 검증된 값이 아닙니다 */
+  agent?: string;
   name: string;
   phone: string;
   email?: string;
@@ -161,6 +176,7 @@ function asText(q: QuoteNotice): string {
 
   return (
     `[${site.name}] 새 견적 문의 (${q.kind === "quick" ? "간편" : "전체"})\n\n` +
+    line("접수 경로", sourceLabel(q.source ?? "", q.agent)) +
     line("이름", q.name) +
     line("연락처", q.phone) +
     line("이메일", q.email) +
@@ -249,7 +265,9 @@ export function asHtml(q: QuoteNotice): string {
     : "";
 
   const rows = [
-    tr("성함", `<b style="font-weight:800;">${esc(q.name)}</b>`),
+    // 사람이 넣은 게 아니면 맨 위에 — 전화 걸기 전에 알아야 합니다
+    row("접수 경로", sourceLabel(q.source ?? "", q.agent)),
+    tr("성함",`<b style="font-weight:800;">${esc(q.name)}</b>`),
     tr("연락처", `<a href="${telHref(q.phone)}" style="color:${C.head};font-weight:800;text-decoration:none;">${esc(q.phone)}</a>`),
     row("보고 온 제품", q.product),
     row("지역", q.region),
@@ -266,7 +284,9 @@ export function asHtml(q: QuoteNotice): string {
 
   const greet = [
     `${q.name} 님의 견적 문의가 접수되었습니다.`,
-    "홈페이지 견적 폼으로 들어온 문의입니다.",
+    q.source === "agent"
+      ? "손님의 AI 비서가 홈페이지 AI 문의 주소로 대신 넣은 문의입니다."
+      : "홈페이지 견적 폼으로 들어온 문의입니다.",
     "아래 연락처로 먼저 연락하여 주시기 바랍니다.",
   ];
   const lines = [`<b style="color:${C.ink};">${esc(greet[0])}</b>`, ...greet.slice(1).map(esc)].join("<br>");
@@ -490,7 +510,7 @@ export async function notifyNewQuote(
         resendKey,
         mailFrom,
         mailTo,
-        `[견적문의] ${q.name} / ${q.phone}`,
+        `[견적문의]${sourceTag(q)} ${q.name} / ${q.phone}`,
         asHtml(q),
         asText(q),
         attachments

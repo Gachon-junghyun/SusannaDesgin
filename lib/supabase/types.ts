@@ -113,6 +113,13 @@ export type QuoteRow = {
    * 관리자 견적함이 `/maker/s/<토큰>` 으로 엽니다. 0017 을 안 돌린 DB 에서는 이 칸이 아예 안 옵니다.
    */
   maker_token?: string;
+  /**
+   * 접수 경로 (`0019_quote_source.sql`, 2026-10-12). '' = 사람 폼 · 'agent' = AI 비서(`/agent/quote`)
+   * · 'trap' = 숨은 칸이 채워진 채 온 것(자동 입력 의심). 0019 를 안 돌린 DB 에서는 칸이 아예 안 옵니다.
+   */
+  source?: string;
+  /** AI 가 스스로 밝힌 이름 — 검증된 값이 아닙니다 */
+  agent?: string;
   ip: string;
   handled: boolean;
   created_at: string;

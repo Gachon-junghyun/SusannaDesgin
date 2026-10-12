@@ -386,4 +386,22 @@ export const privacyConsent = {
     "귀하는 개인정보 수집·이용에 대한 동의를 거부할 권리가 있습니다. 다만 동의를 거부하실 경우 견적 상담 및 시공 안내가 제한될 수 있습니다.",
 } as const;
 
+/**
+ * AI 비서 문의 창구 (F33 · `/agent/quote` · `/llms.txt` «AI 비서를 위한 문의 안내»).
+ *
+ * 손님이 ChatGPT·Claude·Gemini 같은 AI 비서와 대화하다가 «수산나에 대신 문의 넣어 줘» 하면,
+ * 그 AI 가 이 주소로 JSON 을 보내 견적함에 넣습니다(2026-10-12 사람 결정).
+ *
+ * - `open` — 🔴 **일손 밸브입니다.** 현장이 몰려 문의를 소화 못 할 때 `false` 로 두면 AI 에게
+ *   «지금은 접수를 잠시 쉽니다»와 전화번호만 돌려줍니다. 폼(`/quote`)은 이 값과 상관없이 열려 있습니다.
+ * - `waitNote` — AI 가 손님께 그대로 옮기는 문장입니다. 지킬 수 있는 말만 적습니다(날짜를 약속하지 않습니다).
+ * - `dailyCap` — 한 인스턴스 기준 하루 상한(`lib/rate-limit.ts` 의 한계 그대로, §7 부채).
+ */
+export const agentIntake = {
+  open: true,
+  path: "/agent/quote",
+  waitNote: "담당자가 평일 업무 시간에 연락드립니다. 진행 중인 현장이 있어 시공 일정은 상담 때 안내합니다.",
+  dailyCap: 30,
+} as const;
+
 export const phoneDigits = site.phoneHref.replace(/\D/g, "");

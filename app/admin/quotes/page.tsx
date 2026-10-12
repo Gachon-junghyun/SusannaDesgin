@@ -4,6 +4,7 @@ import SubmitButton from "@/components/admin/SubmitButton";
 import { site } from "@/config/site";
 import { requireAdmin } from "@/lib/auth";
 import { signQuoteFiles } from "@/lib/quote-files";
+import { sourceLabel } from "@/lib/quote-store";
 import { createClient } from "@/lib/supabase/server";
 import type { QuoteRow } from "@/lib/supabase/types";
 
@@ -152,6 +153,16 @@ export default async function AdminQuotesPage() {
               <span className="rounded-md bg-paper px-2 py-1 text-[12px] font-bold text-ink-500">
                 {q.kind === "quick" ? "간편문의" : "전체문의"}
               </span>
+              {/* 접수 경로 (F33) — 사람이 넣은 게 아니면 전화 전에 알아야 합니다 */}
+              {sourceLabel(q.source ?? "", q.agent) && (
+                <span
+                  className={`rounded-md px-2 py-1 text-[12px] font-bold ${
+                    q.source === "agent" ? "bg-brand/10 text-brand-700" : "bg-accent/10 text-accent"
+                  }`}
+                >
+                  {sourceLabel(q.source ?? "", q.agent)}
+                </span>
+              )}
               <span className="text-[13px] text-ink-500">{when(q.created_at)}</span>
 
               <div className="ml-auto flex items-center gap-1.5">

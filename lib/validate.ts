@@ -13,7 +13,7 @@ export type QuoteInput = {
   timing?: string;
   message?: string;
   agree: boolean;
-  /** 봇 트랩 — 사람은 절대 채우지 않는 필드 */
+  /** 숨은 칸 — 사람은 채우지 않습니다. 채워져 오면 «자동 입력 의심»으로 저장합니다(F33) */
   company_website?: string;
 };
 

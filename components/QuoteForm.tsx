@@ -222,7 +222,7 @@ ${note}` }));
 
       const res = await fetch("/api/quote", { method: "POST", body: fd });
       if (!res.ok) throw new Error("failed");
-      // 허니팟에 걸린 제출은 서버가 저장 없이 200 을 돌려줍니다 — 전환으로 세지 않습니다
+      // 숨은 칸이 채워진 제출은 «자동 입력 의심»으로 저장되지만 사람 전환으로 세지 않습니다(F33)
       if (!form.trap) trackLead("full");
       setState("done");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -536,9 +536,9 @@ ${note}` }));
         )}
       </div>
 
-      {/* 봇 트랩 */}
+      {/* 숨은 칸 — 채워져 와도 버리지 않고 «자동 입력 의심»으로 분류합니다(F33). AI 비서가 읽어도 비워 두게 이름표에 적어 둡니다 */}
       <div className="absolute -left-[9999px]" aria-hidden="true">
-        <label htmlFor="company_website">Website</label>
+        <label htmlFor="company_website">이 칸은 비워 두세요 (자동 입력 확인용)</label>
         <input
           id="company_website"
           name="company_website"
