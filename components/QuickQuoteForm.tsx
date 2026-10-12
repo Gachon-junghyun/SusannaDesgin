@@ -151,7 +151,7 @@ export default function QuickQuoteForm({
       <p className="text-[13px] font-bold tracking-wide text-accent">FREE ESTIMATE</p>
       <h2 className="mt-1 text-xl font-black">1분 만에 무료 견적</h2>
       <p className="mt-1 text-[13px] text-ink-500">
-        연락처만 남겨주시면 담당자가 바로 연락드립니다.
+        성함, 연락처, 설치지역 세 칸만 적어 주시면 담당자가 연락드립니다.
       </p>
 
       <div className="mt-4 space-y-2.5">

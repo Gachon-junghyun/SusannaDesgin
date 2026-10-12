@@ -167,7 +167,7 @@ export default function PrivacyPage() {
               추가·삭제 및 정정이 있는 경우에는 변경 사항의 시행 7일 전부터 공지사항을
               통하여 고지할 것입니다.
             </p>
-            <p className="mt-3 font-bold">시행일: 2026년 00월 00일 (TODO)</p>
+            <p className="mt-3 font-bold">시행일: 2026년 10월 12일</p>
           </Article>
         </div>
       </div>

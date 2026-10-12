@@ -48,6 +48,7 @@ ${closed}
 ### 방법 1. 홈페이지 폼 (브라우저에서 일하는 AI)
 
 ${site.url}/quote 맨 위 간편 폼의 세 칸(성함, 연락처, 설치지역)만 채우면 됩니다.
+간편 폼의 필수 칸은 이 세 칸뿐입니다. 그 아래 접혀 있는 "자세히 적어 보내기" 폼의 주소, 층수, 문의 분야는 그 폼을 쓸 때만 필요하고 간편 접수에는 필요 없습니다.
 "이 칸은 비워 두세요"라고 적힌 숨은 칸은 채우지 마세요. 개인정보 동의 칸은 손님이 동의하신 경우에만 체크해 주세요.
 
 ### 방법 2. AI 문의 주소 (직접 요청을 보낼 수 있는 AI)
@@ -153,7 +154,8 @@ ${agentSection()}`;
 
   return new Response(body, {
     headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
+      // 🔴 text/markdown 이면 ChatGPT 가 «읽을 수 없는 형식»으로 보고 안 읽습니다(2026-10-12 실측) — 마크다운이어도 text/plain 으로 보냅니다
+      "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=600, s-maxage=3600",
     },
   });
