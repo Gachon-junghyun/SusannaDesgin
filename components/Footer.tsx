@@ -124,6 +124,13 @@ export default function Footer() {
                 오시는길
               </Link>
             </li>
+            <li>
+              {/* F33 — AI 는 홈 HTML 을 먼저 읽습니다. 여기서 «문의 안내가 어디 있는지»를 알려 줍니다(사람 제안 2026-10-12).
+                  텍스트 파일이라 next/link 가 아니라 그냥 a 입니다. */}
+              <a href="/llms.txt" className="hover:text-white">
+                AI 비서 안내 (llms.txt)
+              </a>
+            </li>
           </ul>
 
           <div className="mt-5 space-y-1 text-[13px] leading-relaxed text-white/45">
@@ -152,6 +159,9 @@ export default function Footer() {
               {site.officePhone}
               <Sep />
               FAX {site.fax}
+            </p>
+            <p className="pt-2">
+              ChatGPT, Claude, Gemini 같은 AI 비서를 쓰신다면 AI 비서 안내(llms.txt)에 견적 문의를 대신 넣는 방법이 있습니다.
             </p>
             <p className="pt-2">
               © {new Date().getFullYear()} {site.name}. All rights reserved.
