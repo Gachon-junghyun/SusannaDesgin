@@ -2127,11 +2127,12 @@ app/admin/quotes       접수 경로 표시 «AI 경유 (…)» · «자동 입�
 - 🟢 **F33-c 색인되는 HTML 에도 안내** (2026-10-15) — 실측 둘: ① 구글 `site:susannadesign.co.kr/llms.txt` **0건**(사이트 페이지 6개는 색인됨) ② 로그아웃한 제미나이·ChatGPT 에 손님처럼 «수산나에 대신 견적 넣어 줘» 하니 **둘 다 이 길을 몰랐고**, ChatGPT 는 `/quote` 도 «확인되지 않았다»며 지도 정보(전화)만 줬습니다. 검색으로 들어오는 AI 는 색인된 HTML 조각을 읽지 `/llms.txt` 를 열지 않습니다.
   ```
   config/site.ts   agentIntake.quoteTitle · quoteLead   ← 손님이 보는 두 문장 [A5]
-  app/quote/page.tsx  긴 폼 아래 <section id="ai">  제목 + 한 단락(보이는 글) + 접힌 «AI 비서용 안내 보기»(링크 모양 · POST 주소 · /llms.txt)
+  app/quote/page.tsx  긴 폼 아래 <details id="ai">  손님 눈엔 접힌 회색 한 줄 «AI 비서용 안내»뿐 · 안쪽에 제목 · 한 단락 · 링크 모양 · POST 주소 · /llms.txt
                       agentIntake.open=false 면 통째로 안 나갑니다
   app/layout.tsx   LocalBusiness.potentialAction = CommunicateAction · EntryPoint 둘(미리 채운 링크 urlTemplate · POST JSON)
   ```
-  - 숨긴 글이 아니라 보이는 글입니다(클로킹 금지 — 하단 링크와 같은 이유). 접힌 `<details>` 안도 HTML 에 그대로 있어 색인됩니다.
+  - 🔴 **접어 두기만 하고 «숨기지» 않습니다** (2026-10-15 사람 요청 *"손님께 보이게 하고 싶지 않아, 배경색으로 덮고 크기도 안 보이게"* 를 검토). 구글 스팸 정책 원문(«Hidden text and link abuse», 크롬으로 본문 확인)이 위반 예시로 **배경과 같은 색 글씨 · 글씨 크기나 투명도 0 · CSS 로 화면 밖 배치**를 그대로 적어 두었고, 같은 절이 **아코디언·탭처럼 접었다 펴는 것은 위반이 아니라고** 적어서 `<details>` 로 접었습니다. 걸리면 «순위가 내려가거나 결과에서 빠질 수 있고» 수동 조치 대상입니다. 접힌 안쪽도 HTML 에 그대로 있어 색인되고 AI 가 읽습니다.
+    (처음 이 줄에 «클로킹»이라고 적었던 건 틀린 이름입니다 — 클로킹은 검색엔진에게만 다른 내용을 내주는 것이고, 이건 «숨은 텍스트» 정책입니다.)
   - `potentialAction` 은 구글 리치 결과를 만들지 않습니다 — HTML 을 읽는 AI 용 보조 통로이고 효과를 기대하는 장치가 아닙니다. 링크 칸 이름은 `lib/ai-prefill.ts` 와 같아야 합니다.
   - **`/llms.txt` 를 사이트맵에 넣지 않았습니다.** 구글은 llms.txt 를 «안 쓴다»고 명시했고, 색인되면 사람 검색 결과에 날 텍스트 파일이 뜹니다. 같은 내용을 이미 색인된 `/quote` 에 둔 것으로 갈음합니다.
   - 효과 확인은 구글이 `/quote` 를 다시 긁은 뒤 같은 질문을 다시 던져 봐야 압니다(Search Console «색인 생성 요청»을 하면 빨라집니다).
