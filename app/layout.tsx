@@ -189,7 +189,7 @@ const jsonLd = {
         potentialAction: {
           "@type": "CommunicateAction",
           name: "무료 견적 문의",
-          description: "손님이 확인하고 개인정보 수집에 동의한 내용만 보냅니다. 자세한 안내는 /llms.txt 에 있습니다.",
+          description: `고객님께서 확인하시고 개인정보 수집 및 이용에 동의하신 내용만 접수합니다. 자세한 안내는 ${site.url}/llms.txt 에서 확인하실 수 있습니다.`,
           target: [
             {
               "@type": "EntryPoint",

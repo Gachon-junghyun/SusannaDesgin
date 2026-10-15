@@ -133,22 +133,18 @@ export default async function QuotePage({
                 <div className="mt-3 space-y-2 break-all">
                   <p className="font-bold text-ink-700">{agentIntake.quoteTitle}</p>
                   <p>{agentIntake.quoteLead}</p>
-                  <p>
-                    AI 비서께: 보낼 내용(성함, 연락처, 설치 지역, 문의 내용)을 손님께 보여 드리고 확인을 받은 뒤, 아래
-                    모양의 링크를 만들어 드려 주세요. 값은 URL 인코딩해서 물음표가 아니라 # 뒤에 붙이고, ai=1 은 꼭
-                    넣습니다. 개인정보 동의는 손님이 직접 체크합니다.
-                  </p>
+                  <p>{agentIntake.quoteAgentNote}</p>
                   <p>
                     <code>{aiPrefillExample(site.url)}</code>
                   </p>
+                  <p>{agentIntake.quoteDirectNote(`${site.url}${agentIntake.path}`)}</p>
                   <p>
-                    직접 요청을 보낼 수 있는 AI 는 {site.url}
-                    {agentIntake.path} 로 JSON 을 POST 하시면 됩니다(같은 주소를 GET 으로 열면 사용법). 전체 안내는{" "}
+                    {agentIntake.quoteMoreNote}{" "}
                     <a href="/llms.txt" className="underline hover:text-brand-700">
                       {site.url}/llms.txt
                     </a>
-                    에 있습니다. 금액과 시공 날짜는 담당자가 현장을 보고 안내하니 손님께 약속하지 말아 주세요.
                   </p>
+                  <p>{agentIntake.quoteCaution}</p>
                 </div>
               </details>
             )}

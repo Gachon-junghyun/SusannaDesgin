@@ -2126,7 +2126,7 @@ app/admin/quotes       접수 경로 표시 «AI 경유 (…)» · «자동 입�
   ⚠️ ChatGPT 는 대화 내용이 담긴 링크를 누를 때 «링크 확인» 창을 띄울 수 있습니다(OpenAI 링크 안전 장치) — 손님이 «계속»을 누르면 열립니다.
 - 🟢 **F33-c 색인되는 HTML 에도 안내** (2026-10-15) — 실측 둘: ① 구글 `site:susannadesign.co.kr/llms.txt` **0건**(사이트 페이지 6개는 색인됨) ② 로그아웃한 제미나이·ChatGPT 에 손님처럼 «수산나에 대신 견적 넣어 줘» 하니 **둘 다 이 길을 몰랐고**, ChatGPT 는 `/quote` 도 «확인되지 않았다»며 지도 정보(전화)만 줬습니다. 검색으로 들어오는 AI 는 색인된 HTML 조각을 읽지 `/llms.txt` 를 열지 않습니다.
   ```
-  config/site.ts   agentIntake.quoteTitle · quoteLead   ← 손님이 보는 두 문장 [A5]
+  config/site.ts   agentIntake.quoteSummary(접힌 한 줄) · quoteTitle · quoteLead · quoteAgentNote · quoteDirectNote · quoteMoreNote · quoteCaution  ← 문장은 전부 여기 [A5] · 회사 공식 문서 말투(«~합니다», «~바랍니다», 2026-10-15 사람 요청)
   app/quote/page.tsx  긴 폼 아래 <details id="ai">  손님 눈엔 접힌 회색 한 줄 «AI 비서용 안내»뿐 · 안쪽에 제목 · 한 단락 · 링크 모양 · POST 주소 · /llms.txt
                       agentIntake.open=false 면 통째로 안 나갑니다
   app/layout.tsx   LocalBusiness.potentialAction = CommunicateAction · EntryPoint 둘(미리 채운 링크 urlTemplate · POST JSON)
