@@ -3,6 +3,7 @@ import { SHOW_PRODUCTS } from "@/config/content";
 import { noindexPaths, site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 import { getPublishedSites } from "@/lib/sites";
+import { createPublicClient } from "@/lib/supabase/public";
 
 /**
  * 🔴 **요청 시 생성입니다.** 예전에는 빌드 때 한 번 구워졌는데, 이제 이 목록이
@@ -12,8 +13,55 @@ import { getPublishedSites } from "@/lib/sites";
  */
 export const dynamic = "force-dynamic";
 
+/**
+ * 공개된 행 중 가장 최근 `updated_at` (표마다 `touch_updated_at` 트리거가 수정 때 갱신합니다).
+ * DB 가 없거나 못 읽으면 `null` — 그러면 그 주소엔 날짜를 안 적습니다(모르는 날짜를 지어내지 않음).
+ * ⚠️ 행을 «지우거나» 비공개로 돌린 건 이 값에 안 잡힙니다. 그 경우 날짜가 조금 이를 뿐 틀린 미래 날짜는 안 됩니다.
+ */
+async function latestUpdate(tables: string[]): Promise<Date | null> {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+  const dates = await Promise.all(
+    tables.map(async (t) => {
+      try {
+        const { data } = await supabase
+          .from(t)
+          .select("updated_at")
+          .eq("published", true)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        const v = (data as { updated_at: string }[] | null)?.[0]?.updated_at;
+        return v ? new Date(v).getTime() : 0;
+      } catch {
+        return 0;
+      }
+    }),
+  );
+  const max = Math.max(0, ...dates);
+  return max ? new Date(max) : null;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
+  /**
+   * 🔴 **`<lastmod>` 는 실제로 바뀐 날만 적습니다** (2026-10-15). 예전엔 전부 «요청한 지금 시각»이라
+   * 사이트맵을 열 때마다 아홉 주소가 다 «방금 바뀜»이었습니다. 구글 원문은 *"Google uses the <lastmod>
+   * value if it's consistently and verifiably … accurate"* — 늘 지금이면 이 칸을 아예 안 믿게 되고,
+   * 나중에 생길 시공사례 상세의 진짜 날짜까지 같이 무시당합니다.
+   * - 홈: 히어로·실적·문구 블록(CMS) 중 가장 최근 수정
+   * - `/works`: 실적·공개 시공사례 중 가장 최근 수정
+   * - 나머지: 코드로만 바뀌는 페이지라 DB 에 날짜가 없습니다 → **안 적습니다**(모르면 빼는 게 맞습니다)
+   */
+  const sites = await getPublishedSites();
+  const casesLatest = sites.reduce((m, c) => Math.max(m, new Date(c.updated_at).getTime() || 0), 0);
+  const [homeLatest, worksLatest] = await Promise.all([
+    latestUpdate(["hero_slides", "works", "content_blocks"]),
+    latestUpdate(["works"]),
+  ]);
+  const worksDate = Math.max(worksLatest?.getTime() ?? 0, casesLatest);
+  const lastmod: Record<string, Date | undefined> = {
+    "": homeLatest ?? undefined,
+    "/works": worksDate ? new Date(worksDate) : undefined,
+  };
 
   const routes: { path: string; priority: number; freq: "weekly" | "monthly" | "yearly" }[] =
     [
@@ -56,7 +104,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    */
   const base = publicRoutes.map((r) => ({
     url: r.path ? `${site.url}${r.path}` : `${site.url}/`,
-    lastModified: now,
+    ...(lastmod[r.path] ? { lastModified: lastmod[r.path] } : {}),
     changeFrequency: r.freq,
     priority: r.priority,
   }));
@@ -76,7 +124,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * 시공사례 상세(F29) — 관리자 «현장 폴더»에서 공개한 것만. 공개 조건(사진 3장·이야기 150자)을 통과한 것이라
    * 얇은 페이지가 사이트맵에 섞이지 않습니다. 0016 을 안 돌렸으면 빈 목록입니다.
    */
-  const cases = (await getPublishedSites()).map((c) => ({
+  const cases = sites.map((c) => ({
     url: `${site.url}/works/${encodeURIComponent(c.slug)}`,
     lastModified: new Date(c.updated_at),
     changeFrequency: "monthly" as const,
@@ -90,7 +138,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .filter((m) => m.slug && m.body)
     .map((m) => ({
       url: `${site.url}/products/${m.slug}`,
-      lastModified: now,
+      // 블록에 날짜가 안 실려 와서 적지 않습니다 — «지금 시각»을 넣지 마세요(위 lastmod 주석)
       changeFrequency: "monthly" as const,
       priority: 0.7,
     }));
