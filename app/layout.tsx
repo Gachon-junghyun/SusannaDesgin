@@ -12,7 +12,7 @@ import SiteChrome from "@/components/SiteChrome";
 import { SHOW_PRODUCTS } from "@/config/content";
 import { SHOW_FONTS } from "@/config/fonts";
 import { MAKER_BETA, MAKER_IN_NAV, SHOW_MAKER } from "@/config/maker";
-import { seo, site } from "@/config/site";
+import { agentIntake, seo, site } from "@/config/site";
 import { clarityBootstrap, gaBootstrap } from "@/lib/analytics";
 import { getPreview } from "@/lib/preview";
 import { ogImage } from "@/lib/seo";
@@ -178,6 +178,34 @@ const jsonLd = {
   // 비어 있으면 키 자체를 빼야 합니다 — 빈 문자열을 내보내면 잘못된 값으로 읽힙니다.
   ...(site.bizNo ? { taxID: site.bizNo } : {}),
   priceRange: "₩₩",
+  /**
+   * F33-c (2026-10-15) — «여기로 문의하면 된다»를 기계가 읽는 모양으로도 둡니다.
+   * 구글은 이 칸으로 리치 결과를 만들지 않습니다(효과를 기대하는 장치가 아님). HTML 을 읽는 AI 가
+   * `/llms.txt` 까지 안 가도 링크 모양과 접수 주소를 보게 하려는 보조 통로입니다. 일손 밸브가 닫히면 뺍니다.
+   * 링크 모양은 `lib/ai-prefill.ts` 의 칸 이름과 같아야 합니다 — 칸을 바꾸면 여기도 바꿉니다.
+   */
+  ...(agentIntake.open
+    ? {
+        potentialAction: {
+          "@type": "CommunicateAction",
+          name: "무료 견적 문의",
+          description: "손님이 확인하고 개인정보 수집에 동의한 내용만 보냅니다. 자세한 안내는 /llms.txt 에 있습니다.",
+          target: [
+            {
+              "@type": "EntryPoint",
+              urlTemplate: `${site.url}/quote#ai=1&name={name}&phone={phone}&region={region}&message={message}&agent={agent}`,
+              actionPlatform: ["https://schema.org/DesktopWebPlatform", "https://schema.org/MobileWebPlatform"],
+            },
+            {
+              "@type": "EntryPoint",
+              urlTemplate: `${site.url}${agentIntake.path}`,
+              httpMethod: "POST",
+              contentType: "application/json",
+            },
+          ],
+        },
+      }
+    : {}),
   // ⚠️ AggregateRating·Review 스키마는 넣지 않았습니다.
   //    자사 사이트에 실제로 게시된 리뷰에만 쓸 수 있고, 플레이스·GBP 리뷰를
   //    가져다 넣으면 리치 결과 제외 또는 수동 조치 대상이 됩니다.

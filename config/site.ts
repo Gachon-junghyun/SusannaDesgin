@@ -402,6 +402,15 @@ export const agentIntake = {
   path: "/agent/quote",
   waitNote: "담당자가 평일 업무 시간에 연락드립니다. 진행 중인 현장이 있어 시공 일정은 상담 때 안내합니다.",
   dailyCap: 30,
+  /**
+   * `/quote` 화면 맨 아래 «AI 비서에게 맡기기» (F33-c, 2026-10-15).
+   * 🔴 `/llms.txt` 는 구글 색인에 안 잡힙니다(2026-10-15 실측 `site:` 0건). 반면 `/quote` 는 색인돼 있고
+   * «수산나디자인 견적»으로 찾는 AI 가 읽어 가는 페이지라, 안내의 핵심을 **보이는 글로** 여기에도 둡니다.
+   * 남에게 나가는 글이라 가운뎃점과 줄표를 쓰지 않습니다.
+   */
+  quoteTitle: "AI 비서에게 맡기셔도 됩니다",
+  quoteLead:
+    "ChatGPT, Claude, Gemini 같은 AI 비서에게 \"수산나디자인에 견적 문의 넣어 줘\"라고 말씀하시면 됩니다. AI가 문의서를 채운 링크를 만들어 드리면, 링크를 열고 개인정보 동의에 체크한 뒤 무료 견적 신청만 누르시면 접수됩니다.",
 } as const;
 
 export const phoneDigits = site.phoneHref.replace(/\D/g, "");

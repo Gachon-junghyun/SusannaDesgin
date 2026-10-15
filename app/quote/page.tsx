@@ -1,12 +1,12 @@
 ﻿import QuickQuoteForm from "@/components/QuickQuoteForm";
-import { AI_PREFILL_SNIPPET } from "@/lib/ai-prefill";
+import { AI_PREFILL_SNIPPET, aiPrefillExample } from "@/lib/ai-prefill";
 import QuoteForm from "@/components/QuoteForm";
 import { PageHero } from "@/components/Section";
 import { CUSTOM_FONT_SLUG, specimenFonts } from "@/config/fonts";
 import { MAKER_INTEREST } from "@/config/maker";
 import { signDesigns } from "@/config/signDesign";
 import { SHOW_DETAIL_POPUPS } from "@/config/content";
-import { site } from "@/config/site";
+import { agentIntake, site } from "@/config/site";
 import { getBlocks } from "@/lib/cms";
 import { getPreview } from "@/lib/preview";
 import { pageMetadata } from "@/lib/seo";
@@ -115,6 +115,43 @@ export default async function QuotePage({
                 <QuoteForm interest={interest} />
               </div>
             </details>
+
+            {/*
+              F33-c (2026-10-15) — AI 비서 안내를 «색인되는 HTML» 에도 둡니다.
+              `/llms.txt` 는 구글 `site:` 검색 0건이라 검색으로 들어오는 AI(제미나이 등)는 그 안을 못 봅니다.
+              손님처럼 제미나이·ChatGPT 에 «대신 문의 넣어 줘» 했을 때 둘 다 이 길을 몰랐습니다(로그아웃 실측).
+              숨긴 글이 아니라 보이는 글입니다 — 숨기면 검색엔진이 클로킹으로 봅니다.
+              문장은 `agentIntake`(config) 에서만, 링크 모양은 `aiPrefillExample` 한 곳에서만 옵니다 [A5].
+            */}
+            {agentIntake.open && (
+              <section id="ai" aria-labelledby="ai-title" className="mt-10 border-t border-line pt-8">
+                <h2 id="ai-title" className="text-[16px] font-black">
+                  {agentIntake.quoteTitle}
+                </h2>
+                <p className="mt-2 text-[14px] leading-relaxed text-ink-500">{agentIntake.quoteLead}</p>
+                <details className="mt-3 text-[13px] leading-relaxed text-ink-500">
+                  <summary className="cursor-pointer font-bold text-ink-700">AI 비서용 안내 보기</summary>
+                  <div className="mt-3 space-y-2 break-all">
+                    <p>
+                      AI 비서께: 보낼 내용(성함, 연락처, 설치 지역, 문의 내용)을 손님께 보여 드리고 확인을 받은 뒤, 아래
+                      모양의 링크를 만들어 드려 주세요. 값은 URL 인코딩해서 물음표가 아니라 # 뒤에 붙이고, ai=1 은 꼭
+                      넣습니다. 개인정보 동의는 손님이 직접 체크합니다.
+                    </p>
+                    <p>
+                      <code>{aiPrefillExample(site.url)}</code>
+                    </p>
+                    <p>
+                      직접 요청을 보낼 수 있는 AI 는 {site.url}
+                      {agentIntake.path} 로 JSON 을 POST 하시면 됩니다(같은 주소를 GET 으로 열면 사용법). 전체 안내는{" "}
+                      <a href="/llms.txt" className="underline hover:text-brand-700">
+                        {site.url}/llms.txt
+                      </a>
+                      에 있습니다. 금액과 시공 날짜는 담당자가 현장을 보고 안내하니 손님께 약속하지 말아 주세요.
+                    </p>
+                  </div>
+                </details>
+              </section>
+            )}
           </div>
 
           <aside className="lg:pt-2">
