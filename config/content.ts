@@ -463,6 +463,13 @@ export const SHOW_PRODUCTS: boolean = false;
  */
 export const SHOW_DETAIL_POPUPS: boolean = false;
 
+/**
+ * 간판디자인(`/sign-design`) 팝업만 손님에게 엽니다 (2026-10-16 사람 지시 «간판디자인도 이제 public 으로»).
+ * 연출 사진 다음으로 실제 시공 사례를 넘겨 보는 팝업이라 이 페이지만 먼저 열었습니다.
+ * 실적 카드·/signs 등 나머지 자리는 계속 `SHOW_DETAIL_POPUPS` 를 따릅니다.
+ */
+export const SHOW_SIGN_DESIGN_POPUPS: boolean = true;
+
 export type Step = {
   no: string;
   title: string;

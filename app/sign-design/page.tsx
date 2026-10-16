@@ -5,10 +5,10 @@ import JsonLd from "@/components/JsonLd";
 import Reveal from "@/components/Reveal";
 import SignDesignInquiry from "@/components/SignDesignInquiry";
 import { PageHero } from "@/components/Section";
-import { SHOW_DETAIL_POPUPS, signTypes9 } from "@/config/content";
+import { SHOW_DETAIL_POPUPS, SHOW_SIGN_DESIGN_POPUPS, signTypes9 } from "@/config/content";
 import { signDesigns } from "@/config/signDesign";
 import { seo, site } from "@/config/site";
-import { getBlocks } from "@/lib/cms";
+import { getBlocks, getWorks } from "@/lib/cms";
 import { getPreview } from "@/lib/preview";
 import { pageMetadata } from "@/lib/seo";
 
@@ -24,9 +24,9 @@ export const dynamic = "force-dynamic";
  * 내용은 `config/signDesign.ts` [A5], 이름·설명은 `sign_model`(없으면 `signTypes9`) [A1].
  */
 export default async function SignDesignPage() {
-  const [{ signModels }, preview] = await Promise.all([getBlocks(), getPreview()]);
+  const [{ signModels }, preview, works] = await Promise.all([getBlocks(), getPreview(), getWorks()]);
   /** F32 — 사진을 눌러 크게 보기. Clarity 30일 PC 클릭 74% 가 반응 없는 클릭이었습니다 */
-  const detail = SHOW_DETAIL_POPUPS || preview.on;
+  const detail = SHOW_DETAIL_POPUPS || SHOW_SIGN_DESIGN_POPUPS || preview.on;
 
   const items = signDesigns.map((d) => {
     const db = signModels.find((m) => m.slug === d.key);
@@ -36,6 +36,8 @@ export default async function SignDesignPage() {
       name: d.name || db?.title || cfg?.name || d.key,
       code: db?.eyebrow || cfg?.code || "",
       desc: db?.body || cfg?.desc || d.desc || "",
+      /** 이 방식의 실제 시공 사례 — 공개된 실적만, config 에 적은 순서대로 */
+      cases: (d.works ?? []).flatMap((id) => works.filter((w) => w.slug === id && w.image)),
     };
   });
 
@@ -72,7 +74,7 @@ export default async function SignDesignPage() {
       <PageHero
         eyebrow="SIGN DESIGN"
         title="간판디자인"
-        desc="후광 LED 채널부터 까치발 철문자까지, 간판 열 가지를 저마다 가장 잘 어울리는 가게에 걸어 봤습니다. 마음에 드는 모습을 고르시면 우리 가게에 맞춰 다시 그려 드립니다."
+        desc="후광 LED 채널부터 까치발 철문자까지 간판 열 가지를 업종별 적용 예시로 정리했습니다. 원하시는 방식을 선택하시면 매장 조건에 맞추어 디자인해 드립니다."
         path="/sign-design"
       />
 
@@ -87,7 +89,7 @@ export default async function SignDesignPage() {
             ))}
           </nav>
           <p className="shrink-0 text-[13px] text-ink-500">
-            사진은 AI로 그린 연출 이미지입니다.{" "}
+            간판 연출 이미지는 AI로 제작했습니다.{" "}
             <Link href="/works" className="underline underline-offset-4 hover:text-ink">
               실제 시공 사진 보기
             </Link>
@@ -113,12 +115,16 @@ export default async function SignDesignPage() {
                     alt: it.alt,
                     eyebrow: `${String(i + 1).padStart(2, "0")} / ${String(items.length).padStart(2, "0")}`,
                     title: it.name,
-                    meta: `잘 어울리는 가게 ${it.shop}`,
+                    meta: `추천 업종 ${it.shop}`,
                     lead: it.why,
                     lines: [it.desc, ...it.options.map((o) => `${o.label}: ${o.choices.join(", ")}`)].filter(Boolean),
+                    gallery: [
+                      { image: it.image, alt: it.alt, caption: "연출 이미지 (AI)" },
+                      ...it.cases.map((w) => ({ image: w.image, alt: `${w.title} 시공 사진`, caption: `시공 사례 · ${w.title}` })),
+                    ],
                     actions: [
                       { href: `/quote?design=${it.key}`, label: "이 간판으로 문의하기" },
-                      { href: "/works", label: "실제 시공 사진 보기", quiet: true },
+                      { href: "/works", label: "시공 실적 전체 보기", quiet: true },
                     ],
                   }}
                 >
@@ -141,7 +147,7 @@ export default async function SignDesignPage() {
                 </p>
                 <h2 className="mt-3 text-3xl font-normal tracking-tight md:text-[40px]">{it.name}</h2>
                 <p className="mt-3 text-[17px]">
-                  잘 어울리는 가게 <b className="font-bold text-brand-700">{it.shop}</b>
+                  추천 업종 <b className="font-bold text-brand-700">{it.shop}</b>
                 </p>
                 <p className="mt-1.5 text-[14px] text-ink-500">{it.pairing.join(", ")}</p>
 
@@ -178,7 +184,7 @@ export default async function SignDesignPage() {
         <div className="wrap">
           <SignDesignInquiry items={items.map(({ key, name, shop }) => ({ key, name, shop }))} />
           {/* 2026-09-29 사람 결정: 페이지 끝에 회색 참조 한 줄 */}
-          <p className="mt-16 text-[13px] text-ink-500/80">※ 이 페이지의 이미지는 AI를 통해 만들었습니다.</p>
+          <p className="mt-16 text-[13px] text-ink-500/80">※ 이 페이지의 간판 연출 이미지는 AI로 제작했습니다. 시공 사례 사진은 실제 현장 사진입니다.</p>
         </div>
       </section>
     </>
