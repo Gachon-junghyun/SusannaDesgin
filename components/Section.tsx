@@ -82,7 +82,8 @@ export function PageHero({
   path?: string;
 }) {
   return (
-    <div className="bg-ink py-16 text-white md:py-24">
+    <div className="relative isolate overflow-hidden bg-ink py-16 text-white md:py-24">
+      <HeroGlow />
       {path && (
         <JsonLd
           data={{
@@ -111,6 +112,35 @@ export function PageHero({
           <p className="mt-4 max-w-2xl leading-relaxed text-white/60 md:text-lg">{desc}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * 검정 머리말 오른쪽 아래의 은은한 청록 빛 (2026-10-16 사람 요청 «그라데이션만 떼서 검정 오른쪽에 은은하게»).
+ * 원본은 카톡 배경 디자인(형제 작업 `STARTUP/aidesigner/runs/2026-10-15_수산나_카톡배경`, 청록 램프)이고,
+ * 그림 파일 대신 CSS 빛 두 겹 + 아주 옅은 입자로 다시 그렸습니다 — 폭이 바뀌어도 안 깨지고 받는 파일이 없습니다.
+ * 글자 쪽(왼쪽)은 비워 둡니다. 꾸밈이라 스크린리더·클릭에서 뺍니다.
+ */
+function HeroGlow() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+      <div
+        className="absolute inset-0"
+        style={{
+          background: [
+            "radial-gradient(ellipse 34% 95% at 100% 112%, rgba(150,212,204,0.42), rgba(52,156,146,0.22) 38%, transparent 70%)",
+            "radial-gradient(ellipse 60% 140% at 96% 125%, rgba(24,120,112,0.50), rgba(14,72,68,0.26) 42%, transparent 74%)",
+          ].join(","),
+        }}
+      />
+      <div
+        className="absolute inset-0 opacity-[0.07] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+        }}
+      />
     </div>
   );
 }

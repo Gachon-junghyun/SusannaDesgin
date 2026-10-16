@@ -58,6 +58,10 @@ export const signDesigns: SignDesign[] = [
     ],
     image: "/images/design-bracket.jpg",
     alt: "시멘트 벽 카페 외관에 벽에서 띄워 단 검은 철판 글자 수산나디자인과 그 그림자",
+    works: [
+      "9fa5a744-29b5-4533-a1c1-0a9e307321df", // 커뮤니티 시설 사인 (COMMUNITY — 환봉으로 띄운 철문자, 2026-10-16 사람 정정: 스카시 아님)
+      "5aa108ec-76b2-42ce-b05e-4d58ec5e1c7e", // 기시맹 간판 작업 (2026-10-16 사람 정정)
+    ],
   },
   {
     key: "channel-halo",
@@ -128,9 +132,6 @@ export const signDesigns: SignDesign[] = [
     ],
     image: "/images/design-scasi.jpg",
     alt: "크림색 벽 꽃집 창 위에 붙인 원목 스카시 글자 수산나디자인",
-    works: [
-      "9fa5a744-29b5-4533-a1c1-0a9e307321df", // 커뮤니티 시설 사인
-    ],
   },
   {
     key: "facade",
