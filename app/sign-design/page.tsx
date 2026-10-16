@@ -88,10 +88,10 @@ export default async function SignDesignPage() {
               </a>
             ))}
           </nav>
-          <p className="shrink-0 text-[13px] text-ink-500">
-            간판 연출 이미지는 AI로 제작했습니다.{" "}
+          <p className="text-[13px] leading-relaxed text-ink-500 md:max-w-[320px] md:shrink-0">
+            각 간판의 첫 번째 이미지는 AI로 제작한 연출 이미지이며, 이어지는 사진은 당사가 직접 시공한 실제 현장 사진입니다.{" "}
             <Link href="/works" className="underline underline-offset-4 hover:text-ink">
-              실제 시공 사진 보기
+              시공 실적 전체 보기
             </Link>
           </p>
         </div>
@@ -120,7 +120,7 @@ export default async function SignDesignPage() {
                     lines: [it.desc, ...it.options.map((o) => `${o.label}: ${o.choices.join(", ")}`)].filter(Boolean),
                     gallery: [
                       { image: it.image, alt: it.alt, caption: "연출 이미지 (AI)" },
-                      ...it.cases.map((w) => ({ image: w.image, alt: `${w.title} 시공 사진`, caption: `시공 사례 · ${w.title}` })),
+                      ...it.cases.map((w) => ({ image: w.image, alt: `${w.title} 시공 사진`, caption: `실제 시공 사례 (${w.title})` })),
                     ],
                     actions: [
                       { href: `/quote?design=${it.key}`, label: "이 간판으로 문의하기" },
@@ -184,7 +184,7 @@ export default async function SignDesignPage() {
         <div className="wrap">
           <SignDesignInquiry items={items.map(({ key, name, shop }) => ({ key, name, shop }))} />
           {/* 2026-09-29 사람 결정: 페이지 끝에 회색 참조 한 줄 */}
-          <p className="mt-16 text-[13px] text-ink-500/80">※ 이 페이지의 간판 연출 이미지는 AI로 제작했습니다. 시공 사례 사진은 실제 현장 사진입니다.</p>
+          <p className="mt-16 text-[13px] text-ink-500/80">※ 각 간판의 첫 번째 이미지는 AI로 제작한 연출 이미지이며, 이어지는 사진은 당사가 직접 시공한 실제 현장 사진입니다.</p>
         </div>
       </section>
     </>
