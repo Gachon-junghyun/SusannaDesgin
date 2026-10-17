@@ -21,6 +21,10 @@
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 /apple-icon.png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/favicon.ico
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/logo-mark.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 # 사진 — public/images/ 에 직접 넣은 것들.
 # 파일을 교체하면 이름이 같으므로, 하루 뒤에는 새로 확인하게 둡니다.

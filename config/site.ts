@@ -48,6 +48,11 @@ export const site = {
   // 캐시하므로, 로고 파일을 바꾸면 이 날짜도 같이 올려야 재방문자에게 바로 보입니다 (2026-09-28 실측).
   logo: "/logo.svg?v=20260928",
   logoWhite: "/logo-white.svg?v=20260928",
+  // 심벌(원 안의 S) — 파비콘·앱 아이콘·검색엔진 구조화 데이터 로고. 2026-10-17 교체(이전: 청록 둥근 네모에 흰 S).
+  // public/icon.png(192, 투명 — 그라데이션이라 512 면 130KB 라 줄임) · apple-icon.png(180, 흰 바탕, 견적 메일 머리에도 쓰임) · favicon.ico(16·32·48) · logo-mark.png(512, 흰 바탕).
+  // 바꾸면 이 날짜를 올립니다 — app/layout.tsx 의 icons 가 이 값을 붙여 캐시를 끊습니다.
+  iconVersion: "20261017",
+  logoMark: "/logo-mark.png",
 
   tagline: "옥내외광고물 · 간판디자인 · 철구조물 전문업체",
   catchphrase: "2012년부터, 대전에서 대형 사인을 만들고 세워왔습니다",

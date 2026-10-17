@@ -93,8 +93,11 @@ export const metadata: Metadata = {
    * `public/` 에 두면 CDN 이 바로 내려주고 서버를 안 거칩니다.
    */
   icons: {
-    icon: [{ url: "/icon.png", sizes: "512x512", type: "image/png" }],
-    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    icon: [
+      { url: `/icon.png?v=${site.iconVersion}`, sizes: "192x192", type: "image/png" },
+      { url: `/favicon.ico?v=${site.iconVersion}`, sizes: "48x48" },
+    ],
+    apple: [{ url: `/apple-icon.png?v=${site.iconVersion}`, sizes: "180x180", type: "image/png" }],
   },
   // 값이 비어 있으면 태그가 나가지 않습니다 (config/site.ts 에서 채웁니다)
   verification: {
@@ -142,7 +145,8 @@ const jsonLd = {
   faxNumber: site.fax,
   email: site.email,
   image: `${site.url}/images/og.jpg`,
-  logo: `${site.url}/logo.svg`,
+  // 검색엔진이 상호 옆에 띄우는 로고 — 정사각 심벌이 원형·정사각 자리에 잘 맞습니다(가로 글자 로고는 작게 찌그러짐).
+  logo: `${site.url}${site.logoMark}`,
   founder: { "@type": "Person", name: site.ceo },
   foundingDate: site.founded.replace(/\./g, "-"),
   address: {
