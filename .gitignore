@@ -58,3 +58,4 @@ KakaoTalk_*.jpg
 
 # 형제 저장소(DeGaJa_Agent) 연결 — 이 PC 의 절대경로가 들어가고 저장소는 공개입니다
 .mcp.json
+.hfont-test-out/

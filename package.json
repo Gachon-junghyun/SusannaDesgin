@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:hfont": "node --test lib/maker/hfont/test/",
     "images:manifest": "node scripts/gen-image-manifest.mjs",
     "cms": "node scripts/cms.mjs",
     "supabase:check": "node scripts/check-supabase.mjs",
@@ -23,6 +24,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.8",
+    "clipper-lib": "^6.4.2",
     "exifr": "^7.1.3",
     "next": "16.2.11",
     "opentype.js": "^2.0.0",
