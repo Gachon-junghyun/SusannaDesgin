@@ -2,9 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { CUSTOM_FONT_STORAGE_KEY } from "@/config/fonts";
-import { MAKER_INTEREST, MAKER_STORAGE_KEY } from "@/config/maker";
-import { dataUrlToBlob } from "@/lib/maker/design";
+import { CUSTOM_FONT_STORAGE_KEY } from "@/config/flags";
 import Field, { inputCls } from "./Field";
 import PrivacyConsent from "./PrivacyConsent";
 import { floorOptions, signTypeOptions, timingOptions } from "@/config/content";
@@ -101,6 +99,7 @@ ${note}` }));
    * 가게 사진은 안 들어 있습니다 — 메이커가 흰 벽으로 바꾸고 올린 글꼴 글자는 외곽선으로 굳혀 보냅니다.
    */
   const [maker, setMaker] = useState<{ design: string; title: string } | null>(null);
+  const [restoringMaker, setRestoringMaker] = useState(false);
 
   /**
    * 간판 메이커에서 넘어온 디자인 (F26, 2026-09-25). 위 커스텀 글꼴과 같은 길 —
@@ -109,24 +108,36 @@ ${note}` }));
    * 알림 메일에 그대로 붙어 가서 대표님이 전화 전에 디자인을 봅니다(F16).
    */
   useEffect(() => {
-    if (interest !== MAKER_INTEREST) return;
-    try {
-      const raw = sessionStorage.getItem(MAKER_STORAGE_KEY);
-      if (!raw) return;
-      sessionStorage.removeItem(MAKER_STORAGE_KEY);
-      const got = JSON.parse(raw) as { summary?: string; svg?: string; jpg?: string; design?: unknown; title?: string };
-      const attach: File[] = [];
-      if (got.jpg?.startsWith("data:image/jpeg")) attach.push(new File([dataUrlToBlob(got.jpg)], "간판메이커_미리보기.jpg", { type: "image/jpeg" }));
-      if (got.svg) attach.push(new File([got.svg], "간판메이커_외곽선.svg", { type: "image/svg+xml" }));
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 브라우저 저장소는 첫 그림 뒤에만 읽힙니다
-      if (attach.length) setFiles((f) => (f.length ? f : attach));
-      // 디자인 JSON — 보낼 때 서버가 이걸로 «방»(보기 전용 링크)을 만들어 담당자에게만 붙입니다(0017)
-      if (got.design && typeof got.design === "object") setMaker({ design: JSON.stringify(got.design), title: String(got.title ?? "") });
-      const summary = got.summary;
-      if (summary) setForm((f) => (f.message ? f : { ...f, message: summary.slice(0, 1900) }));
-    } catch {
-      /* 저장소가 막혔거나 모양이 깨짐 — 손님이 직접 적으면 됩니다 */
+    if (new URLSearchParams(window.location.search).get("maker") !== "1") return;
+    let disposed = false;
+    async function restoreMaker() {
+      try {
+        setRestoringMaker(true);
+        const { MAKER_INTEREST, MAKER_STORAGE_KEY } = await import("@/config/maker");
+        if (disposed || interest !== MAKER_INTEREST) return;
+        const raw = sessionStorage.getItem(MAKER_STORAGE_KEY);
+        if (!raw) return;
+        const got = JSON.parse(raw) as { summary?: string; svg?: string; jpg?: string; design?: unknown; title?: string };
+        const { dataUrlToBlob } = await import("@/lib/maker/design");
+        // Strict Mode 재실행·페이지 이동 중에는 저장소도 소비하지 않습니다.
+        if (disposed) return;
+        sessionStorage.removeItem(MAKER_STORAGE_KEY);
+        const attach: File[] = [];
+        if (got.jpg?.startsWith("data:image/jpeg")) attach.push(new File([dataUrlToBlob(got.jpg)], "간판메이커_미리보기.jpg", { type: "image/jpeg" }));
+        if (got.svg) attach.push(new File([got.svg], "간판메이커_외곽선.svg", { type: "image/svg+xml" }));
+        if (attach.length) setFiles((f) => (f.length ? f : attach));
+        // 디자인 JSON — 보낼 때 서버가 이걸로 «방»(보기 전용 링크)을 만들어 담당자에게만 붙입니다(0017)
+        if (got.design && typeof got.design === "object") setMaker({ design: JSON.stringify(got.design), title: String(got.title ?? "") });
+        const summary = got.summary;
+        if (summary) setForm((f) => (f.message ? f : { ...f, message: summary.slice(0, 1900) }));
+      } catch {
+        /* 저장소가 막혔거나 모양이 깨짐 — 손님이 직접 적으면 됩니다 */
+      } finally {
+        if (!disposed) setRestoringMaker(false);
+      }
     }
+    void restoreMaker();
+    return () => { disposed = true; };
   }, [interest]);
   const [errors, setErrors] = useState<Errors>({});
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
@@ -196,6 +207,7 @@ ${note}` }));
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (restoringMaker) return;
     const err = validateFull({ ...form, agree });
     setErrors(err);
     if (Object.keys(err).length) {
@@ -556,7 +568,7 @@ ${note}` }));
       <div>
         <button
           type="submit"
-          disabled={state === "sending"}
+          disabled={restoringMaker || state === "sending"}
           className="btn w-full px-6 py-4 text-[17px] font-black"
         >
           {state === "sending" ? "전송 중…" : "견적 문의하기"}

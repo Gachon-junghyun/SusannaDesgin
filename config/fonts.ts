@@ -94,29 +94,11 @@ export const specimenFonts: SpecimenFont[] = [
 ];
 
 /**
- * 맨 아래 «커스텀 글꼴» 카드 (2026-09-23). 손님이 적은 글씨 정보는 **주소에 안 싣고**
- * `sessionStorage` 이 열쇠로 견적 폼에 건넵니다 — 주소에서 온 글자를 폼에 그대로 넣지 않는다는
- * F24-c 규칙 때문입니다. 주소엔 `?font=custom` 만 가고, 견적 페이지가 그걸 목록처럼 대조합니다.
+ * 공통 부품·견적 폼이 읽는 작은 값(`SHOW_FONTS` · `CUSTOM_FONT_SLUG` · `CUSTOM_FONT_STORAGE_KEY`)은
+ * `./flags` 로 옮겼습니다(2026-10-24) — 이 목록이 공용 JS 에 섞여 나가지 않게 하려는 것입니다.
+ * 예전 import 가 깨지지 않게 여기서 다시 내보냅니다. 새 코드는 목록이 필요 없으면 `flags` 에서 가져오세요.
  */
-export const CUSTOM_FONT_SLUG = "custom";
-export const CUSTOM_FONT_STORAGE_KEY = "susanna-custom-font";
+export { CUSTOM_FONT_SLUG, CUSTOM_FONT_STORAGE_KEY, SHOW_FONTS } from "./flags";
 
 /** 라이선스 표를 마지막으로 연 날 [P6] — 화면에서는 뺐고(2026-09-23) 기록으로만 둡니다 */
 export const FONTS_CHECKED_AT = "2026-09-23";
-
-/**
- * 🔴 **다시 닫았습니다 — 관리자만 봅니다** (2026-10-04, 사람 결정 «글꼴 페이지 관리자만 보이게»).
- * 관리자는 «새 디자인 미리보기»(F23)를 켜면 메뉴·페이지가 그대로 보입니다. 다시 열 땐 `true` 한 글자.
- *
- * (이전) **손님에게 연 페이지였습니다** (2026-09-24, 대표님 결정으로 켬). `SHOW_PRODUCTS` 와 같은
- * 모양의 스위치입니다 — 꺼면 `/fonts` 는 관리자(새 디자인 미리보기, F23) 말고는 404 이고,
- * `noindexPaths` 에 들어가 사이트맵에서도 빠집니다.
- *
- * ⚠️ **`SHOW_PRODUCTS`(제품) 는 여전히 꺼져 있습니다** — 이번에 «이것만» 열라는 지시였습니다.
- * 두 스위치를 같이 켜지 마세요.
- *
- * 켜면 한 값에서 셋이 같이 갈립니다: 페이지 공개(`app/fonts/page.tsx`) ·
- * 주 메뉴 「글꼴」(`components/Header.tsx` 의 `fontsVisible`) ·
- * 사이트맵 등재(`noindexPaths` 에서 빠짐 → `app/sitemap.ts` 가 저절로 싣습니다).
- */
-export const SHOW_FONTS: boolean = false;

@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 
-import { createClient } from "@/lib/supabase/browser";
 import { isCmsEnabled } from "@/lib/supabase/env";
 
 /**
@@ -23,18 +22,32 @@ export default function SessionKeeper() {
   useEffect(() => {
     if (!isCmsEnabled()) return;
 
-    const supabase = createClient();
+    let disposed = false;
+    let unsubscribe: (() => void) | undefined;
 
-    // 만료됐으면 이 호출이 갱신을 일으키고 새 쿠키를 심습니다.
-    void supabase.auth.getSession();
+    // Server → Client dynamic만으로는 SDK가 분리되지 않아 여기서 받습니다.
+    void import("@/lib/supabase/browser").then(({ createClient }) => {
+      if (disposed) return;
+      const supabase = createClient();
 
-    // 이후 만료 시점마다 자동 갱신됩니다(autoRefreshToken 기본 동작).
-    // 구독을 걸어 두어야 갱신 결과가 쿠키에 반영됩니다.
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {});
+      // 만료됐으면 이 호출이 갱신을 일으키고 새 쿠키를 심습니다.
+      void supabase.auth.getSession();
 
-    return () => subscription.unsubscribe();
+      // 이후 만료 시점마다 자동 갱신됩니다(autoRefreshToken 기본 동작).
+      // 구독을 걸어 두어야 갱신 결과가 쿠키에 반영됩니다.
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(() => {});
+
+      unsubscribe = () => subscription.unsubscribe();
+    }).catch(() => {
+      // 연결 실패가 공개 화면 렌더링을 막지 않도록 합니다.
+    });
+
+    return () => {
+      disposed = true;
+      unsubscribe?.();
+    };
   }, []);
 
   return null;

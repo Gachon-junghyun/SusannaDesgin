@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function WorksPage() {
   const [works, cases, preview] = await Promise.all([getWorks(), getPublishedSites(), getPreview()]);
   const list = works.map((w) => ({ ...w, available: imageExists(w.image) }));
+  const firstCasePhoto = cases.find((c) => c.cover)?.id;
 
   /**
    * 실제 사진이 있는 실적만 캐러셀형 구조화 데이터(ItemList)로 냅니다 — JsonLd.tsx 의
@@ -71,7 +72,8 @@ export default async function WorksPage() {
                         <img
                           src={photoUrl(c.cover.thumb_key)}
                           alt={`${c.title} ${c.sign_type}`}
-                          loading="lazy"
+                          loading={c.id === firstCasePhoto ? "eager" : "lazy"}
+                          fetchPriority={c.id === firstCasePhoto ? "high" : undefined}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                         />
                       )}
@@ -85,7 +87,7 @@ export default async function WorksPage() {
           </section>
         )}
 
-        <WorksGrid works={list} categories={workCategories} detail={SHOW_DETAIL_POPUPS || preview.on} />
+        <WorksGrid works={list} categories={workCategories} detail={SHOW_DETAIL_POPUPS || preview.on} prioritizeFirst={!firstCasePhoto} />
 
         <div className="mt-16 rounded-2xl bg-paper px-6 py-12 text-center">
           <h2 className="text-2xl font-black tracking-tight">

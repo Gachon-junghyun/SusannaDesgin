@@ -13,11 +13,14 @@ export default function WorksGrid({
   works,
   categories,
   detail = false,
+  prioritizeFirst = true,
 }: {
   works: WorkWithFlag[];
   categories: string[];
   /** F32 — 카드를 눌러 크게 보기 (지금은 관리자 미리보기만) */
   detail?: boolean;
+  /** 앞에 시공사례가 있으면 그쪽의 첫 사진이 우선입니다. */
+  prioritizeFirst?: boolean;
 }) {
   const [cat, setCat] = useState("전체");
 
@@ -34,6 +37,7 @@ export default function WorksGrid({
     () => (cat === "전체" ? works : works.filter((w) => w.category === cat)),
     [cat, works]
   );
+  const firstPhoto = works.find((w) => w.available)?.slug;
 
   return (
     <div>
@@ -73,7 +77,8 @@ export default function WorksGrid({
                   src={w.image}
                   alt={w.title}
                   fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+                  sizes="(min-width: 1520px) 450.67px, (min-width: 1440px) calc(33.333333vw - 56px), (min-width: 1024px) calc(33.333333vw - 45.333333px), (min-width: 640px) calc(50vw - 42px), calc(100vw - 40px)"
+                  preload={prioritizeFirst && w.slug === firstPhoto}
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               ) : (

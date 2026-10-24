@@ -134,8 +134,8 @@ export default async function SignDesignPage() {
                   width={1536}
                   height={1024}
                   fill
-                  priority={i === 0}
-                  sizes="(max-width: 1024px) 100vw, 740px"
+                  preload={i === 0}
+                  sizes="(min-width: 1520px) 762.9px, (min-width: 1440px) calc(57.446809vw - 110.297872px), (min-width: 1024px) calc(57.446809vw - 91.914894px), (min-width: 640px) calc(100vw - 64px), calc(100vw - 40px)"
                   label={`${it.name} 연출`}
                 />
                 </DetailTrigger>

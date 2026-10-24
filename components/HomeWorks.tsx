@@ -86,7 +86,9 @@ export default function HomeWorks({
                 src={w.image}
                 alt={w.title}
                 fill
-                sizes={idx === 0 ? "(max-width: 1024px) 100vw, 50vw" : "(max-width: 1024px) 50vw, 25vw"}
+                sizes={idx === 0
+                  ? "(min-width: 1520px) 682px, (min-width: 1440px) calc(50vw - 78px), (min-width: 1024px) calc(50vw - 62px), (min-width: 640px) calc(100vw - 64px), calc(100vw - 40px)"
+                  : "(min-width: 1520px) 341px, (min-width: 1440px) calc(25vw - 39px), (min-width: 1024px) calc(25vw - 31px), (min-width: 768px) calc(50vw - 39px), (min-width: 640px) calc(50vw - 38px), calc(50vw - 26px)"}
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (

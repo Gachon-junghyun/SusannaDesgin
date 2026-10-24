@@ -10,7 +10,7 @@ type Props = {
   /** 지정한 컨테이너를 꽉 채우고 잘라냅니다 (position: relative 인 부모 필요) */
   fill?: boolean;
   sizes?: string;
-  priority?: boolean;
+  preload?: boolean;
   className?: string;
   /** 플레이스홀더에 표시할 설명 */
   label?: string;
@@ -29,7 +29,7 @@ export default function Img({
   height,
   fill,
   sizes,
-  priority,
+  preload,
   className = "",
   label,
   dark,
@@ -54,7 +54,7 @@ export default function Img({
         alt={alt}
         fill
         sizes={sizes ?? "100vw"}
-        priority={priority}
+        preload={preload}
         className={`object-cover ${className}`}
       />
     );
@@ -66,8 +66,10 @@ export default function Img({
       alt={alt}
       width={width}
       height={height}
-      sizes={sizes}
-      priority={priority}
+      // 명시하지 않은 호출도 1x/2x 대신 폭별 srcset 을 생성합니다.
+      // CSS 표시 폭을 모르는 공통 컴포넌트에서는 원래 폭/뷰포트를 상한으로 삼습니다.
+      sizes={sizes ?? `(max-width: ${width}px) 100vw, ${width}px`}
+      preload={preload}
       className={className}
     />
   );

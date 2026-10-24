@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import Script from "next/script";
 import { Gowun_Batang } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -9,9 +10,7 @@ import FloatingBar from "@/components/FloatingBar";
 import PreviewBar from "@/components/PreviewBar";
 import ClarityGate from "@/components/ClarityGate";
 import SiteChrome from "@/components/SiteChrome";
-import { SHOW_PRODUCTS } from "@/config/content";
-import { SHOW_FONTS } from "@/config/fonts";
-import { MAKER_BETA, MAKER_IN_NAV, SHOW_MAKER } from "@/config/maker";
+import { MAKER_BETA, MAKER_IN_NAV, SHOW_FONTS, SHOW_MAKER, SHOW_PRODUCTS } from "@/config/flags";
 import { agentIntake, seo, site } from "@/config/site";
 import { clarityBootstrap, gaBootstrap } from "@/lib/analytics";
 import { getPreview } from "@/lib/preview";
@@ -20,9 +19,9 @@ import { ogImage } from "@/lib/seo";
 /**
  * 관리자가 공개 화면을 돌아다니는 동안 로그인 토큰을 갱신합니다 (F23).
  *
- * 🔴 **`next/dynamic` 으로 늦게 부르는 게 요점입니다.** 그냥 `import` 하면
- * `@supabase/ssr` 이 **모든 공개 페이지의 공용 번들**에 들어갑니다 — 조건부로
- * 그려도 그렇습니다. 이러면 관리자일 때만 그 조각을 받아 옵니다.
+ * 🔴 **서버 레이아웃의 `next/dynamic` 만으로는 분할이 안 됩니다**(2026-10-24 실측 — 손님 첫 화면에
+ * Supabase 220KB 가 들어 있었음). 그래서 `SessionKeeper` 안의 effect 에서 `import()` 로 받습니다.
+ * `SessionKeeper` 를 고칠 때 Supabase 를 다시 정적으로 import 하지 마세요 — ARCHITECTURE F34.
  */
 const SessionKeeper = dynamic(() => import("@/components/admin/SessionKeeper"));
 
@@ -50,6 +49,37 @@ const gowunBatang = Gowun_Batang({
    * 첫 글자가 9초 동안 안 떴습니다. 끄면 CSS 가 화면에 실제로 쓰인 글자 범위의 조각만
    * 받고, 그동안 글자는 기본 글꼴로 먼저 보였다가(`swap`) 고운바탕으로 바뀝니다.
    */
+  preload: false,
+});
+
+/**
+ * 같은 고운바탕의 «자주 쓰는 글자 한 벌» (2026-10-24). 글꼴 쌓기에서 위 구글 조각보다 **앞에** 섭니다(`globals.css` `--font-sans`).
+ *
+ * 왜: 구글 조각은 한 조각(약 20KB)에 글자가 백여 개씩 섞여 있어서, 한 페이지가 글자 수백 개를 쓰면
+ * 조각을 22~33개 받았습니다(페이지당 330~540KB, 2026-10-24 실측). 여기는 굵기마다 파일 하나에
+ * KS X 1001 한글 2,350자 + 영문·숫자·자주 쓰는 기호(2,599자)를 담았습니다(400 은 199KB, 700 은 168KB).
+ * 한 번 받으면 다른 페이지에서도 그대로 씁니다 — 네 페이지(`/` `/works` `/sign-design` `/quote`) 모두 이 두 파일로 끝납니다.
+ *
+ * 🔴 **글꼴 모양은 그대로입니다.** 구글 폰트 원본(`google/fonts` 의 `ofl/gowunbatang`, 버전 2.000) TTF 를
+ * `pyftsubset` 으로 글자만 추린 것이고, 구글 조각과 글리프 윤곽을 대조해 같음을 확인했습니다. 굵기는 진짜 700 파일입니다(가짜 굵게 없음).
+ * 🔴 **이 파일에 없는 글자**(CMS 문구에 «똠» 같은 드문 한글이 들어오는 경우)는 브라우저가 다음 글꼴인 구글 조각에서
+ * 같은 모양으로 채웁니다(2026-10-24 크롬으로 확인). 한자는 고운바탕에 원래 없어 예전처럼 시스템 글꼴로 나옵니다 — 그래서 `adjustFontFallback: false` 입니다(자동 대체 글꼴이 끼면 구글 조각보다 먼저 잡힙니다).
+ * ⚠️ 라이선스: OFL 1.1. 원본 `OFL.txt` 에 예약 이름(Reserved Font Name)이 없어 글꼴 이름을 바꾸지 않았습니다.
+ *    추린 파일도 «수정본»이라 OFL 고지를 파일 안 이름표(13·14번)와 `app/fonts-site/OFL.txt` 로 같이 둡니다.
+ * ⚠️ 글자를 다시 추릴 땐 `app/fonts-site/README.md` 의 명령을 그대로 쓰세요.
+ */
+const gowunKs = localFont({
+  src: [
+    { path: "./fonts-site/GowunBatang-KS-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts-site/GowunBatang-KS-700.woff2", weight: "700", style: "normal" },
+  ],
+  variable: "--font-gowun-ks",
+  display: "swap",
+  adjustFontFallback: false,
+  // 파일에 든 글자 범위만 이 글꼴로 찾게 합니다. 범위 안인데 파일에 없는 글자는 브라우저가 다음 글꼴로 넘깁니다.
+  declarations: [{ prop: "unicode-range", value: "U+0020-007E, U+00A0-00FF, U+2010, U+2013-2016, U+2018-201A, U+201C-201E, U+2020-2023, U+2025-2026, U+2030, U+2032-2033, U+2039-203C, U+203E, U+20A9, U+2103, U+2190-2193, U+2197, U+25A0-25A1, U+25B2-25B3, U+25BC-25BD, U+25C6-25C7, U+25CB, U+25CF, U+2605-2606, U+3008-3011, U+339C-339E, U+33A1, U+AC00-D7A3" }],
+  // 미리 받기 끔 — 위 구글 쪽과 같은 이유(2026-10-05). 켜면 두 파일(367KB)이 사진·JS 보다 먼저 받아집니다.
+  // 켤지 말지는 폰 실측(`speed_check.py`)으로 정하세요. 바꾸는 건 이 한 줄입니다.
   preload: false,
 });
 
@@ -232,7 +262,7 @@ export default async function RootLayout({
   const preview = await getPreview();
 
   return (
-    <html lang="ko" className={`${gowunBatang.variable} h-full antialiased`}>
+    <html lang="ko" className={`${gowunKs.variable} ${gowunBatang.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <SiteChrome>
           <a href="#main" className="skip-link">

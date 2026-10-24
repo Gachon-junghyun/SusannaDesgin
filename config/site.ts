@@ -6,9 +6,7 @@
 
 // 아래 `noindexPaths` 가 제품 페이지의 공개 여부를 이 스위치 하나로 판단합니다.
 // ⚠️ `content.ts` 는 이 파일을 import 하지 않습니다 — 이 방향으로만 두세요(순환 방지).
-import { SHOW_PRODUCTS } from "./content";
-import { SHOW_FONTS } from "./fonts";
-import { SHOW_MAKER } from "./maker";
+import { SHOW_FONTS, SHOW_MAKER, SHOW_PRODUCTS } from "./flags";
 
 /**
  * 최종 확정 도메인. 이 주소 위에서 돌 때만 검색엔진에 노출됩니다.

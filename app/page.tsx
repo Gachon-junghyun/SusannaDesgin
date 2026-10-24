@@ -4,7 +4,7 @@ import HomeWorks from "@/components/HomeWorks";
 import QuickQuoteForm from "@/components/QuickQuoteForm";
 import Img from "@/components/Img";
 import JsonLd from "@/components/JsonLd";
-import MakerShowcase from "@/components/MakerShowcase";
+import MakerShowcase from "@/components/MakerShowcaseLoader";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
 import { SHOW_DETAIL_POPUPS, SHOW_FABRICATION, makerShowcase, workCategories } from "@/config/content";
@@ -151,7 +151,7 @@ export default async function Home() {
               width={1600}
               height={1200}
               fill
-              sizes="(max-width: 1024px) 100vw, 640px"
+              sizes="(min-width: 1520px) 704px, (min-width: 1440px) calc(52.380952vw - 92.190476px), (min-width: 1024px) calc(52.380952vw - 75.428571px), (min-width: 640px) calc(100vw - 64px), calc(100vw - 40px)"
               label="제작 · 시공 현장"
             />
           </Reveal>
@@ -287,7 +287,7 @@ export default async function Home() {
                       width={800}
                       height={600}
                       fill
-                      sizes="200px"
+                      sizes="(min-width: 1520px) 252.22px, (min-width: 1440px) calc(19.444444vw - 43.333333px), (min-width: 1024px) calc(19.444444vw - 37.111111px), (min-width: 640px) calc(33.333333vw - 32px), calc(50vw - 28px)"
                       label={e.title}
                       dark
                     />
