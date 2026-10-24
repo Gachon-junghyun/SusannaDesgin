@@ -86,6 +86,14 @@ export default async function AdminHome() {
       desc: "상호·업종·인상을 넣으면 락업·심벌·글꼴·색을 한 단계씩 정해 세 안을 나란히 보고, 간판으로 만들 수 있는지까지 판정해 에디터로 보냅니다.",
     },
     {
+      // F26-m (2026-10-25) — 관리자 전용. 글꼴 파일은 배포처에서 브라우저로 바로 받습니다
+      href: "/admin/maker/font",
+      title: "글꼴 공방",
+      count: null,
+      unit: "",
+      desc: "OFL 공개 글꼴 하나를 바탕으로 굵기·기울기·너비·자간을 바꿔 한글 11,172자 TTF 로 받습니다. 간판용(겹친 획 합치기) 파일도 만듭니다.",
+    },
+    {
       href: "/admin/usage",
       title: "사용량",
       count: null,

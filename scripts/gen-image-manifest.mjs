@@ -27,12 +27,18 @@ const OUT = join(ROOT, "lib", "image-manifest.ts");
 
 /** 사진이 아닌 것 — 목록에 넣을 이유가 없습니다 */
 const SKIP = /\.(md|txt|xml|json)$/i;
+/**
+ * 사진 자동 교체(A6)와 상관없는 폴더 — 글꼴 공방(F26-m) 미리보기 그림 176장. 관리자 화면이 주소를 직접 씁니다.
+ * 목록에 넣으면 `lib/image-manifest.ts` 가 176줄 늘고, 그 목록을 읽는 공개 페이지 서버 코드도 같이 커집니다.
+ */
+const SKIP_DIRS = new Set([join(PUBLIC_DIR, "images", "fontlab")]);
 
 function walk(dir) {
   const out = [];
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) {
+      if (SKIP_DIRS.has(full)) continue;
       out.push(...walk(full));
     } else if (!SKIP.test(name)) {
       out.push("/" + relative(PUBLIC_DIR, full).split(sep).join("/"));

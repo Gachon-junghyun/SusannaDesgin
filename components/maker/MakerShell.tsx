@@ -58,6 +58,8 @@ export default function MakerShell({
       ? [
           { href: `${base}/logo`, label: "로고 만들기", sub: "입력 → 3안 → 판정", icon: IconLogo, beta: true },
           { href: `${base}/draw`, label: "그림판", sub: "대충 그린 획 → 선", icon: IconBrush, beta: true },
+          // F26-m (2026-10-25) — 글꼴 공방. 관리자 전용(손님 `/maker/font` 는 만들지 않음). 글꼴 목록은 이 껍데기에 안 들어옵니다
+          { href: `${base}/font`, label: "글꼴 공방", sub: "바탕 글꼴 → 스타일 → TTF", icon: IconFont },
         ]
       : []),
   ];
@@ -204,6 +206,14 @@ function IconBrush() {
   return (
     <svg className={icon} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
       <path d="M17 3l-7.5 8.5M9.5 11.5c-2-.5-3.5.8-3.8 2.6-.2 1.4-1.2 2.4-2.7 2.6 3.4 1.2 7.3.2 7.3-3.2" />
+    </svg>
+  );
+}
+/** 글꼴 공방 — 가 자와 기준선 */
+function IconFont() {
+  return (
+    <svg className={icon} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M3 4.5h6.5c0 4.5-2 8-5.5 10M14 3v14M14 9.5h3.5M2 18h16" />
     </svg>
   );
 }
