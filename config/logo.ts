@@ -231,6 +231,6 @@ export const drawCanvases = [
 
 /**
  * «AI 로 다듬기»가 뽑을 글꼴 느낌 — 사람이 예로 든 넷(2026-09-27). 클로드 코드가 `/gemini-image --ref <스케치>` 로 이 넷을 뽑아
- * 벡터화해 같은 프로젝트에 올립니다(STARTUP/aidesigner/STAGES.md «손그림 다듬기»).
+ * 벡터화해 같은 프로젝트에 올립니다(SusannaDesigner/STAGES.md «손그림 다듬기»).
  */
 export const refineStyles = ["뾰족한 칼끝", "굵은 기하", "붓", "스텐실"] as const;

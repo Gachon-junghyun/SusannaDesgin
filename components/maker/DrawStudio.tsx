@@ -16,7 +16,7 @@ import { bbox, layersFromImage, nodeCount, toPathD, traceGray } from "@/lib/make
  * «로고 만들기 ③ 손그림»이 이 결과를 바로 불러 씁니다(같은 브라우저 저장소).
  *
  * «AI 로 다듬기»는 이미지 API 가 안 붙어 **자리만** 있습니다. 그동안은 «프로젝트 에셋으로 올리기» → 클로드 코드가
- * `/gemini-image --ref <스케치>` 로 글꼴 느낌 3~4벌을 뽑아 벡터화해 같은 프로젝트로 되돌려 올립니다(STARTUP/aidesigner/STAGES.md 4-a).
+ * `/gemini-image --ref <스케치>` 로 글꼴 느낌 3~4벌을 뽑아 벡터화해 같은 프로젝트로 되돌려 올립니다(SusannaDesigner/STAGES.md 4-a).
  */
 
 type Stroke = { erase: boolean; w: number; pts: [number, number][] };
