@@ -149,6 +149,22 @@ export type MakerShareRow = {
   expires_at: string;
 };
 
+/** 수산나 픽 «보내기»로 손님이 돌려보낸 답 (0021 · F26-n) — 관리자만 읽습니다. 익명은 `send_maker_reply` 함수로 넣기만 */
+export type MakerReplyRow = {
+  id: string;
+  share_id: string;
+  round: number;
+  /** 0 = A, 1 = B, 2 = C */
+  pick: number;
+  pick_name: string;
+  /** 손님이 바꾼 것 — 한 줄씩(줄바꿈으로 이음) */
+  changes: string;
+  memo: string;
+  design: unknown;
+  created_at: string;
+  read_at: string | null;
+};
+
 /** 메이커 프로젝트 에셋 (0018 · F26-j) — 관리자만 읽고 씁니다 */
 export type MakerAssetRow = {
   id: string;

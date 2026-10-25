@@ -17,6 +17,19 @@ export function checkShareDesign(design: unknown): { error: string } | { json: s
   if (d.items.length > 100) return { error: "아이템이 너무 많습니다(100개까지)." };
   if (d.wall === "photo") return { error: "가게 사진 벽은 공유하지 않습니다 — 흰 벽으로 바꿔 보내야 합니다." };
 
+  // 수산나 픽(F26-n) — 맨 위가 A, `picks[1..]` 의 design 이 B·C. 그 안들도 같은 문턱을 지납니다
+  const picks = (design as { picks?: unknown }).picks;
+  if (picks !== undefined) {
+    if (!Array.isArray(picks) || picks.length > 3) return { error: "수산나 픽은 3개까지입니다." };
+    for (const [i, pk] of picks.entries()) {
+      if (i === 0) continue;
+      const pd = (pk as { design?: { items?: unknown; kind?: unknown; wall?: unknown } } | null)?.design;
+      if (!pd || !Array.isArray(pd.items) || typeof pd.kind !== "string" || !pd.items.length) return { error: `${i + 1}번째 픽의 디자인 모양이 올바르지 않습니다.` };
+      if (pd.items.length > 100) return { error: `${i + 1}번째 픽의 아이템이 너무 많습니다(100개까지).` };
+      if (pd.wall === "photo") return { error: `${i + 1}번째 픽이 가게 사진 벽입니다 — 흰 벽으로 바꿔 보내야 합니다.` };
+    }
+  }
+
   const json = JSON.stringify(design);
   if (/"(data|blob):/i.test(json)) return { error: "그림 파일(사진)이 섞여 있어 공유하지 않습니다." };
   const bytes = new TextEncoder().encode(json).length;

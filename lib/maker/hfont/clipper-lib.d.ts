@@ -6,7 +6,7 @@
     const Paths: { new(): Paths };
     const PolyType: { ptSubject: number; ptClip: number };
     const ClipType: { ctUnion: number; ctDifference: number };
-    const PolyFillType: { pftNonZero: number };
+    const PolyFillType: { pftNonZero: number; pftEvenOdd: number };
     const JoinType: { jtRound: number };
     const EndType: { etClosedPolygon: number };
     class Clipper {
@@ -14,6 +14,7 @@
       Execute(type: number, solution: Paths, subjectFill: number, clipFill: number): boolean;
       static CleanPolygons(paths: Paths, distance: number): Paths;
       static SimplifyPolygon(path: Path, fill: number): Paths;
+      static SimplifyPolygons(paths: Paths, fill: number): Paths;
       static Orientation(path: Path): boolean;
     }
     class ClipperOffset {

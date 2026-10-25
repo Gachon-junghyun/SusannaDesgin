@@ -28,7 +28,7 @@ export type RItem = {
   /** 그림(프로젝트 에셋, F26-j) — 서명 URL. 아직 못 받았으면 null(회색 자리만) */
   image?: { href: string | null };
   /** 판(2026-09-26) — 색·테두리·철물(벽 좌표 경로). 철물은 돌출(까치발)·걸이(팔 + 봉 둘)에만 있습니다 */
-  plate?: { fill: string; border?: string; borderW: number; hardware: string[] };
+  plate?: { fill: string; border?: string; borderW: number; hardware: string[]; corniceH?: number; lights?: number };
   /** 실제 크기 (회전·원근 전) */
   size: Measured;
   /** 벽 좌표로 옮긴 외곽선 */
@@ -84,6 +84,13 @@ type Props = {
   rulers?: boolean;
   /** 보기 전용(공유 링크, F26-b) — 골라 옮기기·손잡이 없이 확대·이동만 됩니다 */
   readOnly?: boolean;
+  /**
+   * 도면처럼(정면도) — 낮 그림자·옆면 두께·판 두께를 안 그리고, 판 테두리(몰딩)는 안쪽 가는 선으로 그립니다(F26-n · 2026-10-25).
+   * 🔴 왜: 그림자는 종류의 이격(`standoffMm`, 3D 씬 기본값이지 실측 아님 — 스카시 30mm)으로 밀려 그려지는데, 뮤제드폴처럼 5mm 아크릴을
+   *    판에 바로 붙인 간판엔 그림자가 없습니다. 손님이 받는 일러·제안서 정면도(FRONT VIEW)와 같은 말을 하려고 둡니다(사람 지적).
+   *    밤 모습(번짐·점등)은 그대로입니다.
+   */
+  flat?: boolean;
   /** 캔버스 크기(px)가 바뀔 때 — 「화면에 맞춤」 계산에 씁니다 */
   onMeasure?: (w: number, h: number) => void;
   /*
@@ -339,8 +346,8 @@ export default function Stage({ svgRef, ...p }: Props) {
         {/* 바탕판 (T5) — 그림자 + 두께 + 판 */}
         {p.board && (
           <g pointerEvents="none">
-            {!p.night && <rect x={p.board.x + 18} y={p.board.y + 24} width={p.board.w} height={p.board.h} fill="#000" opacity={0.28} filter={`url(#boardsh-${uid})`} />}
-            <rect x={p.board.x + dir[0] * 24} y={p.board.y + dir[1] * 24} width={p.board.w} height={p.board.h} fill={shade(d.board, p.night ? 0.2 : 0.6)} />
+            {!p.night && !p.flat && <rect x={p.board.x + 18} y={p.board.y + 24} width={p.board.w} height={p.board.h} fill="#000" opacity={0.28} filter={`url(#boardsh-${uid})`} />}
+            {!p.flat && <rect x={p.board.x + dir[0] * 24} y={p.board.y + dir[1] * 24} width={p.board.w} height={p.board.h} fill={shade(d.board, p.night ? 0.2 : 0.6)} />}
             <rect x={p.board.x} y={p.board.y} width={p.board.w} height={p.board.h} fill={p.night ? shade(d.board, 0.4) : d.board} />
           </g>
         )}
@@ -358,19 +365,77 @@ export default function Stage({ svgRef, ...p }: Props) {
                 {pl.hardware.map((hd, i) => (
                   <path key={`hw${i}`} d={hd} fill={p.night ? "#1f2221" : "#34393a"} />
                 ))}
-                {!p.night && (
+                {!p.night && !p.flat && (
                   <g opacity={0.28} filter={`url(#boardsh-${uid})`} pointerEvents="none">
                     <path d={q.d} transform="translate(16 22)" fill="#000" />
                   </g>
                 )}
-                <path d={q.d} transform={`translate(${dir[0] * tk} ${dir[1] * tk})`} fill={shade(pl.fill, p.night ? 0.2 : 0.62)} pointerEvents="none" />
-                <path
-                  d={q.d}
-                  fill={p.night ? shade(pl.fill, 0.32) : pl.fill}
-                  stroke={pl.border ? (p.night ? shade(pl.border, 0.35) : pl.border) : undefined}
-                  strokeWidth={pl.border ? pl.borderW : undefined}
-                  strokeLinejoin="round"
-                />
+                {!p.flat && <path d={q.d} transform={`translate(${dir[0] * tk} ${dir[1] * tk})`} fill={shade(pl.fill, p.night ? 0.2 : 0.62)} pointerEvents="none" />}
+                {p.flat ? (
+                  // 도면 — 판 바깥 가는 선 + 몰딩 폭만큼 안쪽에 가는 선 하나(제안서 FRONT VIEW 와 같은 표현). 안쪽 선은 판 모양으로 오려 그립니다
+                  (() => {
+                    const fill = p.night ? shade(pl.fill, 0.32) : pl.fill;
+                    // 선은 제안서 정면도처럼 거의 검정(판 색을 섞은 갈색으로 그렸더니 원 시안과 달라 보였습니다 — 2026-10-25 비교)
+                    const lineC = p.night ? "#5a5552" : "#231f1e";
+                    const lw = Math.max(3, Math.min(8, pl.borderW * 0.18 || 4));
+                    const cid = `plclip-${uid}-${r.id}`;
+                    return (
+                      <>
+                        <clipPath id={cid}>
+                          <path d={q.d} />
+                        </clipPath>
+                        <path d={q.d} fill={fill} />
+                        {(() => {
+                          // 코니스 띠·간접등 (사각 판) — 판 네 모서리(quad) 위의 비율 자리로 그려 회전해도 따라갑니다
+                          const ch = pl.corniceH ?? 0;
+                          if (!ch) return null;
+                          const [TL, TR, BR, BL] = r.quad;
+                          const at = (u: number, v: number): Pt => [
+                            TL[0] + (TR[0] - TL[0]) * u + (BL[0] - TL[0]) * v + (TL[0] - TR[0] + BR[0] - BL[0]) * u * v,
+                            TL[1] + (TR[1] - TL[1]) * u + (BL[1] - TL[1]) * v + (TL[1] - TR[1] + BR[1] - BL[1]) * u * v,
+                          ];
+                          const vh = ch / Math.max(1, r.size.h);
+                          const bu = (pl.borderW || 0) / Math.max(1, r.size.w), bv = (pl.borderW || 0) / Math.max(1, r.size.h);
+                          const n = pl.lights ?? 0;
+                          const lightW = 100 / Math.max(1, r.size.w);
+                          return (
+                            <g pointerEvents="none">
+                              {n > 0 &&
+                                Array.from({ length: n }, (_, i) => (i + 0.5) / n).map((u, i) => {
+                                  const c = at(u, vh);
+                                  return (
+                                    <g key={`lt${i}`}>
+                                      <circle cx={c[0]} cy={c[1] + ch * 0.4} r={Math.max(40, ch * 1.8)} fill="#ff9d2e" opacity={0.35} filter={`url(#boardsh-${uid})`} />
+                                      <line x1={at(u - lightW / 2, vh)[0]} y1={c[1] - 3} x2={at(u + lightW / 2, vh)[0]} y2={c[1] - 3} stroke={lineC} strokeWidth={lw * 1.6} />
+                                    </g>
+                                  );
+                                })}
+                              <polyline points={[at(0, vh), at(1, vh)].map((p) => p.join(",")).join(" ")} fill="none" stroke={lineC} strokeWidth={lw} />
+                              {pl.border && pl.borderW > 0 && (
+                                <polyline points={[at(bu, vh), at(bu, 1 - bv), at(1 - bu, 1 - bv), at(1 - bu, vh)].map((p) => p.join(",")).join(" ")} fill="none" stroke={lineC} strokeWidth={lw} />
+                              )}
+                            </g>
+                          );
+                        })()}
+                        {pl.border && pl.borderW > 0 && !pl.corniceH && (
+                          <g clipPath={`url(#${cid})`} pointerEvents="none">
+                            <path d={q.d} fill="none" stroke={lineC} strokeWidth={(pl.borderW + lw / 2) * 2} strokeLinejoin="miter" />
+                            <path d={q.d} fill="none" stroke={fill} strokeWidth={Math.max(0, pl.borderW - lw / 2) * 2} strokeLinejoin="miter" />
+                          </g>
+                        )}
+                        <path d={q.d} fill="none" stroke={lineC} strokeWidth={lw} strokeLinejoin="miter" pointerEvents="none" />
+                      </>
+                    );
+                  })()
+                ) : (
+                  <path
+                    d={q.d}
+                    fill={p.night ? shade(pl.fill, 0.32) : pl.fill}
+                    stroke={pl.border ? (p.night ? shade(pl.border, 0.35) : pl.border) : undefined}
+                    strokeWidth={pl.border ? pl.borderW : undefined}
+                    strokeLinejoin="round"
+                  />
+                )}
               </g>
             );
           })}
@@ -403,12 +468,12 @@ export default function Stage({ svgRef, ...p }: Props) {
                 {/* 전기선 가림 바 */}
                 {r.bars.map((b, i) => (
                   <g key={`bar${i}`} pointerEvents="none">
-                    {!p.night && <polygon points={b.map((q) => `${q[0] + 10},${q[1] + 14}`).join(" ")} fill="#000" opacity={0.25} filter={F("sh")} />}
+                    {!p.night && !p.flat && <polygon points={b.map((q) => `${q[0] + 10},${q[1] + 14}`).join(" ")} fill="#000" opacity={0.25} filter={F("sh")} />}
                     <polygon points={b.map((q) => q.join(",")).join(" ")} fill={p.night ? shade(d.barColor ?? "#2b2f2e", 0.35) : d.barColor ?? "#2b2f2e"} />
                   </g>
                 ))}
                 {/* 낮 그림자 — 벽에서 띄운 만큼 멀어집니다(까치발은 그게 정의다) */}
-                {!p.night && (
+                {!p.night && !p.flat && (
                   <g opacity={kind.lit === "standoff" ? 0.55 : 0.34} filter={F("sh")} pointerEvents="none">
                     <g transform={`translate(${shadowOff} ${shadowOff * 1.25})`}>{faces(() => "#000")}</g>
                   </g>
@@ -426,7 +491,7 @@ export default function Stage({ svgRef, ...p }: Props) {
                   </g>
                 )}
                 {/* 옆면(두께) — 보는 쪽으로 겹겹이. 사진 속 간판을 아래·옆에서 보면 이 면이 보입니다 */}
-                {depth > 8 &&
+                {depth > 8 && !p.flat &&
                   Array.from({ length: 10 }, (_, k) => 10 - k).map((k) => (
                     <g key={`ret${k}`} transform={`translate(${(dir[0] * dv * k) / 10} ${(dir[1] * dv * k) / 10})`} pointerEvents="none">
                       {faces((c) => {

@@ -122,7 +122,8 @@ export function PageHero({
  * 그림 파일 대신 CSS 빛 두 겹 + 아주 옅은 입자로 다시 그렸습니다 — 폭이 바뀌어도 안 깨지고 받는 파일이 없습니다.
  * 글자 쪽(왼쪽)은 비워 둡니다. 꾸밈이라 스크린리더·클릭에서 뺍니다.
  */
-function HeroGlow() {
+/** 검정 머리말 오른쪽 아래의 청록 빛 — 수산나 픽(F26-n) 머리말도 같은 것을 씁니다 */
+export function HeroGlow() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
       <div

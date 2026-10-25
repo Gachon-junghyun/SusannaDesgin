@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { fontGroups, specimenFonts } from "@/config/fonts";
+import { fontGroups, makerExtraFonts, makerFont, specimenFonts } from "@/config/fonts";
 import {
   boardColors,
   faceColors,
@@ -104,12 +104,24 @@ import {
   type Pt,
 } from "@/lib/maker/geom";
 import { bbox, imageDataOf, layersFromImage, toPathD, traceGray, type Contour } from "@/lib/maker/trace";
-import { createMakerShare, deleteMakerShare, listMakerShares, type ShareItem } from "@/app/admin/maker/actions";
+import {
+  createMakerShare,
+  deleteMakerShare,
+  listMakerReplies,
+  listMakerShares,
+  markMakerReplyRead,
+  updateMakerShare,
+  type ReplyItem,
+  type ShareItem,
+} from "@/app/admin/maker/actions";
 import { getMakerAssets } from "@/app/admin/maker/assets/actions";
 import { parseAssetSvg } from "@/lib/maker/asset-svg";
 import type { MakerAsset } from "@/lib/maker/assets";
+import { applyTune, packPicks, PICK_LETTERS, PICK_MAX, readPicks, readRound, TUNE0, TUNE_RANGE, tuneLines, type Pick, type Tune } from "@/lib/maker/pick";
+import { loadClipper, thicken } from "@/lib/maker/weight";
 
 import MakerTour from "./MakerTour";
+import PickView from "./PickView";
 import Stage, { type Calib, type RItem, type RPath, type View } from "./Stage";
 
 /**
@@ -135,6 +147,14 @@ type TextOut = { key: string; outline: Outline; fontName: string };
 export type ShareInfo = { token: string; title: string; expiresAt: string; canEdit: boolean };
 
 const STORE = (mode: "admin" | "customer") => `susanna-maker-draft-v2-${mode}`;
+/** 수산나 픽의 보기 셋 */
+/** 🔴 «입체»는 뺐습니다(사람 지시 2026-10-25 «도면이랑 모델링만 남겨 두고 입체는 없애 줘») */
+export type PickViewMode = "flat" | "model";
+/** 모델링(블렌더 렌더) 화면 상태 — `url` 은 마지막으로 받은 그림(다시 그리는 동안에도 보여 줍니다) */
+export type RenderView = { state: "idle" | "wait" | "done" | "off" | "error"; url?: string; ms?: number; total?: number; message?: string };
+
+/** 관리자가 담아 둔 수산나 픽(A·B·C) — 이 브라우저에만 (F26-n) */
+const PICK_BIN_KEY = "susanna-maker-picks-v1";
 
 /** 저장소·공유 링크에서 온 디자인을 지금 모양에 맞춥니다. 사진은 저장하지 않으므로 사진 벽은 흰 벽으로 */
 function normalize(raw: unknown): Design | null {
@@ -248,7 +268,22 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     now: mode === "view" ? (normalize(initial) ?? defaultDesign()) : loadDraft(mode),
     future: [] as Design[],
   }));
-  const d = hist.now;
+  /*
+   * 수산나 픽 (F26-n · 2026-10-25) — 공유 링크로 받은 A·B·C 중 하나 + 손님의 다듬기(`Tune`).
+   * 보기 전용에서는 «받은 안 위에 다듬기를 얹은 것»이 곧 디자인입니다. 받은 안은 안 고칩니다(«받은 그대로» 한 번에 돌아감).
+   */
+  const picks = useMemo(() => (viewOnly ? readPicks(initial, share?.title) : []), [viewOnly, initial, share?.title]);
+  const [pickIdx, setPickIdx] = useState(0);
+  const [tune, setTune] = useState<Tune>(TUNE0);
+  /**
+   * 수산나 픽의 보기 — 도면(정면도, 그림자·두께 없음 — 손님 일러·제안서와 같은 모습, 사람 지적 2026-10-25) · 입체 · 모델링(블렌더 렌더, 0022).
+   * 🔴 야간 보기는 수산나 픽에서 뺐습니다(사람 지시 2026-10-25 «야간 기능 없애 버려»).
+   */
+  const [pickView, setPickView] = useState<PickViewMode>("flat");
+  /** 줄마다 «자간 1 = 몇 mm» — 글꼴을 받은 뒤 채워집니다(아래 texts 효과). 글자 사이를 mm 로 다듬으려고 씁니다 */
+  const [trackMm, setTrackMm] = useState<Map<string, (number | undefined)[]>>(new Map());
+  const tuned = useMemo(() => (picks[pickIdx] ? applyTune(picks[pickIdx].design, tune, trackMm) : null), [picks, pickIdx, tune, trackMm]);
+  const d = tuned ?? hist.now;
   const dragBase = useRef<Design | null>(null);
 
   const commit = useCallback((next: Design | ((p: Design) => Design)) => {
@@ -388,20 +423,20 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
   const fileFonts = useRef(new Map<string, Blob>());
   const logoSrc = useRef(new Map<string, ImageData>());
 
-  const fontLabel = useCallback((f: FontRef) => (f.src === "lib" ? specimenFonts.find((s) => s.slug === f.slug)?.name ?? f.slug : f.name), []);
+  const fontLabel = useCallback((f: FontRef) => (f.src === "lib" ? makerFont(f.slug)?.name ?? f.slug : f.name), []);
 
   useEffect(() => {
     let alive = true;
     for (const it of d.items) {
       if (it.type !== "text") continue;
-      const key = JSON.stringify([it.lines, it.font, !!it.vertical]);
+      const key = JSON.stringify([it.lines, it.font, !!it.vertical, it.gap ?? 0.35]);
       if (texts.get(it.id)?.key === key) continue;
       (async () => {
         try {
           const f = it.font;
           let font;
           if (f.src === "lib") {
-            const s = specimenFonts.find((x) => x.slug === f.slug);
+            const s = makerFont(f.slug);
             if (!s) throw new Error("목록에 없는 글꼴입니다");
             font = await loadFontUrl(s.file);
           } else if (f.src === "local") {
@@ -413,7 +448,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
             if (!b) throw new Error("올린 글꼴 파일이 이 탭에 없습니다 — 다시 올려 주세요");
             font = await loadFontBlob(f.key, b);
           }
-          const outline = layoutLines(font, it.lines, 0.35, !!it.vertical);
+          const outline = layoutLines(font, it.lines, it.gap ?? 0.35, !!it.vertical);
           if (!alive) return;
           setTexts((m) => new Map(m).set(it.id, { key, outline, fontName: f.src === "lib" ? fontLabel(f) : fontDisplayName(font) }));
           setFontErr((m) => {
@@ -430,6 +465,43 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       alive = false;
     };
   }, [d.items, texts, localFonts, fontLabel]);
+
+  /* ---------------------------------------------------------- 굵기 (F26-n) — 클리퍼는 굵기를 처음 바꿀 때만 받습니다 */
+  const [clip, setClip] = useState<Awaited<ReturnType<typeof loadClipper>> | null>(null);
+  useEffect(() => {
+    if (!d.weight || clip) return;
+    let alive = true;
+    loadClipper()
+      .then((c) => alive && setClip(() => c))
+      .catch(() => alive && setErr("굵기 계산 도구를 불러오지 못했습니다 — 새로고침해 보세요."));
+    return () => {
+      alive = false;
+    };
+  }, [d.weight, clip]);
+  /** 넓힌 외곽 — 같은 모양·같은 굵기는 다시 안 셉니다(슬라이더를 끄는 동안 위치만 바뀌는 일이 많습니다) */
+  const thickCache = useRef(new Map<string, string>());
+  const thick = useCallback(
+    (pd: string, mm: number) => {
+      if (!clip) return pd;
+      const k = `${mm}|${pd}`;
+      let v = thickCache.current.get(k);
+      if (v === undefined) {
+        v = thicken(clip, pd, mm);
+        if (thickCache.current.size > 3000) thickCache.current.clear();
+        thickCache.current.set(k, v);
+      }
+      return v;
+    },
+    [clip],
+  );
+
+  // 수산나 픽 — 글자 사이(mm)를 자간으로 바꿀 «자간 1 의 mm». 크기가 바뀌어 다시 짠 뒤에만 바뀝니다(자간과는 무관해서 한 번에 멈춥니다)
+  useEffect(() => {
+    if (!viewOnly) return;
+    const next = new Map([...texts].map(([id, t]) => [id, t.outline.lines.map((b) => b.trackMm)] as [string, (number | undefined)[]]));
+    const same = next.size === trackMm.size && [...next].every(([id, v]) => JSON.stringify(trackMm.get(id)) === JSON.stringify(v.map((x) => (x ? Math.round(x * 1e4) / 1e4 : x))));
+    if (!same) setTrackMm(new Map([...next].map(([id, v]) => [id, v.map((x) => (x ? Math.round(x * 1e4) / 1e4 : x))])));
+  }, [texts, viewOnly, trackMm]);
 
   /* ---------------------------------------------------------- 반듯한 모양 (판정·제작용 SVG 의 원본) */
   type Local = { size: Measured; paths: RPath[]; glyphBoxes: Record<number, Pt[]>; lines?: Outline["lines"]; letterH: number };
@@ -468,8 +540,26 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         m.set(it.id, { size: { w: t.outline.w, h: t.outline.h }, paths, glyphBoxes, lines: t.outline.lines, letterH: Math.max(...it.lines.map((l) => l.heightMm)) });
       }
     }
+    // 굵기 — 글자·로고 외곽을 넓히고, 넓힌 만큼 가로 상자를 키워 가운데를 맞춥니다(F26-n).
+    // 🔴 **글자 높이는 그대로 둡니다** — 간판에서 «더 두껍게»는 같은 높이의 굵은 굵기입니다(뮤제드폴 확정안: Medium 도 90mm).
+    //    넓히기만 하면 90mm 가 93mm 가 됐습니다(2026-10-25 실측). 세로만 되돌려 줄이고(가로획 굵어짐은 거의 그대로) 가로는 넓어진 채 둡니다.
+    const wt = d.weight ?? 0;
+    if (wt && clip)
+      for (const it of d.items) {
+        const L = isSign(it) ? m.get(it.id) : undefined;
+        if (!L) continue;
+        const fy = L.size.h / Math.max(1, L.size.h + wt * 2);
+        const sh = (q: Pt): Pt => [q[0] + wt, (q[1] + wt) * fy];
+        m.set(it.id, {
+          ...L,
+          size: { w: Math.max(1, L.size.w + wt * 2), h: L.size.h },
+          paths: L.paths.map((q) => ({ ...q, d: mapPath(thick(q.d, wt), sh) })),
+          glyphBoxes: Object.fromEntries(Object.entries(L.glyphBoxes).map(([k, qs]) => [k, qs.map(sh)])),
+          lines: L.lines?.map((b) => ({ ...b, x0: b.x0 + wt, y0: (b.y0 + wt) * fy, h: b.h * fy })),
+        });
+      }
     return m;
-  }, [d.items, texts]);
+  }, [d.items, d.weight, texts, clip, thick]);
 
   /* ---------------------------------------------------------- 벽 위로 (회전·원근) */
   const ritems: RItem[] = useMemo(
@@ -506,7 +596,14 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
             image: it.type === "image" ? { href: assetUrls.get(it.asset) ?? null } : undefined,
             plate:
               it.type === "plate"
-                ? { fill: it.fill, border: it.border || undefined, borderW: it.border ? (it.borderMm ?? 30) : 0, hardware: plateHardware(it).map((hd) => mapPath(hd, toWorld)) }
+                ? {
+                    fill: it.fill,
+                    border: it.border || undefined,
+                    borderW: it.border ? (it.borderMm ?? 30) : 0,
+                    hardware: plateHardware(it).map((hd) => mapPath(hd, toWorld)),
+                    corniceH: it.corniceMm ? (it.corniceH ?? 50) : 0,
+                    lights: it.lights ?? 0,
+                  }
                 : undefined,
           },
         ];
@@ -570,6 +667,22 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     }
     return m;
   }, [d.items, texts, fabs, kind, fontErr, locals]);
+
+  /** 글자·로고 묶음의 가로세로와, 판 안에 들어 있으면 판 끝까지의 여백 — 손님이 «양쪽 여백 10센티»로 말하는 그 값(F26-n) */
+  const letterBox = useMemo(() => {
+    const s = ritems.filter((q) => q.type === "text" || q.type === "logo");
+    if (!s.length) return null;
+    const xs = s.flatMap((q) => q.quad.map((v) => v[0])), ys = s.flatMap((q) => q.quad.map((v) => v[1]));
+    const b = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+    const host = board ?? (() => {
+      const pl = ritems.find((q) => q.type === "plate");
+      if (!pl) return null;
+      const px = pl.quad.map((v) => v[0]), py = pl.quad.map((v) => v[1]);
+      return { x: Math.min(...px), y: Math.min(...py), w: Math.max(...px) - Math.min(...px), h: Math.max(...py) - Math.min(...py) };
+    })();
+    const side = host && b.x0 >= host.x - 1 && b.x1 <= host.x + host.w + 1 ? { l: b.x0 - host.x, r: host.x + host.w - b.x1, t: b.y0 - host.y, b: host.y + host.h - b.y1 } : null;
+    return { w: b.x1 - b.x0, h: b.y1 - b.y0, side };
+  }, [ritems, board]);
 
   const allNotes = [...notes.values()].flat();
   if (overall && overall.w > 10000) allNotes.push({ level: "check", text: `전체 가로 ${fmtMm(overall.w)} — 벽면 간판은 보통 10m 까지입니다(지자체 조례로 다름).` });
@@ -1322,12 +1435,20 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       // (맨 앞에 둡니다 — 폼이 긴 요약을 뒤에서 자릅니다)
       const from = share ? `공유 링크: ${location.origin}/maker/s/${share.token}
 ` : "";
+      // 수산나 픽(F26-n) — 어느 안을 골라 무엇을 바꿨나. 담당자가 받은 안과 견주어 봅니다(링크 다음, 요약 앞)
+      const pk = viewOnly ? picks[pickIdx] : undefined;
+      const changed = pk ? tuneLines(pk.design, tune) : [];
+      const pickLine = pk
+        ? `수산나 픽: PICK ${PICK_LETTERS[pickIdx]} «${pk.name}»${picks.length > 1 ? ` (${picks.length}개 중)` : ""}
+손님이 바꾼 것: ${changed.length ? changed.join(", ") : "없음 (기본 시안 그대로)"}
+`
+        : "";
       // 디자인 JSON 도 같이 건넵니다 — 견적을 «보낼 때» 서버가 이걸로 방(보기 전용 링크)을 만들어 담당자에게 붙입니다(0017).
       // 공유와 같은 거르개(shareable)를 지납니다: 가게 사진은 빠지고, 올린 글꼴 글자는 외곽선으로 굳습니다.
       // 글꼴을 아직 불러오는 중이거나 너무 크면 디자인은 빼고 JPG·SVG 만 갑니다(견적은 막지 않습니다)
       const s = shareable();
       const design = "error" in s || new TextEncoder().encode(JSON.stringify(s.design)).length > MAKER_SHARE_MAX_BYTES ? undefined : s.design;
-      sessionStorage.setItem(MAKER_STORAGE_KEY, JSON.stringify({ summary: from + summary(), svg: fabricationSvg(placed()), jpg, design, title: share?.title || firstText }));
+      sessionStorage.setItem(MAKER_STORAGE_KEY, JSON.stringify({ summary: from + pickLine + summary(), svg: fabricationSvg(placed()), jpg, design, title: share?.title || firstText }));
       router.push("/quote?maker=1");
     } catch (e) {
       setErr(`견적 폼으로 넘기지 못했습니다: ${(e as Error).message}`);
@@ -1385,16 +1506,21 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     const s = shareable();
     if ("error" in s) return setErr(s.error);
     if (!s.design.items.some((it) => it.type !== "patch")) return setErr("벽에 올린 글자·로고가 없습니다.");
-    const bytes = new TextEncoder().encode(JSON.stringify(s.design)).length;
+    const notes: string[] = [];
+    if (s.photo) notes.push("가게 사진은 안 들어갑니다 — 받는 사람은 같은 크기의 흰 벽으로 봅니다.");
+    if (s.baked) notes.push(`이 PC 글꼴로 쓴 글자 ${s.baked}개는 모양 그대로(외곽선) 들어갑니다 — 받는 쪽에서 글자를 고칠 수는 없습니다.`);
+    await publish(s.design, shareTitle.trim() || firstText, notes);
+  }
+
+  /** 링크 한 건 올리기 — 한 안(`makeShare`)과 수산나 픽(`makePickShare`)이 같은 길로 갑니다 */
+  async function publish(design: unknown, title: string, notes: string[]) {
+    const bytes = new TextEncoder().encode(JSON.stringify(design)).length;
     if (bytes > MAKER_SHARE_MAX_BYTES) return setErr(`디자인이 너무 큽니다(${Math.round(bytes / 1000)}KB) — 로고를 «SVG 따기»에서 매끄럽게 다듬어 점을 줄여 주세요.`);
     setBusy("공유 링크를 만드는 중…");
     try {
-      const r = await createMakerShare(s.design, shareTitle.trim() || firstText);
+      const r = await createMakerShare(design, title);
       if (!r.ok) return setErr(r.error);
       const url = `${location.origin}/maker/s/${r.share.token}`;
-      const notes: string[] = [];
-      if (s.photo) notes.push("가게 사진은 안 들어갑니다 — 받는 사람은 같은 크기의 흰 벽으로 봅니다.");
-      if (s.baked) notes.push(`이 PC 글꼴로 쓴 글자 ${s.baked}개는 모양 그대로(외곽선) 들어갑니다 — 받는 쪽에서 글자를 고칠 수는 없습니다.`);
       let copied = true;
       try {
         await navigator.clipboard.writeText(url);
@@ -1407,6 +1533,139 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       setErr(`공유 링크를 만들지 못했습니다: ${(e as Error).message}`);
     } finally {
       setBusy("");
+    }
+  }
+
+  /* ---------------------------------------------------------- 수산나 픽 묶기 (관리자, F26-n) */
+  /**
+   * 벽에 만든 안을 하나씩 «담아» A·B·C 로 묶고 링크 하나로 보냅니다. 담는 순간의 모양(공유 거르개 `shareable()` 를 지난 것)이
+   * 들어가므로, 담은 뒤 벽을 고쳐 다음 안을 만들면 됩니다. 담은 목록은 **이 브라우저에만** 남습니다(새로고침해도 유지).
+   */
+  const [pickBin, setPickBin] = useState<Pick[]>(() => {
+    if (mode !== "admin") return [];
+    try {
+      const raw = JSON.parse(localStorage.getItem(PICK_BIN_KEY) ?? "[]");
+      return Array.isArray(raw) ? (raw as Pick[]).slice(0, PICK_MAX) : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    if (mode !== "admin") return;
+    try {
+      localStorage.setItem(PICK_BIN_KEY, JSON.stringify(pickBin));
+    } catch {
+      /* 용량 초과(큰 로고 셋) — 이 탭에서만 들고 있습니다 */
+    }
+  }, [pickBin, mode]);
+  const [pickName, setPickName] = useState("");
+  const [pickNote, setPickNote] = useState("");
+
+  function addPick() {
+    setErr("");
+    if (pickBin.length >= PICK_MAX) return setErr(`수산나 픽은 ${PICK_MAX}개까지입니다 — 하나를 빼고 담으세요.`);
+    const s = shareable();
+    if ("error" in s) return setErr(s.error);
+    if (!s.design.items.some((it) => it.type !== "patch")) return setErr("벽에 올린 글자·로고가 없습니다.");
+    setPickBin((b) => [...b, { name: pickName.trim() || `${PICK_LETTERS[b.length]}안`, note: pickNote.trim(), design: structuredClone(s.design) }]);
+    setPickName("");
+    setPickNote("");
+  }
+  function movePick(i: number, dir: -1 | 1) {
+    setPickBin((b) => {
+      const j = i + dir;
+      if (j < 0 || j >= b.length) return b;
+      const n = [...b];
+      [n[i], n[j]] = [n[j], n[i]];
+      return n;
+    });
+  }
+  async function makePickShare() {
+    setErr("");
+    if (!pickBin.length) return setErr("담은 픽이 없습니다 — 벽에 안을 만들고 «담기»를 누르세요.");
+    await publish(packPicks(pickBin), shareTitle.trim() || pickBin[0].name, [
+      `수산나 픽 ${pickBin.length}개(${pickBin.map((_, i) => PICK_LETTERS[i]).join("·")})로 보냈습니다. 손님은 고르고 크기·굵기·여백·위치·색만 바꿀 수 있습니다.`,
+    ]);
+  }
+
+  /* ---------------------------------------------------------- 받은 답 · 같은 링크에 다음 차수 (관리자, F26-n · 0021) */
+  const [replies, setReplies] = useState<ReplyItem[] | null>(null);
+  /** «에디터로 열기»를 누른 답 — 고친 뒤 «이 링크에 N차로 보내기»가 이 링크를 갈아 끼웁니다 */
+  const [replyTo, setReplyTo] = useState<{ shareId: string; title: string; token: string; round: number } | null>(null);
+
+  async function loadReplies() {
+    setErr("");
+    const r = await listMakerReplies();
+    if (!r.ok) return setErr(r.error);
+    setReplies(r.items);
+  }
+
+  function openReply(r: ReplyItem) {
+    const got = normalize(r.design);
+    if (!got) return setErr("이 답의 디자인을 읽지 못했습니다.");
+    if (d.items.length && !confirm("지금 벽을 손님이 보낸 모양으로 바꿀까요? (되돌리기로 돌아올 수 있습니다)")) return;
+    commit(got);
+    fit(got.wallW, got.wallH);
+    setReplyTo({ shareId: r.share_id, title: r.share?.title ?? "", token: r.share?.token ?? "", round: r.round + 1 });
+    if (!r.read_at) {
+      void markMakerReplyRead(r.id);
+      setReplies((l) => l?.map((x) => (x.id === r.id ? { ...x, read_at: new Date().toISOString() } : x)) ?? l);
+    }
+  }
+
+  async function resendPicks() {
+    if (!replyTo) return;
+    setErr("");
+    if (!pickBin.length) return setErr("담은 픽이 없습니다 — 고친 안을 «담기»로 먼저 담으세요.");
+    const design = packPicks(pickBin, replyTo.round);
+    const bytes = new TextEncoder().encode(JSON.stringify(design)).length;
+    if (bytes > MAKER_SHARE_MAX_BYTES) return setErr(`디자인이 너무 큽니다(${Math.round(bytes / 1000)}KB).`);
+    setBusy(`같은 링크에 ${replyTo.round}차를 올리는 중…`);
+    try {
+      const r = await updateMakerShare(replyTo.shareId, design);
+      if (!r.ok) return setErr(r.error);
+      const url = `${location.origin}/maker/s/${r.share.token}`;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        /* 복사가 막힘 — 주소 칸에서 직접 */
+      }
+      setShareOut({ url, expires: ymd(r.share.expires_at), notes: [`«${replyTo.title || "링크"}» 에 ${replyTo.round}차를 올렸습니다. 손님은 같은 주소를 다시 열면 됩니다(주소 복사함).`] });
+      setReplyTo(null);
+    } catch (e) {
+      setErr(`올리지 못했습니다: ${(e as Error).message}`);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  /* ---------------------------------------------------------- 손님 «보내기» (보기 전용, F26-n · 0021) */
+  async function sendReply(memo: string): Promise<{ ok: boolean; error?: string }> {
+    const pk = picks[pickIdx];
+    if (!share || !pk) return { ok: false, error: "보낼 링크를 찾지 못했습니다." };
+    const s = shareable();
+    if ("error" in s) return { ok: false, error: s.error };
+    try {
+      const res = await fetch("/api/maker/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: share.token,
+          round: readRound(initial),
+          pick: pickIdx,
+          pickName: pk.name,
+          changes: [
+            ...tuneLines(pk.design, tune),
+            ...(letterBox ? [`글자 묶음 ${fmtMm(letterBox.w)} × ${fmtMm(letterBox.h)}${letterBox.side ? `, 판 끝까지 왼쪽 ${fmtMm(letterBox.side.l)} 오른쪽 ${fmtMm(letterBox.side.r)}` : ""}`] : []),
+          ],
+          memo,
+          design: s.design,
+        }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      return j.ok ? { ok: true } : { ok: false, error: j.error || "지금은 보내지 못했습니다. 잠시 뒤 다시 보내 주세요." };
+    } catch {
+      return { ok: false, error: "인터넷 연결을 확인하고 다시 보내 주세요." };
     }
   }
 
@@ -1550,13 +1809,117 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
     setTab(t);
   };
 
+  /*
+   * 수산나 픽 — 무대에서 간판을 끌면 «위치», 두 손가락이면 «크기·기울기»가 바뀝니다(받은 안은 그대로, 다듬기 값만).
+   * 끌기 하나 동안은 «잡은 순간»의 값에서 셉니다 — 바뀐 화면을 다시 기준으로 삼으면 손보다 빨리 달아납니다.
+   */
+  /* ---------------------------------------------------------- 수산나 픽 «모델링» — 블렌더 일꾼에게 지금 모양을 보내고 그림을 받습니다 (0022) */
+  /**
+   * 일꾼이 받는 것은 숫자·경로·색뿐입니다(실행되는 글자가 없습니다). 좌표는 mm, 아이템마다 «반듯한» 외곽(왼쪽 위 0,0)과 중심·회전.
+   * 원근(네 점)은 사진 맞추기용이라 모델에는 안 넣습니다 — 모델은 실제 크기로 짓는 것이 목적입니다.
+   */
+  const renderPayload = useMemo(() => {
+    if (!tuned) return null;
+    const items = d.items.flatMap((it) => {
+      if (it.type !== "text" && it.type !== "logo" && it.type !== "plate") return [];
+      const L = locals.get(it.id);
+      if (!L) return [];
+      return [
+        {
+          type: it.type,
+          x: Math.round(it.x * 10) / 10,
+          y: Math.round(it.y * 10) / 10,
+          w: Math.round(L.size.w * 10) / 10,
+          h: Math.round(L.size.h * 10) / 10,
+          rot: it.rot ?? 0,
+          paths: L.paths.map((q) => ({ d: q.d, color: q.color })),
+          ...(it.type === "plate"
+            ? { fill: it.fill, border: it.border ?? "", borderMm: it.borderMm ?? 0, mount: it.mount, bodyMm: it.bodyMm ?? 0, corniceMm: it.corniceMm ?? 0, corniceH: it.corniceH ?? 0, lights: it.lights ?? 0 }
+            : {}),
+        },
+      ];
+    });
+    if (!items.some((q) => q.type !== "plate")) return null;
+    return {
+      v: 1,
+      wall: { w: d.wallW, h: d.wallH, color: wallFill(d) },
+      kind: { key: kind.key, lit: kind.lit, depth: d.depth ?? kind.depthMm, standoff: kind.standoffMm },
+      side: d.side,
+      board: board ? { ...board, color: d.board } : null,
+      items,
+    };
+  }, [tuned, d, locals, kind, board]);
+  const renderJson = useMemo(() => (renderPayload ? JSON.stringify(renderPayload) : ""), [renderPayload]);
+  const [render, setRender] = useState<RenderView>({ state: "idle" });
+  const renderSeq = useRef(0);
+  useEffect(() => {
+    if (!viewOnly || pickView !== "model" || !share || !renderJson) return;
+    const my = ++renderSeq.current;
+    const t = window.setTimeout(async () => {
+      const t0 = performance.now();
+      setRender((r) => ({ ...r, state: "wait" }));
+      try {
+        const res = await fetch("/api/maker/render", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"token":${JSON.stringify(share.token)},"payload":${renderJson}}` });
+        const j = (await res.json().catch(() => ({}))) as { ok?: boolean; id?: string; error?: string };
+        if (!j.ok || !j.id) {
+          if (my === renderSeq.current) setRender((r) => ({ ...r, state: res.status === 503 ? "off" : "error", message: j.error }));
+          return;
+        }
+        // 다 그릴 때까지 물어봅니다 — 일꾼이 꺼져 있으면 몇 초 안에 «꺼짐»으로
+        for (let i = 0; i < 80; i++) {
+          await new Promise((ok) => setTimeout(ok, i < 10 ? 250 : 500));
+          if (my !== renderSeq.current) return; // 그새 손님이 또 바꿨습니다
+          const g = await fetch(`/api/maker/render?token=${share.token}&id=${j.id}`, { cache: "no-store" });
+          const r = (await g.json().catch(() => ({}))) as { status?: string; jpg?: string | null; ms?: number | null; workerOn?: boolean };
+          if (r.status === "done" && r.jpg) {
+            if (my === renderSeq.current) setRender({ state: "done", url: `data:image/jpeg;base64,${r.jpg}`, ms: r.ms ?? undefined, total: Math.round(performance.now() - t0) });
+            return;
+          }
+          if (r.status === "error" || r.status === "gone") {
+            if (my === renderSeq.current) setRender((x) => ({ ...x, state: "error" }));
+            return;
+          }
+          if (r.workerOn === false && i >= 6) {
+            if (my === renderSeq.current) setRender((x) => ({ ...x, state: "off" }));
+            return;
+          }
+        }
+        if (my === renderSeq.current) setRender((x) => ({ ...x, state: "off" }));
+      } catch {
+        if (my === renderSeq.current) setRender((x) => ({ ...x, state: "error" }));
+      }
+    }, 350);
+    return () => window.clearTimeout(t);
+  }, [viewOnly, pickView, share, renderJson]);
+
+  const tuneGrab = useRef<{ t: Tune; x: number; y: number } | null>(null);
+  function onTuneMove(id: string, x: number, y: number, done: boolean) {
+    const it = d.items.find((q) => q.id === id);
+    if (!it) return;
+    const g = (tuneGrab.current ??= { t: tune, x: it.x, y: it.y });
+    setTune({ ...g.t, dx: Math.round(g.t.dx + x - g.x), dy: Math.round(g.t.dy + y - g.y) });
+    if (done) tuneGrab.current = null;
+  }
+  function onTunePinch(_id: string, k: number, deg: number, done: boolean) {
+    const g = (tuneGrab.current ??= { t: tune, x: 0, y: 0 });
+    const R = TUNE_RANGE;
+    const clamp = (v: number, a: { min: number; max: number }) => Math.max(a.min, Math.min(a.max, v));
+    setTune({ ...g.t, scale: clamp(Math.round((g.t.scale * k) / 0.05) * 0.05, R.scale), rot: clamp(Math.round((g.t.rot + deg) * 2) / 2, R.rot) });
+    if (done) tuneGrab.current = null;
+  }
+  // 다른 픽으로 바꾸면 그 안의 벽 크기로 다시 맞춥니다
+  useEffect(() => {
+    if (viewOnly && fitted.current) fit(d.wallW, d.wallH);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 픽이 바뀔 때만
+  }, [pickIdx]);
+
   const stageEl = (
     <Stage
       design={d}
       kind={kind}
       items={ritems}
       wall={wall}
-      night={night}
+      night={night && !tuned}
       ledOn={ledOn}
       dims={dims}
       selected={selected}
@@ -1579,20 +1942,21 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         }
       }}
       svgRef={svgRef}
-      readOnly={viewOnly}
+      readOnly={viewOnly && !tuned}
+      flat={!!tuned}
       touch={coarse}
-      rulers={!phone}
+      rulers={!phone && !tuned}
       onSelect={select}
       onGlyph={(id, g) => {
         setSelected(id);
         setGlyph(g);
         if (phone && !pro) setTab("text"); // 폰 — 한 자 꾸밈 칸이 «글자» 시트에 있습니다(PRO 는 벽에서 바로 끌므로 시트를 안 엽니다)
       }}
-      onMove={(id, x, y, done) => setItem(id, { x, y }, !done)}
+      onMove={(id, x, y, done) => (tuned ? onTuneMove(id, x, y, done) : setItem(id, { x, y }, !done))}
       onResize={onResize}
       onRotate={onRotate}
       onWarp={onWarp}
-      onPinch={onPinch}
+      onPinch={tuned ? onTunePinch : onPinch}
       onPinchStart={hint ? dismissHint : undefined}
       glyphDrag={pro && !viewOnly}
       onGlyphDrag={onGlyphDrag}
@@ -2050,13 +2414,16 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
           <Swatches items={ledColors.map((c) => ({ name: c.name, hex: c.hex }))} value={d.led} onPick={(hex) => patchDesign({ led: hex })} glow />
         </Field>
       )}
+      <Field label={`글자 굵기 · 외곽 ${d.weight ? `${d.weight > 0 ? "+" : ""}${d.weight}mm` : "그대로"}`}>
+        <input type="range" min={-6} max={20} step={0.5} value={d.weight ?? 0} onChange={(e) => patchDesign({ weight: Number(e.target.value) || undefined })} className="w-full accent-brand" aria-label="글자 굵기" />
+      </Field>
       {kind.depthMm > 10 && (
         <>
           <Field label="옆면 색">
             <Swatches items={sideColors.map((c) => ({ name: c.name, hex: c.hex }))} value={d.side} onPick={(hex) => patchDesign({ side: hex })} />
           </Field>
           <Field label={`옆면 깊이 · ${d.depth ?? kind.depthMm}mm`}>
-            <input type="range" min={10} max={200} step={5} value={d.depth ?? kind.depthMm} onChange={(e) => patchDesign({ depth: Number(e.target.value) })} className="w-full accent-brand" aria-label="옆면 깊이" />
+            <input type="range" min={3} max={200} step={1} value={d.depth ?? kind.depthMm} onChange={(e) => patchDesign({ depth: Number(e.target.value) })} className="w-full accent-brand" aria-label="옆면 깊이" />
           </Field>
           <Field label="보는 쪽 (옆면이 보이는 방향)">
             <Seg
@@ -2170,6 +2537,88 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
       <button type="button" onClick={makeShare} className="mt-2 w-full border border-brand-700 px-4 py-2.5 font-bold text-brand-700 hover:bg-brand-50">
         공유 링크 만들기
       </button>
+
+      {/* 수산나 픽 (F26-n) — 벽의 안을 하나씩 담아 A·B·C 링크 하나로 */}
+      <div className="mt-4 border-t border-line pt-3">
+        <p className="text-[13px] font-black">수산나 픽 · A·B·C 한 링크로</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-ink-500">
+          벽에 안을 만들고 «담기» → 벽을 고쳐 다음 안 → 다시 «담기». 손님은 그중 하나를 골라 크기·굵기·여백·위치·색만 다듬고 견적을 넣습니다(글자·글꼴·종류는 못 바꿉니다).
+        </p>
+        {pickBin.length > 0 && (
+          <ol className="mt-2 divide-y divide-line border-y border-line">
+            {pickBin.map((pk, i) => (
+              <li key={i} className="flex items-center gap-2 py-1.5 text-[12px]">
+                <span className="w-5 font-black text-brand-700">{PICK_LETTERS[i]}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold">{pk.name}</span>
+                  <span className="block truncate text-ink-500">{kindOf(pk.design).name}{pk.note ? ` · ${pk.note}` : ""}</span>
+                </span>
+                <button type="button" onClick={() => movePick(i, -1)} disabled={i === 0} aria-label="앞으로" className="px-1 text-ink-500 disabled:opacity-30">↑</button>
+                <button type="button" onClick={() => setPickBin((b) => b.filter((_, j) => j !== i))} className="font-bold text-ink-500 underline">빼기</button>
+              </li>
+            ))}
+          </ol>
+        )}
+        {pickBin.length < PICK_MAX && (
+          <div className="mt-2 space-y-1.5">
+            <input value={pickName} maxLength={40} placeholder={`${PICK_LETTERS[pickBin.length]}안 이름 (예: 밤에 돋보이는 안)`} onChange={(e) => setPickName(e.target.value)} className="w-full border border-line px-2 py-1.5 text-[13px]" aria-label="픽 이름" />
+            <input value={pickNote} maxLength={80} placeholder="한 줄 설명 (손님 카드에 보임, 비워도 됨)" onChange={(e) => setPickNote(e.target.value)} className="w-full border border-line px-2 py-1.5 text-[13px]" aria-label="픽 설명" />
+            <button type="button" onClick={addPick} className="w-full border border-ink px-4 py-2 text-[13px] font-bold hover:bg-paper">
+              지금 벽을 PICK {PICK_LETTERS[pickBin.length]} 로 담기
+            </button>
+          </div>
+        )}
+        <button type="button" onClick={makePickShare} disabled={!pickBin.length} className="mt-2 w-full bg-brand-700 px-4 py-2.5 font-bold text-white hover:bg-brand-600 disabled:opacity-40">
+          새 픽 링크 만들기{pickBin.length ? ` (${pickBin.length}개)` : ""}
+        </button>
+        {replyTo && (
+          <div className="mt-2 border-l-[3px] border-accent pl-3">
+            <p className="text-[12px] leading-relaxed">
+              손님 답을 열었습니다 · «{replyTo.title || "이름 없음"}». 고친 안을 담은 뒤 같은 주소에 다음 차수로 올립니다.
+            </p>
+            <button type="button" onClick={resendPicks} disabled={!pickBin.length} className="mt-1.5 w-full border border-ink bg-ink px-4 py-2 text-[13px] font-bold text-white disabled:opacity-40">
+              이 링크에 {replyTo.round}차로 보내기
+            </button>
+            <button type="button" onClick={() => setReplyTo(null)} className="mt-1 text-[12px] font-bold text-ink-500 underline">
+              그만두기
+            </button>
+          </div>
+        )}
+
+        {/* 받은 답 (0021) — 손님이 «보내기»로 돌려보낸 모양 */}
+        <div className="mt-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-black">받은 답</span>
+            <button type="button" onClick={() => void loadReplies()} className="ml-auto text-[12px] font-bold text-ink-500 underline">
+              {replies ? "새로고침" : "받은 답 보기"}
+            </button>
+          </div>
+          {replies && !replies.length && <p className="mt-1 text-[12px] text-ink-500">아직 받은 답이 없습니다.</p>}
+          {replies && replies.length > 0 && (
+            <ul className="mt-1 divide-y divide-line border-y border-line">
+              {replies.map((r) => (
+                <li key={r.id} className="py-2 text-[12px] leading-relaxed">
+                  <p className="flex items-baseline gap-2">
+                    {!r.read_at && <span className="h-1.5 w-1.5 shrink-0 bg-accent" aria-label="안 읽음" />}
+                    <span className="min-w-0 flex-1 truncate font-bold">{r.share?.title || "이름 없음"} · {r.round}차 · PICK {PICK_LETTERS[r.pick] ?? "?"}{r.pick_name ? ` «${r.pick_name}»` : ""}</span>
+                    <span className="shrink-0 text-ink-500">{ymd(r.created_at)}</span>
+                  </p>
+                  <p className="text-ink-500">{r.changes ? r.changes.split("\n").join(", ") : "바꾼 것 없음"}</p>
+                  {r.memo && <p className="mt-0.5 whitespace-pre-line">«{r.memo}»</p>}
+                  <span className="mt-1 flex gap-3">
+                    <button type="button" onClick={() => openReply(r)} className="font-bold text-brand-700 underline">에디터로 열기</button>
+                    {r.share?.token && (
+                      <a href={`/maker/s/${r.share.token}`} target="_blank" rel="noreferrer" className="font-bold text-ink-500 underline">
+                        링크 열기
+                      </a>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
       {shareOut && (
         <div className="mt-3 border-l-[3px] border-brand pl-3" role="status">
           <p className="text-[12px] font-bold text-brand-700">링크를 만들어 복사했습니다 · {shareOut.expires} 까지</p>
@@ -2213,6 +2662,52 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
   const tourEl = tour && mode !== "view" && (
     <MakerTour mode={mode} onClose={endTour} onPrepare={prepareTour} steps={phone ? makerTourPhone : makerTour} noScroll={phone} />
   );
+
+  /* ================================================================ 수산나 픽 (공유 링크로 받은 화면, F26-n) */
+  if (viewOnly && tuned) {
+    const ft = d.items.find((x): x is TextItem => x.type === "text");
+    return (
+      <PickView
+        picks={picks}
+        pickIdx={pickIdx}
+        onPick={(i) => {
+          if (i !== pickIdx) setTune(TUNE0);
+          setPickIdx(i);
+        }}
+        tune={tune}
+        onTune={setTune}
+        design={d}
+        kind={kind}
+        overall={overall}
+        verdict={verdict}
+        notes={allNotes}
+        stage={stageEl}
+        night={night}
+        onNight={setNight}
+        ledOn={ledOn}
+        onLedOn={setLedOn}
+        dims={dims}
+        onDims={setDims}
+        zoomPct={zoomPct}
+        onFit={() => fit()}
+        onZoom={zoomBy}
+        fontName={ft ? (texts.get(ft.id)?.fontName ?? fontLabel(ft.font)) : ""}
+        title={share?.title ?? ""}
+        expiresAt={share?.expiresAt}
+        canEdit={!!share?.canEdit}
+        busy={busy}
+        err={err}
+        round={readRound(initial)}
+        letters={letterBox}
+        view={pickView}
+        onView={setPickView}
+        render={render}
+        onSend={sendReply}
+        onSave={exportJpeg}
+        onContinue={continueEdit}
+      />
+    );
+  }
 
   /* ================================================================ 폰 (768px 미만) */
   if (phone) {
@@ -2971,6 +3466,20 @@ function TextProps({
                 })}
             </div>
           ))}
+          {/* 메이커 전용(관리자만) — 손님 목록·/fonts 에는 없습니다. 수산나 픽에서 손님이 글자 사이를 다듬을 수 있게 글자로 보냅니다 */}
+          {admin && (
+            <div>
+              <p className="sticky top-0 bg-paper px-2 py-1 text-[11px] font-bold tracking-wider text-ink-500">메이커 전용 · 손님 목록엔 없음</p>
+              {makerExtraFonts.map((f) => {
+                const on = it.font.src === "lib" && it.font.slug === f.slug;
+                return (
+                  <button key={f.slug} type="button" onClick={() => onChange({ font: { src: "lib", slug: f.slug } })} aria-pressed={on} className={`block w-full px-2.5 py-1.5 text-left text-[14px] ${on ? "bg-brand-100 font-bold text-brand-700" : "hover:bg-paper"}`}>
+                    {f.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
         {!admin && <p className="mt-1.5 text-[12px] leading-relaxed text-ink-500">간판에 써도 되는 무료 글꼴만 모았습니다(인쇄·상호·웹 사용 가능 확인).</p>}
       </Field>
@@ -3140,6 +3649,33 @@ function PlateProps({ it, palette, onChange }: { it: PlateItem; palette?: string
         <Swatches items={[{ name: "없음", hex: "" }, ...plateColors.map((c) => ({ name: c.name, hex: c.hex }))]} value={it.border ?? ""} onPick={(hex) => onChange({ border: hex })} emptyLabel="없음" />
         {!!it.border && <Slider label="굵기" unit="mm" min={5} max={150} step={5} value={it.borderMm ?? 30} onChange={(v) => onChange({ borderMm: v })} />}
       </Field>
+      {it.shape === "rect" && it.mount === "wall" && (
+        <Field label="짜임 (갈바 판 간판)">
+          <div className="grid grid-cols-2 gap-2 text-[12px]">
+            <label className="block">
+              <span className="font-bold">몸통 깊이 (mm)</span>
+              <NumIn value={it.bodyMm ?? 60} min={10} max={600} step={5} onChange={(v) => onChange({ bodyMm: v })} />
+            </label>
+            <label className="block">
+              <span className="font-bold">코니스 돌출 (mm, 0=없음)</span>
+              <NumIn value={it.corniceMm ?? 0} min={0} max={800} step={10} onChange={(v) => onChange({ corniceMm: v || undefined })} />
+            </label>
+            {!!it.corniceMm && (
+              <label className="block">
+                <span className="font-bold">코니스 앞면 높이 (mm)</span>
+                <NumIn value={it.corniceH ?? 50} min={10} max={400} step={5} onChange={(v) => onChange({ corniceH: v })} />
+              </label>
+            )}
+            {!!it.corniceMm && (
+              <label className="block">
+                <span className="font-bold">간접등 (개)</span>
+                <NumIn value={it.lights ?? 0} min={0} max={12} step={1} onChange={(v) => onChange({ lights: v || undefined })} />
+              </label>
+            )}
+          </div>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-ink-500">제안서 SIDE VIEW 의 값을 넣습니다. 도면에는 코니스 띠와 간접등 표시로, 모델링에는 실제 돌출과 조명으로 들어갑니다.</p>
+        </Field>
+      )}
       <Field label="다는 방식">
         <Seg value={it.mount} onChange={(v) => onChange({ mount: v })} options={plateMounts.map((m) => ({ v: m.key, label: m.short }))} />
         <p className="mt-1.5 text-[12px] leading-relaxed text-ink-500">

@@ -15,7 +15,7 @@ import { loadShare } from "@/lib/maker/share";
  * 🔴 구글 애널리틱스는 이 주소로 «들어온» 방문을 안 셉니다(`app/layout.tsx`) — 토큰이 든 주소가 구글에 남지 않게.
  */
 export const metadata: Metadata = {
-  title: "간판 디자인 보기",
+  title: "수산나 픽 간판 디자인",
   robots: { index: false, follow: false },
 };
 
@@ -26,7 +26,8 @@ export default async function MakerSharePage({ params }: { params: Promise<{ tok
   const got = await loadShare(token);
 
   return (
-    <MakerShell mode="customer" base="/maker" nav={SHOW_MAKER}>
+    // 열리는 링크는 «수산나 픽» 화면이 자기 머리말(단계 막대)을 그립니다(F26-n) — 껍데기의 머리말·목록을 걷습니다
+    <MakerShell mode="customer" base="/maker" nav={SHOW_MAKER} bare={got.state === "ok"}>
       {got.state === "ok" ? (
         <MakerLoader
           mode="customer"

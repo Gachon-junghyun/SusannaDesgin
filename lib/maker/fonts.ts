@@ -120,7 +120,7 @@ export type Outline = {
   w: number;
   h: number;
   /** 줄마다 잉크 상자 (mm, 같은 좌표계) — 치수선 그리는 데 씁니다 */
-  lines: { x0: number; y0: number; w: number; h: number }[];
+  lines: { x0: number; y0: number; w: number; h: number; trackMm?: number }[];
   /** 글자 한 자씩 — 글자별 색·위치·크기·회전(해외 메이커의 «단어·글자별 색»에서 빌린 것) */
   glyphs: Glyph[];
   /** 이 글꼴에 없는 글자 — 손님에게 알립니다 (두부로 나가면 안 됩니다) */
@@ -189,7 +189,8 @@ export function layoutLines(font: Font, lines: TextLine[], gap = 0.35, vertical 
       d += gd;
       glyphs.push({ i: gi++, ch: r.ch, line: l.li, d: gd, x0: tx(r.b.x1), y0: ty(r.b.y1), w: (r.b.x2 - r.b.x1) * l.s, h: (r.b.y2 - r.b.y1) * l.s });
     }
-    boxes.push({ x0: ox, y0: y, w: l.w, h: l.h });
+    // trackMm — 자간 1(em 의 1/1000)이 이 줄에서 몇 mm 인가. 수산나 픽이 «글자 사이 +10mm» 를 자간 값으로 바꿀 때 씁니다(F26-n)
+    boxes.push({ x0: ox, y0: y, w: l.w, h: l.h, trackMm: l.s });
     y += l.h + (k < built.length - 1 ? l.gapMm : 0);
   });
   return { d, w: W, h: y, lines: boxes, glyphs, missing };
@@ -251,7 +252,7 @@ function layoutVertical(font: Font, lines: TextLine[]): Outline {
       glyphs.push({ i: gi++, ch: r.ch, line: c.li, d: gd, x0: ox, y0: y, w: gw, h: gh });
       y += gh + c.gapMm;
     }
-    boxes.push({ x0: x0col, y0: 0, w: c.colW, h: c.colH });
+    boxes.push({ x0: x0col, y0: 0, w: c.colW, h: c.colH, trackMm: (lines[c.li]?.heightMm ?? 0) / 1000 });
     right = x0col - c.sep;
   }
   return { d, w: W, h: H, lines: boxes, glyphs, missing };

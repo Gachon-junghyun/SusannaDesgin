@@ -69,3 +69,65 @@ export async function deleteMakerShare(id: string): Promise<{ ok: boolean; error
   if (error) return { ok: false, error: explain(error) };
   return { ok: true };
 }
+
+/* ------------------------------------------------------------------ 수산나 픽 — 받은 답 · 같은 링크에 다음 차수 (F26-n · 0021) */
+
+export type ReplyItem = {
+  id: string;
+  share_id: string;
+  round: number;
+  pick: number;
+  pick_name: string;
+  changes: string;
+  memo: string;
+  design: unknown;
+  created_at: string;
+  read_at: string | null;
+  /** 어느 링크의 답인가 — 목록에서 알아보려고 같이 읽습니다 */
+  share: { title: string; token: string } | null;
+};
+
+const MISSING_REPLY = "받은 답 표가 아직 없습니다 — supabase/migrations/0021_maker_reply.sql 을 Supabase 대시보드에서 먼저 실행해야 합니다.";
+
+/** 최근 받은 답 30개(모든 링크). 디자인 JSON 까지 같이 옵니다 — «에디터로 열기»가 바로 씁니다 */
+export async function listMakerReplies(): Promise<{ ok: true; items: ReplyItem[] } | { ok: false; error: string }> {
+  const supabase = await client();
+  const { data, error } = await supabase
+    .from("maker_replies")
+    .select("id, share_id, round, pick, pick_name, changes, memo, design, created_at, read_at, share:maker_shares(title, token)")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) {
+    const msg = error.message ?? "";
+    if (error.code === "42P01" || error.code === "PGRST205" || /maker_replies/.test(msg)) return { ok: false, error: MISSING_REPLY };
+    return { ok: false, error: explain(error) };
+  }
+  return { ok: true, items: (data ?? []) as unknown as ReplyItem[] };
+}
+
+export async function markMakerReplyRead(id: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await client();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, error: "잘못된 답 번호입니다." };
+  const { error } = await supabase.from("maker_replies").update({ read_at: new Date().toISOString() }).eq("id", id).is("read_at", null);
+  if (error) return { ok: false, error: explain(error) };
+  return { ok: true };
+}
+
+/**
+ * 같은 링크에 다음 차수를 올립니다 — 디자인을 갈아 끼우고 기한을 오늘부터 90일로 늘립니다.
+ * 🔴 손님이 그 주소를 다시 열면 **새 차수만** 보입니다(옛 차수는 받은 답 쪽에 그 모양 그대로 남아 있습니다).
+ */
+export async function updateMakerShare(id: string, design: unknown): Promise<ShareResult> {
+  const supabase = await client();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, error: "잘못된 링크 번호입니다." };
+  const checked = checkShareDesign(design);
+  if ("error" in checked) return { ok: false, error: checked.error };
+  const { data, error } = await supabase
+    .from("maker_shares")
+    .update({ design, expires_at: new Date(Date.now() + 90 * 864e5).toISOString() })
+    .eq("id", id)
+    .select("id, token, title, created_at, expires_at")
+    .single<ShareItem>();
+  if (error || !data) return { ok: false, error: error ? explain(error) : "고치지 못했습니다." };
+  return { ok: true, share: data };
+}

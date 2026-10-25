@@ -102,3 +102,20 @@ export { CUSTOM_FONT_SLUG, CUSTOM_FONT_STORAGE_KEY, SHOW_FONTS } from "./flags";
 
 /** 라이선스 표를 마지막으로 연 날 [P6] — 화면에서는 뺐고(2026-09-23) 기록으로만 둡니다 */
 export const FONTS_CHECKED_AT = "2026-09-23";
+
+/**
+ * 메이커 전용 글꼴 — **`/fonts` 견본 페이지·손님 글꼴 목록에는 안 나옵니다** (F26-n · 2026-10-25).
+ * 관리자 에디터에서만 고르고, 그 글꼴로 보낸 수산나 픽은 손님 화면에서 **글자로 남아** 글자 사이·줄 사이를 다듬을 수 있습니다
+ * (이 PC 글꼴로 쓰면 외곽선으로 굳혀 가서 글자 사이를 못 바꿉니다 — 뮤제드폴 실험에서 걸린 것).
+ * 넣은 까닭: 뮤제드폴 손님이 «Noto Sans KR» 을 짚었고 확정은 Medium 인데, 견본 목록의 본고딕은 Black(900) 하나뿐이었습니다.
+ * 파일은 견본 본고딕과 같은 배포처(jsdelivr, notofonts/noto-cjk, SIL OFL 1.1, CORS `*`, 2026-10-25 실측 Medium 4.7MB).
+ */
+export const makerExtraFonts: { slug: string; name: string; file: string }[] = [
+  { slug: "noto-sans-kr-400", name: "본고딕 Regular (Noto Sans KR 400)", file: "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/KR/NotoSansKR-Regular.otf" },
+  { slug: "noto-sans-kr-500", name: "본고딕 Medium (Noto Sans KR 500)", file: "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/KR/NotoSansKR-Medium.otf" },
+  { slug: "noto-sans-kr-700", name: "본고딕 Bold (Noto Sans KR 700)", file: "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/KR/NotoSansKR-Bold.otf" },
+];
+
+/** 메이커가 쓰는 글꼴 한 벌(견본 + 메이커 전용)에서 찾기 — 이름과 파일 주소 */
+export const makerFont = (slug: string): { name: string; file: string } | undefined =>
+  specimenFonts.find((f) => f.slug === slug) ?? makerExtraFonts.find((f) => f.slug === slug);

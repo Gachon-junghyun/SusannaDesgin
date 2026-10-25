@@ -542,3 +542,56 @@ export async function notifyNewQuote(
 
   return sent;
 }
+
+/* ------------------------------------------------------------------ 수산나 픽 답장 (F26-n · 2026-10-25) */
+
+export type MakerReplyNotice = {
+  title: string;
+  token: string;
+  round: number;
+  pickLabel: string;
+  changes: string[];
+  memo: string;
+};
+
+/**
+ * 손님이 공유 링크에서 «보내기»를 눌렀을 때 — 견적 알림과 **같은 경로·같은 받는 사람**(`QUOTE_WEBHOOK_URL` · Resend)으로 보냅니다.
+ * 견적이 아니라서 제목 머리를 «[수산나 픽 답장]»으로 가릅니다. 실패해도 답장은 이미 DB 에 들어 있습니다(관리자 화면에서 보입니다).
+ */
+export async function notifyMakerReply(n: MakerReplyNotice): Promise<string[]> {
+  const webhook = process.env.QUOTE_WEBHOOK_URL?.trim();
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+  const mailFrom = process.env.QUOTE_MAIL_FROM?.trim() || "onboarding@resend.dev";
+  const mailTo = process.env.QUOTE_NOTIFY_EMAIL?.trim() || site.email;
+  const link = `${site.url}/maker/s/${n.token}`;
+  const lines = [
+    `[수산나 픽 답장] ${n.title || "이름 없는 링크"} (${n.round}차)`,
+    `고른 안: ${n.pickLabel}`,
+    `바꾼 것: ${n.changes.length ? n.changes.join(", ") : "없음 (기본 시안 그대로)"}`,
+    `한마디: ${n.memo || "(없음)"}`,
+    `손님이 본 화면: ${link}`,
+    `고쳐서 다시 보내기: ${site.url}/admin/maker (공유 링크 칸의 «받은 답»)`,
+  ];
+  const text = lines.join("\n");
+  const html =
+    `<div style="font-family:sans-serif;font-size:15px;line-height:1.7;color:#0f1a19">` +
+    `<p style="margin:0 0 12px;font-size:17px;font-weight:700">${esc(lines[0])}</p>` +
+    lines.slice(1, 4).map((l) => `<p style="margin:0">${esc(l)}</p>`).join("") +
+    `<p style="margin:16px 0 0"><a href="${esc(link)}" style="color:#00726c;font-weight:700">손님이 보낸 모양 보기</a></p>` +
+    `<p style="margin:4px 0 0;color:#5a6b69">${esc(lines[5])}</p></div>`;
+
+  const jobs: Array<[string, Promise<void>]> = [];
+  if (webhook) jobs.push(["웹훅", sendWebhook(webhook, text)]);
+  if (resendKey && mailTo) jobs.push(["이메일", sendEmail(resendKey, mailFrom, mailTo, `[수산나 픽 답장] ${n.title} · ${n.pickLabel}`, html, text)]);
+  if (!jobs.length) {
+    console.warn("[수산나 픽] 알림 경로가 설정되지 않아 답장을 아무 곳에도 알리지 않았습니다(답장은 DB 에 있습니다).");
+    return [];
+  }
+  const results = await Promise.allSettled(jobs.map(([, p]) => p));
+  const sent: string[] = [];
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") sent.push(jobs[i][0]);
+    else console.error(`[수산나 픽] ${jobs[i][0]} 알림 실패:`, r.reason);
+  });
+  return sent;
+}

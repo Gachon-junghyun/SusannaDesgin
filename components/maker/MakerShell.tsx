@@ -24,6 +24,7 @@ export default function MakerShell({
   base,
   hidden,
   nav: showNav = true,
+  bare = false,
   children,
 }: {
   mode: "admin" | "customer";
@@ -36,6 +37,8 @@ export default function MakerShell({
    * 목록이 가리키는 `/maker` 가 손님에게 404 라서, 누르면 막다른 길입니다.
    */
   nav?: boolean;
+  /** 머리말·목록 없이 화면을 통째로 — 수산나 픽(F26-n, 공유 링크)이 자기 머리말(단계 막대)을 그립니다 */
+  bare?: boolean;
   children: React.ReactNode;
 }) {
   const path = usePathname();
@@ -63,6 +66,8 @@ export default function MakerShell({
         ]
       : []),
   ];
+
+  if (bare) return <div className="h-dvh overflow-hidden bg-white text-ink">{children}</div>;
 
   return (
     <div className={`flex min-h-dvh flex-col bg-[#eef0ef] text-ink lg:h-dvh lg:overflow-hidden ${onPhone("max-md:h-dvh max-md:overflow-hidden")}`}>

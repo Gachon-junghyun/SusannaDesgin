@@ -61,6 +61,8 @@ export type TextItem = Xform & {
   glyphs?: Record<number, GlyphOv>;
   /** 세로쓰기 — 줄마다 한 세로 단, 첫 줄이 오른쪽(돌출 판·현판에 흔한 결, 2026-09-26) */
   vertical?: boolean;
+  /** 줄 간격 — 위 줄 글자 높이의 배수. 비우면 0.35 (수산나 픽의 «여백», F26-n · 2026-10-25) */
+  gap?: number;
   /** PRO — 글자 전체(이 아이템 상자) 위의 격자 왜곡 */
   mesh?: Mesh;
   /** 중심 좌표 (mm) */
@@ -108,6 +110,18 @@ export type PlateItem = Xform & {
   /** 테두리 색 — "" 면 없음 */
   border?: string;
   borderMm?: number;
+  /**
+   * 갈바 판 간판의 짜임 (F26-n · 2026-10-25, 뮤제드폴 제안서 SIDE VIEW·FRONT VIEW 에서 옮김).
+   * 사람 지적: *"실제 시안이랑 같나, 앞으로 나오고 LED 이런 건 다 스킵한 건가?"* — 판 자료에 칸이 없어 도면·모델 모두 빠졌습니다.
+   * - `bodyMm`: 판 몸통 깊이(벽에서 앞면까지). 뮤제드폴 90 = 몰딩 30 + 프레임 60. 비우면 60
+   * - `corniceMm`: 위 코니스(처마)가 벽에서 나온 길이. 뮤제드폴 200. 0·비움 = 코니스 없음
+   * - `corniceH`: 코니스 앞면 높이(정면에서 보이는 띠). 뮤제드폴 정면도에서 약 50(잰 값)
+   * - `lights`: 코니스 아래 간접등 개수(가로로 고르게). 뮤제드폴 2
+   */
+  bodyMm?: number;
+  corniceMm?: number;
+  corniceH?: number;
+  lights?: number;
   w: number;
   h: number;
   x: number;
@@ -170,6 +184,11 @@ export type Design = {
   wallH: number;
   /** 건물 사진에서 뽑은 색(넓은 순) — 사진은 안 남기고 색 값만 둡니다 (F26-f) */
   palette?: string[];
+  /**
+   * 글자 굵기 — 글자·로고 외곽을 이만큼(mm, 한쪽) 넓힙니다. 음수면 가늘게 (F26-n · 2026-10-25).
+   * 🔴 보이는 테두리가 아니라 **외곽선 자체를 옮깁니다**(`lib/maker/weight.ts`) — 판정·제작용 SVG·치수가 굵어진 모양을 봅니다.
+   */
+  weight?: number;
   items: Item[];
 };
 
@@ -347,6 +366,7 @@ export function summarize(
   if (k.needsLed) L.push(`조명 색: ${info.ledName}`);
   if (info.overall) L.push(`전체 크기(글자·로고 외곽): 가로 ${fmtMm(info.overall.w)} × 세로 ${fmtMm(info.overall.h)}`);
   L.push(`벽: ${info.wallName}`);
+  if (d.weight) L.push(`글자 굵기: 외곽 ${d.weight > 0 ? "+" : ""}${d.weight}mm (첨부 SVG 에 반영)`);
   if (d.palette?.length) L.push(`건물 색(사진에서 뽑음): ${d.palette.slice(0, 5).join(", ")}`);
   d.items.forEach((it, i) => {
     if (it.type === "patch") return;
@@ -359,7 +379,7 @@ export function summarize(
       const shape = plateShapes.find((s) => s.key === it.shape)?.name ?? it.shape;
       const mount = plateMounts.find((m) => m.key === it.mount);
       L.push(
-        `${i + 1}. 판 · ${shape} · ${fmtMm(it.w)} × ${fmtMm(it.h)} · 색 ${it.fill}${it.border ? ` · 테두리 ${it.border} ${it.borderMm ?? 0}mm` : ""} · 설치 ${mount ? mount.label : it.mount}`,
+        `${i + 1}. 판 · ${shape} · ${fmtMm(it.w)} × ${fmtMm(it.h)} · 색 ${it.fill}${it.border ? ` · 테두리 ${it.border} ${it.borderMm ?? 0}mm` : ""}${it.bodyMm ? ` · 몸통 깊이 ${it.bodyMm}mm` : ""}${it.corniceMm ? ` · 코니스 돌출 ${it.corniceMm}mm(앞면 ${it.corniceH ?? 50}mm)` : ""}${it.lights ? ` · 간접등 ${it.lights}개` : ""} · 설치 ${mount ? mount.label : it.mount}`,
       );
       return;
     }
