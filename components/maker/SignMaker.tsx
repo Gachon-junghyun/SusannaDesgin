@@ -151,7 +151,7 @@ const STORE = (mode: "admin" | "customer") => `susanna-maker-draft-v2-${mode}`;
 /** 🔴 «입체»는 뺐습니다(사람 지시 2026-10-25 «도면이랑 모델링만 남겨 두고 입체는 없애 줘») */
 export type PickViewMode = "flat" | "model";
 /** 모델링(블렌더 렌더) 화면 상태 — `url` 은 마지막으로 받은 그림(다시 그리는 동안에도 보여 줍니다) */
-export type RenderView = { state: "idle" | "wait" | "done" | "off" | "error"; url?: string; ms?: number; total?: number; message?: string };
+export type RenderView = { state: "idle" | "wait" | "done" | "off" | "error"; url?: string; ms?: number; total?: number; message?: string; json?: string };
 
 /** 관리자가 담아 둔 수산나 픽(A·B·C) — 이 브라우저에만 (F26-n) */
 const PICK_BIN_KEY = "susanna-maker-picks-v1";
@@ -1872,7 +1872,7 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
           const g = await fetch(`/api/maker/render?token=${share.token}&id=${j.id}`, { cache: "no-store" });
           const r = (await g.json().catch(() => ({}))) as { status?: string; jpg?: string | null; ms?: number | null; workerOn?: boolean };
           if (r.status === "done" && r.jpg) {
-            if (my === renderSeq.current) setRender({ state: "done", url: `data:image/jpeg;base64,${r.jpg}`, ms: r.ms ?? undefined, total: Math.round(performance.now() - t0) });
+            if (my === renderSeq.current) setRender({ state: "done", url: `data:image/jpeg;base64,${r.jpg}`, ms: r.ms ?? undefined, total: Math.round(performance.now() - t0), json: renderJson });
             return;
           }
           if (r.status === "error" || r.status === "gone") {
@@ -2701,7 +2701,8 @@ export default function SignMaker({ mode, initial, share }: { mode: Mode; initia
         letters={letterBox}
         view={pickView}
         onView={setPickView}
-        render={render}
+        // 지금 모양과 다른 모양의 그림이면 «반영하는 중»으로 — 픽을 바꿨는데 앞 픽 그림이 «렌더 완료»로 남던 것(2026-10-25 운영 실측)
+        render={render.state === "done" && render.json !== renderJson ? { ...render, state: "wait" } : render}
         onSend={sendReply}
         onSave={exportJpeg}
         onContinue={continueEdit}

@@ -281,7 +281,8 @@ def main():
             time.sleep(3)
             continue
         if not rows:
-            time.sleep(0.25 if time.time() - idle_since < 120 else 2.0)
+            # 쉴 때 1초 — 2초로 두었더니 오래 쉰 뒤 첫 그림이 운영에서 4.9초 걸렸습니다(2026-10-25)
+            time.sleep(0.25 if time.time() - idle_since < 120 else 1.0)
             continue
         row = rows[0]
         t0 = time.perf_counter()
