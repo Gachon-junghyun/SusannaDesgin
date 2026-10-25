@@ -223,3 +223,28 @@ export type SitePhotoRow = {
   drive_file_id: string;
   created_at: string;
 };
+
+/** 글꼴 공방 «내 글꼴 작업» 한 벌 (0020 · F26-m 3단계) — 관리자만 읽고 씁니다 */
+export type MakerFontRow = {
+  id: string;
+  name: string;
+  /** 바탕 글꼴 id (`config/fontLab.ts`). null = 직접 그린 글꼴 */
+  base: string | null;
+  sample: string;
+  /** {weight, slant, width, tracking} */
+  style: { weight?: number; slant?: number; width?: number; tracking?: number };
+  /** 틀 (CONTRACT §3). null = 기본 틀 */
+  frames: unknown | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** 글꼴 작업의 고친 글자 한 자 또는 자모 칸 하나 (0020). `data` 는 CONTRACT §7 v2 */
+export type MakerFontPartRow = {
+  font_id: string;
+  kind: "over" | "cell";
+  key: string;
+  data: unknown;
+  updated_at: string;
+};

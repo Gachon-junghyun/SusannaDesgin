@@ -7,7 +7,8 @@
  * 일꾼은 관리자가 글꼴을 처음 고를 때 만들어집니다(`FontStudio.tsx`).
  *
  * 수식은 시제품 `page/app.js` 그대로입니다: `styleMatrix` · `styled` · `fastBaseTT` · `addExtra` · `resolveAsync` · `mergedSyl`.
- * 2단계엔 글자 고치기가 없어 칸(cells)·덮어쓰기(overrides) 문서는 비어 있습니다 — 바탕 글꼴 글자만 스타일을 입혀 넣습니다.
+ * 3단계부터 고친 음절(overrides)을 받습니다 — 시제품처럼 «고친 글자는 범위와 상관없이 늘 넣고», 스타일은 고친 윤곽에도 똑같이 입힙니다.
+ * 자모 칸(cells)은 아직 화면이 안 고치므로 여기 오지 않습니다(바탕 글꼴에 없는 음절은 비어 있음).
  */
 import ClipperLib from "clipper-lib";
 import type { Font } from "opentype.js";
@@ -21,17 +22,21 @@ import * as G from "@/lib/maker/hfont/geom";
 export type Style = { weight: number; slant: number; width: number; tracking: number };
 export type License = { copyright: string; license: string; licenseUrl: string };
 export type SignScope = "all" | "ks" | "text";
+/** 고친 음절(3단계) — 음절 좌표 v2 윤곽 (CONTRACT §7) */
+export type Overrides = Record<string, { contours: G.Contour[] }>;
 
 export type ToWorker =
   | { type: "load"; id: string; url: string; cacheName: string }
-  | { type: "bake"; seq: number; text: string; style: Style }
-  | { type: "export"; seq: number; sign: SignScope | null; text: string; style: Style; familyName: string; license: License };
+  | { type: "bake"; seq: number; text: string; style: Style; overrides: Overrides }
+  | { type: "export"; seq: number; sign: SignScope | null; text: string; style: Style; familyName: string; license: License; overrides: Overrides }
+  | { type: "glyph"; seq: number; ch: string };
 
 export type FromWorker =
   | { type: "progress"; seq: number; phase: "download" | "resolve" | "merge" | "build"; n: number; total: number; ms?: number }
   | { type: "loaded"; id: string; cached: boolean; bytes: number; ms: number }
   | { type: "baked"; seq: number; buf: ArrayBuffer; ms: number }
-  | { type: "done"; seq: number; buf: ArrayBuffer; ms: number; syllables: number }
+  | { type: "done"; seq: number; buf: ArrayBuffer; ms: number; syllables: number; edited: number }
+  | { type: "glyph"; seq: number; ch: string; contours: G.Contour[] }
   | { type: "error"; seq: number; id?: string; message: string };
 
 const ctx = self as unknown as {
@@ -156,7 +161,7 @@ function addExtra(r: Resolved, cp: number, st: Style) {
 }
 
 /** 바탕 글꼴 → 엔진 저장 형식(CONTRACT v1.1). 시제품 resolveAsync 에서 칸·덮어쓰기를 뺀 것 */
-function resolve(chars: string[], st: Style, seq: number, report: boolean): Resolved {
+function resolve(chars: string[], st: Style, seq: number, report: boolean, overrides: Overrides): Resolved {
   const r: Resolved = {
     store: { frames: DEFAULT_FRAMES, cells: {}, overrides: {}, extra: {} },
     advance: 1000 + (st.tracking || 0),
@@ -166,12 +171,19 @@ function resolve(chars: string[], st: Style, seq: number, report: boolean): Reso
   for (let j = 0x3131; j <= 0x3163; j++) addExtra(r, j, st);
   const sp = baseAdvance(" ");
   if (sp) r.spaceAdvance = sp;
+  // 고친 글자는 범위와 상관없이 늘 넣습니다(시제품 resolveAsync)
+  const edited = Object.keys(overrides).filter((ch) => overrides[ch]?.contours?.length);
+  chars = Array.from(new Set(chars.concat(edited)));
   for (let i = 0; i < chars.length; i++) {
     const ch = chars[i];
     let adv = baseAdvance(ch);
     adv = adv == null ? null : adv + (st.tracking || 0);
     let cs: Contour[] | null = null;
-    if (!st.weight) {
+    const o = overrides[ch];
+    if (o && o.contours && o.contours.length) {
+      cs = styled(o.contours, st);
+      // 바탕 글꼴에 없는 글자를 새로 그렸으면 글자 폭은 기본값(advance)
+    } else if (!st.weight) {
       const tt = fastBaseTT(ch, st);
       if (tt) r.store.overrides[ch] = { contours: tt, advance: adv ?? undefined };
     } else if (baseGlyph(ch)) cs = styledBase(ch, st);
@@ -183,7 +195,7 @@ function resolve(chars: string[], st: Style, seq: number, report: boolean): Reso
   }
   return r;
 }
-/** 간판용: 한 글자의 겹친 획을 하나의 윤곽으로 (시제품 mergedSyl) */
+/** 간판용: 한 글자의 겹친 획을 하나의 윤곽으로 (시제품 mergedSyl) — 고친 글자는 r.charSyl 에 이미 있습니다 */
 function mergedSyl(r: Resolved, ch: string, st: Style): Contour[] {
   const cs = r.charSyl[ch] || (baseGlyph(ch) ? styledBase(ch, st) : null);
   if (!cs || !cs.length) return [];
@@ -221,11 +233,16 @@ async function handle(m: ToWorker) {
     ctx.postMessage({ type: "error", seq: m.seq, message: "바탕 글꼴을 먼저 골라 주십시오." });
     return;
   }
+  if (m.type === "glyph") {
+    // 글자 고치기의 출발점 — 바탕 글꼴 모양(음절 좌표 v2, 스타일 없이)
+    ctx.postMessage({ type: "glyph", seq: m.seq, ch: m.ch, contours: G.cloneAll(baseGlyph(m.ch) || []) });
+    return;
+  }
   if (m.type === "bake") {
     if (m.seq !== latestBake) return;
     const t0 = performance.now();
     try {
-      const r = resolve(hangul(m.text), m.style, m.seq, false);
+      const r = resolve(hangul(m.text), m.style, m.seq, false, m.overrides);
       const buf = E.buildTTF(r.store, { familyName: `FL${m.seq}`, advance: r.advance, spaceAdvance: r.spaceAdvance });
       ctx.postMessage({ type: "baked", seq: m.seq, buf, ms: performance.now() - t0 }, [buf]);
     } catch (e) {
@@ -237,7 +254,7 @@ async function handle(m: ToWorker) {
   const t0 = (jobStart = performance.now());
   try {
     const st = m.style;
-    const r = resolve(allSyllables(), st, m.seq, true);
+    const r = resolve(allSyllables(), st, m.seq, true, m.overrides);
     let familyName = m.familyName;
     if (m.sign) {
       const list = m.sign === "all" ? allSyllables() : m.sign === "ks" ? E.ks2350() : hangul(m.text);
@@ -251,7 +268,8 @@ async function handle(m: ToWorker) {
     ctx.postMessage({ type: "progress", seq: m.seq, phase: "build", n: 0, total: 1, ms: performance.now() - t0 });
     const buf = E.buildTTF(r.store, { familyName, advance: r.advance, spaceAdvance: r.spaceAdvance, ...m.license });
     const syllables = Object.keys(r.store.overrides).length;
-    ctx.postMessage({ type: "done", seq: m.seq, buf, ms: performance.now() - t0, syllables }, [buf]);
+    const edited = Object.keys(m.overrides).filter((ch) => m.overrides[ch]?.contours?.length).length;
+    ctx.postMessage({ type: "done", seq: m.seq, buf, ms: performance.now() - t0, syllables, edited }, [buf]);
   } catch (e) {
     ctx.postMessage({ type: "error", seq: m.seq, message: e instanceof Error ? e.message : String(e) });
   }

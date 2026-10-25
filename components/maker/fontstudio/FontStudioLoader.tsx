@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 
+import type { FontStoreStatus } from "@/lib/maker/hfont-store";
+
 /**
  * 글꼴 공방(F26-m) 껍데기 — `MakerLoader` 와 같은 이유로 둡니다: `ssr: false` 는 서버 컴포넌트에서 못 쓰고,
  * 서버 컴포넌트에서 `next/dynamic` 으로 가져오면 코드 분할이 안 됩니다(F34 에서 실제로 밟음, Next 문서 «Lazy Loading»).
@@ -16,6 +18,7 @@ const FontStudio = dynamic(() => import("../FontStudio"), {
   ),
 });
 
-export default function FontStudioLoader() {
-  return <FontStudio />;
+/** `store` — 저장소(0020) 상태. 서버 페이지가 한 번 보고 넘깁니다 */
+export default function FontStudioLoader({ store }: { store: FontStoreStatus }) {
+  return <FontStudio store={store} />;
 }

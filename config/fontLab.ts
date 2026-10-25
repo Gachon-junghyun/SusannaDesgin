@@ -55,8 +55,17 @@ export const ALL_SYLLABLES = 11172;
 
 /* ------------------------------------------------------------------ 화면 문구 · 기본값 */
 
-/** 이 브라우저에만 남기는 상태(고른 글꼴·스타일·문장·폰트 이름). 저장(`maker_fonts`)은 3단계입니다 */
+/** 이 브라우저에만 남기는 화면 설정(갈래·거르기·간판용 범위). 2단계에선 고른 글꼴·스타일·문장·이름도 여기 있었습니다 */
 export const FONT_LAB_STATE_KEY = "susanna-fontlab-v1";
+/**
+ * 지금 작업 중인 글꼴 문서의 이 브라우저 사본(3단계) — 고칠 때마다 통째로 적습니다. 저장소(0020)가 없거나 죽어도 고친 것을 잃지 않게.
+ * «저장»은 이 사본에서 바뀐 글자만 DB 로 올립니다.
+ */
+export const FONT_LAB_DOC_KEY = "susanna-fontlab-doc-v1";
+/** 서버 액션 본문 상한 1MB 안으로 — 한 번에 보내는 글자 묶음의 크기(바이트) */
+export const FONT_SAVE_BATCH_BYTES = 700_000;
+/** 한 자 상한 — `0020_maker_fonts.sql` 의 check(256KB)와 같은 값. 한쪽만 바꾸지 마세요 */
+export const FONT_PART_MAX_BYTES = 262_144;
 /** 받은 글꼴 파일을 넣어 두는 이 브라우저의 Cache API 이름 — 나눔손글씨 한 종이 약 5.5MB 라 두 번 받지 않습니다 */
 export const FONT_LAB_CACHE = "susanna-fontlab-files-v1";
 
@@ -100,12 +109,64 @@ export const fontLabCopy = {
   signScope: "간판용 범위",
   signNote: "간판용은 글자마다 겹친 획을 하나의 윤곽으로 합칩니다. 레이저 가공·외곽선 작업에서 획이 겹친 자리에 구멍이나 선이 생기지 않습니다. 시간이 더 걸립니다.",
   cacheNote: "한 번 받은 글꼴 파일은 이 브라우저에 보관해 다음에는 바로 엽니다.",
-  saveNote: "저장 기능은 다음 단계에서 붙습니다. 지금은 고른 글꼴·스타일·문장이 이 브라우저에만 남습니다.",
   partialNote: (n: number) => `이 글꼴에는 한글 ${n.toLocaleString()}자만 있습니다. 받은 TTF 에도 그 글자만 들어갑니다.`,
   rfnBlocked: (rfn: string) => `«${rfn}» 는 원작의 예약 이름이라 폰트 이름에 쓸 수 없습니다(OFL). 다른 이름을 넣어 주십시오.`,
   sameName: "바탕 글꼴과 같은 이름은 쓸 수 없습니다. 고친 글꼴이므로 다른 이름을 넣어 주십시오.",
   credit: (name: string, copyright: string) =>
     `바탕 글꼴 ${name}. ${copyright} 이 글꼴과 여기서 고친 글꼴은 SIL Open Font License 1.1 을 따르며, 받은 TTF 안에 원작 저작권과 라이선스가 함께 들어갑니다.`,
+  // ---------- 3단계: 글자 고치기
+  editPickLabel: "고칠 글자",
+  editPickHint: "미리보기 문장의 글자를 누르거나 한 글자를 넣고 «고치기»를 누르십시오.",
+  editOpen: "고치기",
+  editedList: "고친 글자",
+  editedNone: "아직 고친 글자가 없습니다.",
+  editTitle: "글자 고치기",
+  editedTag: "고친 글자",
+  editClose: "닫기",
+  toolNode: "점",
+  toolSelect: "선택(옮기기·크기·회전)",
+  multi: "여럿 고르기",
+  delNode: "점 지우기",
+  smooth: "부드럽게/뾰족하게",
+  round: "모서리 둥글게",
+  tame: "뾰족한 데 다듬기",
+  fitView: "화면 맞춤",
+  resetGlyph: "처음 모양으로",
+  refit: "점 줄이기",
+  roundR: "둥글게 반지름",
+  editHelp: [
+    "점을 끌어 옮기고, 고른 점의 손잡이를 끌어 곡선을 바꿉니다. 점을 두 번 누르면 부드러운 점과 뾰족한 점이 바뀝니다.",
+    "선 위를 누르면 점이 생기고, 빈 곳을 끌면 상자로 여럿을 고릅니다(Shift 를 누르면 더하기).",
+    "화살표 키로 1, Shift 와 함께 10 씩 옮깁니다. Delete 는 점 지우기, Ctrl+Z 되돌리기, Ctrl+Y 다시 하기.",
+    "휠로 확대하고, Alt 를 누른 채 끌면 화면을 옮깁니다. 회색은 바탕 글꼴의 원래 모양입니다.",
+  ],
+  importTitle: "그림 불러오기",
+  importPick: "그림 파일 고르기",
+  importPaste: "사진이나 스캔한 글자를 Ctrl+V 로 붙여 넣어도 됩니다.",
+  importTh: "문턱",
+  importTol: "매끈하게",
+  importInv: "밝은 글씨(반전)",
+  importReplace: "이 모양으로 바꾸기",
+  importAdd: "지금 모양에 더하기",
+  importCancel: "그만두기",
+  // ---------- 3단계: 저장
+  storeTitle: "내 글꼴 작업",
+  storeReady: "저장소를 쓰고 있습니다. «저장»을 누르면 바뀐 글자만 올라갑니다.",
+  save: "저장",
+  saving: "저장하는 중",
+  newFont: "새로 만들기",
+  deleteFont: "이 작업 지우기",
+  deleteArmed: "정말 지우기",
+  openLabel: "저장한 작업 열기",
+  unsaved: (n: number) => `저장 안 된 고침 ${n.toLocaleString()}건`,
+  allSaved: "모두 저장했습니다.",
+  confirmDiscard: "저장 안 된 고침이 있습니다. 이 브라우저 사본을 버리고 계속하시겠습니까?",
+  localFull: "이 브라우저의 저장 공간이 찼습니다. 고친 것을 잃지 않도록 «백업 JSON 받기»를 먼저 해 주십시오.",
+  tooBig: (ch: string, kb: number) => `«${ch}» 한 자가 너무 큽니다(${kb}KB, 한 자 상한 256KB). «점 줄이기»로 점을 줄인 뒤 다시 저장해 주십시오.`,
+  backupOut: "백업 JSON 받기",
+  backupIn: "백업 JSON 불러오기",
+  backupNote: "백업 JSON 은 시제품(손글씨 한글 공방)과 같은 형식이라 서로 불러올 수 있습니다.",
+  baseMissing: (id: string) => `백업의 바탕 글꼴(${id})은 이 목록에 없습니다. 바탕 글꼴을 다시 골라 주십시오.`,
   /** 받은 TTF 의 name 표 0번 뒤에 붙는 문구 */
   modifiedWith: (name: string) => `Modified with the Susanna font workshop from ${name}.`,
   oflLicense: "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://openfontlicense.org",
