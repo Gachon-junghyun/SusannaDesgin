@@ -91,11 +91,11 @@ export default async function Home() {
         <QuickQuoteForm idPrefix="mobile" />
       </div>
 
-      {/* 사업 영역 — 히어로 위로 살짝 올라타며 다음 화면으로 넘어갑니다 */}
+      {/* 사업 영역 — 히어로 위로 살짝 올라타며 다음 화면으로 넘어갑니다. 위 모서리 둥글림은 뺐습니다(2026-10-27 사람: «랜딩 아래 라운드 폰이랑 pc 둘 다 없애») */}
       <nav
         id="business"
         aria-label="사업 영역 바로가기"
-        className="relative z-10 -mt-8 scroll-mt-24 rounded-t-[28px] border-b border-line bg-white shadow-[0_-12px_40px_rgba(0,0,0,.18)] md:-mt-10 md:rounded-t-[36px]"
+        className="relative z-10 -mt-8 scroll-mt-24 border-b border-line bg-white shadow-[0_-12px_40px_rgba(0,0,0,.18)] md:-mt-10"
       >
         <ul className="wrap grid grid-cols-2 divide-x divide-y divide-line lg:grid-cols-4 lg:divide-y-0">
           {blocks.signTypes.map((t, idx) => (
