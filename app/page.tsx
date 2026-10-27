@@ -5,9 +5,11 @@ import QuickQuoteForm from "@/components/QuickQuoteForm";
 import Img from "@/components/Img";
 import JsonLd from "@/components/JsonLd";
 import MakerShowcase from "@/components/MakerShowcaseLoader";
+import ProcessPanels from "@/components/ProcessPanels";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
-import { SHOW_DETAIL_POPUPS, SHOW_FABRICATION, makerShowcase, workCategories } from "@/config/content";
+import { SHOW_DETAIL_POPUPS, SHOW_FABRICATION, makerShowcase, stepPhotoAlt, workCategories } from "@/config/content";
+import { PROCESS_PANELS_ON_HOME } from "@/config/flags";
 import { MAKER_BETA, MAKER_ON_HOME, SHOW_MAKER } from "@/config/maker";
 import { site } from "@/config/site";
 import { getBlocks, getSlides, getWorks } from "@/lib/cms";
@@ -159,6 +161,39 @@ export default async function Home() {
       </Section>
 
       {/*
+        제작 공정 — 사진 패널 (F35, 2026-10-27 사람 스케치). PC 는 세로 기둥 다섯, 휴대폰은 가로 띠 다섯.
+        첫 화면처럼 사진 위에 글자를 얹습니다 — 자세한 건 `components/ProcessPanels.tsx` 머리말.
+        `PROCESS_PANELS_ON_HOME` 이 꺼져 있으면 미리보기(F23) 중인 관리자에게만 그리고, 손님은 아래 예전 카드 줄을 봅니다.
+      */}
+      {PROCESS_PANELS_ON_HOME || preview.on ? (
+      <section className="bg-paper pt-16 md:pt-24">
+        {/* 사람 결정(2026-10-27): «여백 없이 꽉» — 머리말만 가로 틀 안에, 패널은 화면 끝에서 끝까지·단계 사이 틈 없이·구역 아래 여백 없이 */}
+        <div className="wrap mb-10 flex flex-wrap items-end justify-between gap-6 md:mb-12">
+          <SectionHeading
+            eyebrow={copy("home-process").eyebrow}
+            title={<Lines text={copy("home-process").title} />}
+            desc={copy("home-process").desc}
+          />
+          <Link href="/process" className="btn btn-quiet px-7 py-3.5">
+            공정 자세히 보기 <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+        <Reveal>
+          <ProcessPanels
+            panels={blocks.process.map((s, idx) => ({
+              no: s.eyebrow || String(idx + 1).padStart(2, "0"),
+              title: s.title,
+              lines: s.points.length ? s.points : [s.sub],
+              image: s.image,
+              alt: s.alt || stepPhotoAlt[s.image] || `${s.title} 단계`,
+              available: !!s.image && imageExists(s.image),
+            }))}
+          />
+        </Reveal>
+      </section>
+      ) : (
+      <>
+      {/*
         제작 공정 — 2026-09-29 사람 결정(«2안»의 프로세스). 왼쪽에 제목(넓은 화면에서 따라 내려옴),
         오른쪽에 STEP 01~05 를 세로 줄로 잇고 단계마다 할 일(`points`)을 적습니다 — 한샘 리하우스
         «상담부터 시공까지 프로세스 안내»의 세로 흐름(reference/reference.md 부록 B).
@@ -217,6 +252,8 @@ export default async function Home() {
           </ol>
         </div>
       </Section>
+      </>
+      )}
 
       {/* 시공 실적 — 2026-09-29 사람 결정: 칩 + 큰 사진 하나와 작은 사진 넷(components/HomeWorks.tsx) */}
       <Section>

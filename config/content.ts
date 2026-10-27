@@ -516,6 +516,21 @@ export const steps: Step[] = [
   },
 ];
 
+/**
+ * 단계 사진의 대체 문구 — **파일 경로로 찾습니다**(F35). 사진은 파일명 슬롯(A6)이라 문구도 파일을 따라갑니다.
+ * DB(관리자 화면)의 `alt` 칸이 차 있으면 그쪽이 먼저입니다. 사진을 바꾸면 여기 한 줄도 같이 고칩니다.
+ * 지금 다섯 장(2026-10-27): 01 현장 실측 사진(ChatGPT 로 빛번짐 제거·수평·줄자 동작, 얼굴은 보내기 전에 가림) ·
+ * 02 일러스트레이터 작업 화면 캡처 · 03 블렌더 3D 렌더(뮤제드폴 확정 B안 구조·치수에 글자만 «수산나디자인», 판 색은 브랜드 청록 — 사람 지시, 장면 `SusannaDesigner/runs/2026-10-27_홈공정_모델링/scene_musee.py`). 02 는 가상 상호 «온결하우스» ·
+ * 04 카톡 실적 원본 `27_chungchun_halo_factory` · 05 실적 `work-16`. 만든 법은 형제 저장소 `SusannaDesigner/LESSONS.md` 2026-10-27 [홍보].
+ */
+export const stepPhotoAlt: Record<string, string> = {
+  "/images/step-1-consult.jpg": "밤의 모퉁이 카페 앞에서 시공 담당자가 줄자로 창 폭을 재는 현장 실측 모습",
+  "/images/step-2-design.jpg": "일러스트레이터에서 간판 정면 도면을 그리는 화면 — 가상 상호 «온결하우스» 채널 간판의 치수, 색상표, 사양표",
+  "/images/step-3-confirm.jpg": "확정 시안을 3D 로 지은 벽면 갈바 간판 — 청록 도장 판, 위 코니스, 조명용 간접등 둘, 흰 아크릴 글자 «수산나디자인»",
+  "/images/step-4-production.jpg": "출고 전 자체 공장에서 불을 켠 «청춘예찬» 후광 채널문자",
+  "/images/step-5-install.jpg": "고층 건물 옥상에서 로프 작업자들이 대형 입체 문자를 설치하는 시공 현장",
+};
+
 export type Work = {
   slug: string;
   title: string;
