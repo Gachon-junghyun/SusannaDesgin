@@ -91,11 +91,13 @@ export default async function Home() {
         <QuickQuoteForm idPrefix="mobile" />
       </div>
 
-      {/* 사업 영역 — 히어로 위로 살짝 올라타며 다음 화면으로 넘어갑니다. 위 모서리 둥글림은 뺐습니다(2026-10-27 사람: «랜딩 아래 라운드 폰이랑 pc 둘 다 없애») */}
+      {/* 사업 영역 — 첫 화면 바로 아래. 위 모서리 둥글림은 뺐습니다(2026-10-27 사람: «랜딩 아래 라운드 폰이랑 pc 둘 다 없애»).
+          예전엔 히어로 위로 32~40px 올라탔는데, 둥글림이 빠지고 나니 첫 화면 맨 아래에 흰 띠와 칸 나눔 선만 비쳐 보여서
+          올라타기와 그림자를 뺐습니다(2026-10-29 사람: «히어로 저 아래 흰색 라인 안 보이게, 지저분해서»). */}
       <nav
         id="business"
         aria-label="사업 영역 바로가기"
-        className="relative z-10 -mt-8 scroll-mt-24 border-b border-line bg-white shadow-[0_-12px_40px_rgba(0,0,0,.18)] md:-mt-10"
+        className="relative z-10 scroll-mt-24 border-b border-line bg-white"
       >
         <ul className="wrap grid grid-cols-2 divide-x divide-y divide-line lg:grid-cols-4 lg:divide-y-0">
           {blocks.signTypes.map((t, idx) => (
@@ -105,7 +107,7 @@ export default async function Home() {
                 className="group flex flex-col items-center gap-1 px-4 py-8 text-center transition-colors hover:bg-paper md:py-10"
               >
                 <Reveal delay={idx * 70}>
-                  <span className="block text-[11px] font-bold tracking-[0.2em] text-ink-500">
+                  <span className="block text-[13px] font-bold tracking-[0.2em] text-ink-500">
                     {t.eyebrow}
                   </span>
                   <span className="mt-1 block text-lg font-black transition-colors group-hover:text-brand">
@@ -137,7 +139,7 @@ export default async function Home() {
                   />
                   <div>
                     <p className="font-bold">{f.title}</p>
-                    <p className="mt-0.5 text-[15px] leading-relaxed text-ink-500">
+                    <p className="mt-0.5 text-[15px] leading-relaxed text-ink-500 md:text-base">
                       {f.sub}
                     </p>
                   </div>
@@ -166,9 +168,11 @@ export default async function Home() {
         `PROCESS_PANELS_ON_HOME` 이 꺼져 있으면 미리보기(F23) 중인 관리자에게만 그리고, 손님은 아래 예전 카드 줄을 봅니다.
       */}
       {PROCESS_PANELS_ON_HOME || preview.on ? (
-      <section className="bg-paper pt-16 md:pt-24">
-        {/* 사람 결정(2026-10-27): «여백 없이 꽉» — 머리말만 가로 틀 안에, 패널은 화면 끝에서 끝까지·단계 사이 틈 없이·구역 아래 여백 없이 */}
-        <div className="wrap mb-10 flex flex-wrap items-end justify-between gap-6 md:mb-12">
+      <Section className="bg-paper">
+        {/* 2026-10-29 사람: «여백 주요 실적처럼» — 예전(10-27 «여백 없이 꽉»)엔 패널이 화면 끝에서 끝까지였는데,
+            이제 주요 실적과 같은 가로 틀·같은 위아래 여백·같은 머리말 간격(mt-10) 안에 둡니다. 단계 사이 틈 없음과
+            옆으로 넓어지는 움직임은 그대로입니다. */}
+        <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionHeading
             eyebrow={copy("home-process").eyebrow}
             title={<Lines text={copy("home-process").title} />}
@@ -178,7 +182,8 @@ export default async function Home() {
             공정 자세히 보기 <span aria-hidden="true">→</span>
           </Link>
         </div>
-        <Reveal>
+        {/* mt-6 — 패널을 머리말 쪽으로 당김(2026-10-29 사람: «조금 위로 땡기고» → «업무프로세스도 조금 올리고»). 주요 실적의 머리말 간격과 같은 값 */}
+        <Reveal className="mt-6">
           <ProcessPanels
             panels={blocks.process.map((s, idx) => ({
               no: s.eyebrow || String(idx + 1).padStart(2, "0"),
@@ -190,7 +195,7 @@ export default async function Home() {
             }))}
           />
         </Reveal>
-      </section>
+      </Section>
       ) : (
       <>
       {/*
@@ -268,7 +273,8 @@ export default async function Home() {
           </Link>
         </div>
 
-        <div className="mt-10">
+        {/* mt-6 — 머리말 쪽으로 밀착(2026-10-29 사람: «주요실적도 조금 위로 밀착») */}
+        <div className="mt-6">
           <HomeWorks
             works={works.map((w) => ({ ...w, available: imageExists(w.image) }))}
             categories={workCategories}
@@ -352,19 +358,20 @@ export default async function Home() {
       )}
 
       {/* 마무리 CTA — 2026-09-29 사람 결정(«2안»): 청록 띠 대신 흰 바탕 가운데 정렬 + 먹 버튼 둘 */}
-      <section className="border-t border-line py-20 text-center md:py-24">
+      {/* 글자·단추 크기는 다른 구역 머리말(SectionHeading)·단추와 같게 맞췄습니다(2026-10-29 «전체적으로 글씨 맞추고») */}
+      <section className="sec-y border-t border-line text-center">
         <div className="wrap">
-          <h2 className="text-3xl font-normal tracking-tight whitespace-pre-line md:text-[42px]">
+          <h2 className="text-3xl leading-tight font-normal tracking-tight whitespace-pre-line md:text-[42px]">
             {copy("home-cta").title}
           </h2>
-          <p className="mt-3 leading-relaxed whitespace-pre-line text-ink-500">
+          <p className="mt-4 text-base leading-relaxed whitespace-pre-line text-ink-500 md:text-lg">
             {copy("home-cta").desc}
           </p>
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/quote" className="btn px-8 py-4 text-lg">
+            <Link href="/quote" className="btn px-7 py-3.5">
               무료 견적 신청 <span aria-hidden="true">→</span>
             </Link>
-            <a href={site.phoneHref} className="btn btn-quiet px-8 py-4 text-lg">
+            <a href={site.phoneHref} className="btn btn-quiet px-7 py-3.5">
               {site.phone}
             </a>
           </div>

@@ -95,20 +95,24 @@ export default function ProcessPanels({ panels }: { panels: ProcessPanel[] }) {
   return (
     <>
       {/* PC — 세로 기둥. `@container` 로 줄 폭을 재서 넓은 기둥의 글 폭을 미리 고정합니다(넓어지는 동안 글이 다시 흐르지 않게) */}
-      <ol className="@container hidden h-[clamp(600px,84vh,860px)] lg:flex">
+      {/* 높이는 `.process-rail-h`(globals.css) — 머리띠 아래 한 화면에 구역 전체가 들어오도록 화면 높이에서 계산(2026-10-29).
+          기둥 사이 14px 틈 = 주요 실적 사진 칸 사이(HomeWorks gap-3.5)와 같은 값(같은 날 사람: «주요실적 각 네모 여백 가져다가 프로세스에도») */}
+      <ol className="@container process-rail-h hidden gap-3.5 lg:flex">
         {panels.map((p, idx) => {
           const on = idx === active;
           return (
             <li
               key={p.no || idx}
               onMouseEnter={() => setActive(idx)}
-              className="relative min-w-0 overflow-hidden border-l border-white/10 bg-ink first:border-l-0 transition-[flex-grow] duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+              className="relative min-w-0 overflow-hidden bg-ink transition-[flex-grow] duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
               style={{ flexGrow: on ? 3.2 : 1, flexBasis: 0 }}
             >
               <PanelImage p={p} on={on} sizes="(min-width: 1520px) 640px, 45vw" />
 
-              {/* 막 — 좁은 기둥은 짙게, 넓은 기둥은 아래만 짙게(글 자리) */}
-              <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/45 via-45% to-ink/10" />
+              {/* 막 — 첫 화면(HeroSlider 데스크톱)과 같은 두 겹: 왼쪽(글 자리)부터 짙게 + 아래를 짙게
+                  (2026-10-29 사람: «글자 있는 곳은 랜딩페이지 그라데이션이랑 통일성 맞춰서 잘 보이게»). 좁은 기둥은 아래 ink/45 를 한 겹 더 */}
+              <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/55 via-40% to-transparent to-75%" />
+              <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-ink/75 to-transparent" />
               <div
                 aria-hidden="true"
                 className={`absolute inset-0 bg-ink transition-opacity duration-700 ${on ? "opacity-0" : "opacity-45"}`}
@@ -135,17 +139,17 @@ export default function ProcessPanels({ panels }: { panels: ProcessPanel[] }) {
                 {p.title}
               </p>
 
-              {/* 넓은 기둥 — 제목 + 할 일. 폭 = 줄 폭 × 3.2/7.2 − 좌우 여백 */}
+              {/* 넓은 기둥 — 제목 + 할 일. 폭 = (줄 폭 − 틈 넷 56px) × 3.2/7.2 − 좌우 여백. 단계 수가 바뀌면 틈 수(56px)도 같이 */}
               <div
                 id={`process-panel-${idx}`}
-                className={`absolute bottom-9 left-9 w-[calc(100cqw*3.2/7.2-72px)] text-white transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                className={`absolute bottom-9 left-9 w-[calc((100cqw_-_56px)*3.2/7.2_-_72px)] text-white transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   on ? "translate-y-0 opacity-100 delay-300" : "pointer-events-none translate-y-[18px] opacity-0"
                 }`}
               >
                 <h3 className="text-[28px] leading-tight font-normal tracking-tight xl:text-[34px]">{p.title}</h3>
                 <ul className="mt-5 space-y-2 border-t border-white/20 pt-5">
                   {p.lines.map((line) => (
-                    <li key={line} className="text-[15px] leading-relaxed text-white/80">
+                    <li key={line} className="text-base leading-relaxed text-white/80">
                       {line}
                     </li>
                   ))}
@@ -175,8 +179,9 @@ export default function ProcessPanels({ panels }: { panels: ProcessPanel[] }) {
                 className="relative h-[min(82svh,640px)] min-h-[520px] w-full shrink-0 snap-start overflow-hidden bg-ink"
               >
                 <PanelImage p={p} on={on} sizes="(min-width: 1024px) 1px, 100vw" />
-                {/* 첫 화면 휴대폰 판처럼 아래를 짙게 — 사진 속 사람·간판은 위 절반에 남습니다 */}
-                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 via-40% to-transparent to-70%" />
+                {/* 첫 화면 휴대폰 판과 같은 가로 막(왼쪽 짙게) + 글·단추 자리인 아래를 짙게 (2026-10-29 «랜딩 그라데이션과 통일») */}
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/65 to-ink/25" />
+                <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-ink/75 to-transparent" />
                 <div
                   className={`absolute inset-x-5 bottom-24 text-white transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:inset-x-8 ${
                     on ? "translate-y-0 opacity-100" : "translate-y-[18px] opacity-0"
@@ -185,7 +190,7 @@ export default function ProcessPanels({ panels }: { panels: ProcessPanel[] }) {
                   <h3 className="text-[28px] leading-tight font-normal tracking-tight">{p.title}</h3>
                   <ul className="mt-4 space-y-1.5 border-t border-white/20 pt-4">
                     {p.lines.map((line) => (
-                      <li key={line} className="text-[14px] leading-relaxed text-white/80">
+                      <li key={line} className="text-[15px] leading-relaxed text-white/80">
                         {line}
                       </li>
                     ))}

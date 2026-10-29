@@ -165,7 +165,7 @@ export default function QuickQuoteForm({
         {moreHref && (
           <Link
             href={moreHref}
-            className="mt-4 inline-block text-[14px] font-bold text-accent underline underline-offset-4"
+            className="mt-4 inline-block text-[14px] font-bold text-brand underline underline-offset-4"
           >
             상세 견적도 남기기 →
           </Link>
@@ -180,7 +180,7 @@ export default function QuickQuoteForm({
       noValidate
       className="rounded-2xl bg-white/95 p-6 shadow-2xl backdrop-blur"
     >
-      <p className="text-[13px] font-bold tracking-wide text-accent">FREE ESTIMATE</p>
+      <p className="text-[13px] font-bold tracking-wide text-brand">FREE ESTIMATE</p>
       <h2 className="mt-1 text-xl font-black">1분 만에 무료 견적</h2>
       <p className="mt-1 text-[13px] text-ink-500">
         성함, 연락처, 설치지역 세 칸만 적어 주시면 담당자가 연락드립니다.

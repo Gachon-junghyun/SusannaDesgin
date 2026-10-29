@@ -285,7 +285,7 @@ export default function Header({
 /** 메뉴 이름 옆 작은 글씨(«베타») — 상자 없이 글자만 */
 function Tag({ children, clear = false }: { children: string; clear?: boolean }) {
   return (
-    <span className={`ml-1 align-super text-[11px] font-bold ${clear ? "text-white/70" : "text-accent"}`}>
+    <span className={`ml-1 align-super text-[11px] font-bold ${clear ? "text-white/70" : "text-brand"}`}>
       {children}
     </span>
   );

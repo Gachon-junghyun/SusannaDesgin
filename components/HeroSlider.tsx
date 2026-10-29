@@ -276,7 +276,7 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
             i={i}
             render={(s, Heading) => (
               <>
-                <p className="mb-3 text-[15px] font-black tracking-[0.3em] text-accent">
+                <p className="mb-3 text-[13px] font-black tracking-[0.25em] text-brand-400">
                   {s.eyebrow}
                   {/* ⚠️ white/35 는 ink 배경에서 3.21:1 로 기준 미달입니다(장식용 슬라이드 수).
                       색 톤 유지 결정에 따라 그대로 둡니다 — globals.css `@theme` 머리말 */}
@@ -350,7 +350,7 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
       */}
       <div className="wrap relative hidden min-h-[100svh] flex-row items-end justify-between gap-10 pt-28 pb-36 md:flex">
         <div
-          className="text-white"
+          className="min-w-0 text-white"
           style={{
             transform: `translate3d(0, ${-ease * 70}px, 0)`,
             opacity: 1 - ease * 1.15,
@@ -389,14 +389,15 @@ export default function HeroSlider({ slides }: { slides: SlideWithFlag[] }) {
              마우스 올리기로 멈추는 건 손을 댄 동안뿐이라 대신이 안 됩니다.
           ⚠️ 버튼은 36×36 — WCAG 2.2 «Target Size (Minimum)» 24×24 를 넘습니다.
         */}
+        {/* shrink-0 · 막대 w-20(lg 부터 w-40) — 폭 768~800 에서 정지·다음 단추가 화면 밖으로 잘리던 것(2026-10-29 실측) */}
         <div
-          className="flex items-center gap-3 text-white"
+          className="flex shrink-0 items-center gap-3 text-white"
           style={{ opacity: 1 - ease * 1.15 }}
         >
           <span className="text-[14px] tracking-[0.1em] tabular-nums">
             {String(i + 1).padStart(2, "0")}
           </span>
-          <span aria-hidden="true" className="relative block h-0.5 w-32 bg-white/30 md:w-40">
+          <span aria-hidden="true" className="relative block h-0.5 w-20 bg-white/30 lg:w-40">
             <span
               className="absolute inset-y-0 left-0 bg-white transition-[width] duration-500"
               style={{ width: `${((i + 1) / slides.length) * 100}%` }}

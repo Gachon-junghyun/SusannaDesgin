@@ -68,10 +68,11 @@ export default function HomeWorks({
         ))}
       </div>
 
-      {/* 넓은 화면: 2fr 1fr 1fr, 첫 장이 두 줄. 휴대폰: 첫 장 가득 + 나머지 두 칸 */}
+      {/* 넓은 화면: 2fr 1fr 1fr, 첫 장이 두 줄. 휴대폰: 첫 장 가득 + 나머지 두 칸.
+          PC 칸 높이는 `.works-rows`(globals.css) — 업무 프로세스 기둥과 같은 «네모 묶음» 높이(--box-h)를 두 줄로 나눔(2026-10-29) */}
       <ul
         aria-live="polite"
-        className="mt-8 grid grid-cols-2 gap-3 md:gap-3.5 lg:grid-cols-[2fr_1fr_1fr] lg:auto-rows-[260px] xl:auto-rows-[300px]"
+        className="works-rows mt-5 grid grid-cols-2 gap-3 md:gap-3.5 lg:grid-cols-[2fr_1fr_1fr]"
       >
         {shown.map((w, idx) => (
           <li
@@ -101,10 +102,10 @@ export default function HomeWorks({
               />
             )}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/80 to-transparent px-4 pt-12 pb-3.5 text-white md:px-5 md:pb-4">
-              <h3 className={`font-bold ${idx === 0 ? "md:text-[19px]" : "text-[14px] md:text-[15px]"}`}>
+              <h3 className={`font-bold ${idx === 0 ? "text-base md:text-lg" : "text-[15px] md:text-base"}`}>
                 {w.title}
               </h3>
-              <p className="mt-0.5 text-[12px] text-white/80">
+              <p className="mt-0.5 text-[13px] text-white/80">
                 {[w.category, ...w.tags.slice(0, 1)].filter(Boolean).join(" · ")}
               </p>
             </div>

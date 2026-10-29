@@ -666,7 +666,8 @@ export const sectionCopy: Record<string, SectionCopy> = {
   },
   "home-process": {
     eyebrow: "PROCESS",
-    title: "상담부터 시공까지, 이렇게 진행됩니다",
+    // 2026-10-29 사람: «주요 실적처럼 그냥 업무 프로세스». 화면에 나가는 값은 DB(관리자 «페이지 문구» → 구역 제목)라 거기서도 같은 값으로 바꿔야 합니다
+    title: "업무 프로세스",
     desc: "현장 확인과 시안 제작까지 무료로 진행합니다.",
   },
   "home-works": {

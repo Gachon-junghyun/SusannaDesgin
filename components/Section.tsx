@@ -18,17 +18,17 @@ export function SectionHeading({
   return (
     <div className={`${center ? "text-center" : ""} ${center ? "mx-auto max-w-2xl" : ""}`}>
       {/*
-        ⚠️ 이 오렌지는 **밝은 배경에서 3.14:1** 로 명암비 기준에 못 미칩니다
-           (어두운 배경에서는 5.65:1 로 통과). 브랜드 색을 지키기로 한 결정이라
-           그대로 둡니다 — 근거는 `app/globals.css` 의 `@theme` 머리말.
+        머리글은 브랜드 청록입니다(2026-10-29 사람: «주황색 글씨들 다 우리 브랜드 컬러로»). 예전엔 주황(accent)이었습니다.
+        ⚠️ `brand` 는 밝은 배경에서 **2.99:1** 로 명암비 기준에 못 미칩니다 — 브랜드 색을 지키기로 한 결정(globals.css `@theme` 머리말).
+           어두운 배경은 `brand-400`(ink 위 8.09:1).
       */}
       {eyebrow && (
-        <p className="mb-3 text-[13px] font-black tracking-[0.25em] text-accent">
+        <p className={`mb-3 text-[13px] font-black tracking-[0.25em] ${dark ? "text-brand-400" : "text-brand"}`}>
           {eyebrow}
         </p>
       )}
       <h2
-        className={`text-3xl leading-tight font-black tracking-tight md:text-[42px] ${
+        className={`text-3xl leading-tight font-normal tracking-tight md:text-[42px] ${
           dark ? "text-white" : ""
         }`}
       >
@@ -57,7 +57,7 @@ export function Section({
   id?: string;
 }) {
   return (
-    <section id={id} className={`py-16 md:py-24 ${className}`}>
+    <section id={id} className={`sec-y ${className}`}>
       <div className="wrap">{children}</div>
     </section>
   );
@@ -102,10 +102,10 @@ export function PageHero({
         />
       )}
       <div className="wrap">
-        <p className="mb-3 text-[13px] font-black tracking-[0.25em] text-accent">
+        <p className="mb-3 text-[13px] font-black tracking-[0.25em] text-brand-400">
           {eyebrow}
         </p>
-        <h1 className="text-3xl leading-tight font-black tracking-tight md:text-5xl">
+        <h1 className="text-3xl leading-tight font-normal tracking-tight md:text-5xl">
           {title}
         </h1>
         {desc && (

@@ -39,7 +39,7 @@ export default function CaseView({ site: s, photos }: { site: PublicSite; photos
 
       <div className="bg-ink py-14 text-white md:py-20">
         <div className="wrap">
-          <p className="mb-3 text-[13px] font-black tracking-[0.25em] text-accent">
+          <p className="mb-3 text-[13px] font-black tracking-[0.25em] text-brand-400">
             <Link href="/works" className="hover:underline">
               시공사례
             </Link>

@@ -101,6 +101,43 @@ body {
   }
 }
 
+/*
+ * 한 화면에 한 구역 (2026-10-29 사람: «각 파트가 한 페이지 안에 잘 보이게, 양 옆 여백 잘 넣고»).
+ * 홈에서는 머리띠가 늘 위에 떠 있어서(Header `fixed`) 한 화면에 쓸 수 있는 높이는 «화면 높이 − 머리띠» 입니다.
+ *   --header-h  머리띠 높이 — 휴대폰 65px(메인 바 64 + 선 1) · md 이상 117px(유틸 바 36 + 메인 바 80 + 선 1). Header.tsx 를 바꾸면 같이 고칩니다.
+ *   --sec-y     구역 위아래 여백 — 화면 높이를 따라 56~96px. 900px 화면에서 72px, 1080px 에서 86px.
+ * `.sec-y` 는 `Section`(components/Section.tsx)과 홈 마무리 구역이 씁니다. 공정 패널 높이·실적 칸 높이는 아래 두 클래스가
+ * 이 둘을 빼고 남은 높이로 계산합니다 — 구역 하나가 머리띠 아래 한 화면에 들어오게.
+ */
+:root {
+  --header-h: 65px;
+  --sec-y: clamp(3.5rem, 8svh, 6rem);
+}
+@media (min-width: 768px) {
+  :root {
+    --header-h: 117px;
+  }
+}
+.sec-y {
+  padding-block: var(--sec-y);
+}
+/*
+ * 홈 «네모 묶음» 높이 하나 — 업무 프로세스 기둥과 주요 실적 사진 묶음(두 줄 + 틈 14px)이 같은 높이(같은 날 사람: «네모 크기가 통일성 있게»).
+ * 화면 높이 − 머리띠 − 위아래 여백 − 주요 실적의 머리말·칩·간격 묶음(실측 216px, 여유 6). 300~620px.
+ * 업무 프로세스는 칩이 없어 그만큼 구역이 짧고, 두 구역 모두 머리띠 아래 한 화면에 들어갑니다.
+ */
+:root {
+  --box-h: clamp(300px, calc(100svh - var(--header-h) - 2 * var(--sec-y) - 222px), 620px);
+}
+.process-rail-h {
+  height: var(--box-h);
+}
+@media (min-width: 1024px) {
+  .works-rows {
+    grid-auto-rows: calc((var(--box-h) - 14px) / 2);
+  }
+}
+
 /* 접근성 — 스킵 링크 */
 .skip-link {
   position: absolute;

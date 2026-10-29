@@ -157,7 +157,7 @@ export default async function AboutPage() {
                   aria-hidden="true"
                   className="absolute top-1.5 -left-[41px] h-4 w-4 rounded-full border-4 border-paper bg-brand"
                 />
-                <p className="text-[13px] font-black tracking-widest text-accent">
+                <p className="text-[13px] font-black tracking-widest text-brand">
                   {h.stage}
                 </p>
                 <p className="mt-0.5 text-xl font-black tracking-tight">{h.date}</p>
@@ -193,7 +193,7 @@ export default async function AboutPage() {
                   />
                 </div>
                 <div className="p-5">
-                  <p className="text-[13px] font-black tracking-widest text-accent">
+                  <p className="text-[13px] font-black tracking-widest text-brand">
                     {String(i + 1).padStart(2, "0")}
                   </p>
                   <h3 className="mt-0.5 font-black">{e.title}</h3>
@@ -208,7 +208,7 @@ export default async function AboutPage() {
       {/* 비전 */}
       <Section className="bg-ink text-white">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-[13px] font-black tracking-[0.3em] text-accent">
+          <p className="text-[13px] font-black tracking-[0.3em] text-brand-400">
             VISION 2026
           </p>
           <h2 className="mt-4 text-3xl leading-tight font-black tracking-tight md:text-5xl">
@@ -220,7 +220,7 @@ export default async function AboutPage() {
         <ul className="mt-14 grid gap-5 md:grid-cols-3">
           {vision.goals.map((g) => (
             <li key={g.no} className="rounded-2xl bg-ink-800 p-7">
-              <p className="text-[13px] font-black tracking-widest text-accent">
+              <p className="text-[13px] font-black tracking-widest text-brand-400">
                 GOAL {g.no}
               </p>
               <h3 className="mt-2 text-xl font-black">{g.title}</h3>
