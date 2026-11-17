@@ -545,3 +545,12 @@ body {
     animation: none;
   }
 }
+
+/**
+ * 메인 홈(/) 구역 사이를 조금 더 띄웁니다(2026-11-17 사람: «간격 띄우는 건 메인 홈도 조금 띄워줘»). 기본의 1.2배.
+ * 홈만 고르려고 «사업 영역 바로가기(#business)»가 있는 화면을 집고, /new(자체 1.4배, app/new/new.css)는 뺍니다.
+ * `--sec-y` 자체를 키우지 않는 이유: 네모 높이(`--box-h`)가 이 값으로 «한 화면에 한 구역»을 맞추고 있어서입니다.
+ */
+body:has(#business):not(:has(.new-home)) .sec-y {
+  padding-block: calc(var(--sec-y) * 1.2);
+}

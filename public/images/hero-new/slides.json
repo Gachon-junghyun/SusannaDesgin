@@ -15,44 +15,44 @@
    "no": 2,
    "bg": "/images/hero-new/slide-2-bg.jpg",
    "pop": {
-    "src": "/images/hero-new/slide-2-pop.webp",
-    "x": 483.8,
-    "y": -131.0,
-    "w": 143.6,
-    "h": 183.9
+    "src": "/images/hero-new/slide-2-pop-v2.webp",
+    "x": 449.8,
+    "y": -133.5,
+    "w": 704.3,
+    "h": 534.2
    }
   },
   {
    "no": 3,
    "bg": "/images/hero-new/slide-3-bg.jpg",
    "pop": {
-    "src": "/images/hero-new/slide-3-pop.webp",
-    "x": 155.8,
-    "y": -142.3,
-    "w": 1238.9,
-    "h": 195.0
+    "src": "/images/hero-new/slide-3-pop-v2.webp",
+    "x": 170.5,
+    "y": -138.6,
+    "w": 1595.9,
+    "h": 590.0
    }
   },
   {
    "no": 4,
    "bg": "/images/hero-new/slide-4-bg.jpg",
    "pop": {
-    "src": "/images/hero-new/slide-4-pop.webp",
-    "x": 456.3,
-    "y": -143.5,
-    "w": 644.0,
-    "h": 196.3
+    "src": "/images/hero-new/slide-4-pop-v2.webp",
+    "x": 460.0,
+    "y": -138.6,
+    "w": 693.1,
+    "h": 505.4
    }
   },
   {
    "no": 5,
    "bg": "/images/hero-new/slide-5-bg.jpg",
    "pop": {
-    "src": "/images/hero-new/slide-5-pop.webp",
-    "x": 365.5,
+    "src": "/images/hero-new/slide-5-pop-v2.webp",
+    "x": 0.0,
     "y": -242.9,
-    "w": 920.0,
-    "h": 295.6
+    "w": 1391.0,
+    "h": 712.7
    }
   }
  ]

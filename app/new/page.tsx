@@ -9,7 +9,6 @@ import QuickQuoteForm from "@/components/QuickQuoteForm";
 import Reveal from "@/components/Reveal";
 import { SectionHeading } from "@/components/Section";
 import { SHOW_DETAIL_POPUPS, stepPhotoAlt, workCategories } from "@/config/content";
-import { SHOW_MAKER } from "@/config/maker";
 import { site } from "@/config/site";
 import { getBlocks, getWorks } from "@/lib/cms";
 import { imageExists } from "@/lib/images";
@@ -115,7 +114,7 @@ export default async function NewHome() {
       <HeroPop
         slides={slides}
         eyebrow="간판 제작 및 시공"
-        cta={SHOW_MAKER ? { href: "/maker", label: "간판 만들어 보기" } : { href: "/quote", label: "견적 먼저 받기" }}
+        cta={{ href: "/quote", label: "간판 문의하기" }}
       />
 
       {/* 폰 — 첫 화면 아래 간편 상담 폼(예전 홈과 같은 자리). 바탕은 종이색 그대로 */}

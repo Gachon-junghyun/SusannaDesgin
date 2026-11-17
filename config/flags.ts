@@ -74,7 +74,7 @@ export const SHOW_PRODUCTS: boolean = false;
  * 켜면 셋이 같이 갈립니다: 페이지 404 해제 · 주 메뉴 「간판 만들기」 · 사이트맵 등재.
  * 끄면 홈 F30 구역의 단추·카드는 견적(`makerShowcase.closed`)으로 갑니다 — 구역 자체는 남습니다.
  */
-export const SHOW_MAKER: boolean = true;
+export const SHOW_MAKER: boolean = false; // 2026-11-17 사람: «수산나 메이커 다 내려줘» (공유 링크 /maker/s/… 는 그대로 열림)
 
 /**
  * 주 메뉴에 「간판 만들기」를 세울지 — **페이지는 열어 둔 채 메뉴만 뺍니다**(2026-09-26 사람 결정:

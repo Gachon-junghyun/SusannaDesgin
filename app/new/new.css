@@ -6,6 +6,10 @@
 .new-home {
   background: var(--color-paper);
 }
+/* 구역 사이를 조금 더 띄웁니다(2026-11-17 사람: «파트마다 상하 간격을 조금만 늘려줘, 너무 붙어 있다»). 기본 --sec-y 의 1.4배 */
+.new-home .sec-y {
+  padding-block: calc(var(--sec-y) * 1.4);
+}
 
 /* ---------------- 첫 화면 ---------------- */
 .hero-pop {
@@ -53,13 +57,12 @@
   margin-top: calc(var(--u) * 270 * 1.6 + 16px);
 }
 .hp-rule {
-  margin-top: 44px;
+  margin-top: 52px;
 }
 .hp-nav {
-  gap: 14px;
-  height: 36px;
-  margin-top: -36px;
-  transform: translateY(-1px);
+  gap: 6px;
+  height: 52px;
+  margin-top: -52px;
 }
 .hp-count {
   font-size: 12px;
@@ -67,9 +70,23 @@
   margin-left: 4px;
 }
 .hp-arrow {
-  font-size: 16px;
-  line-height: 1;
-  padding: 4px;
+  width: 44px;
+  padding: 12px 6px;
+  color: var(--color-ink);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.hp-arrow:hover {
+  color: var(--color-brand);
+}
+.hp-arrow:first-child:hover {
+  transform: translateX(-3px);
+}
+.hp-arrow:nth-child(2):hover {
+  transform: translateX(3px);
+}
+.hp-arrow:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }
 .hp-brand {
   font-family: var(--font-archivo-new), var(--font-pretendard-new), sans-serif;
@@ -115,18 +132,19 @@
     margin-top: calc(var(--u) * 148);
   }
   .hp-rule {
-    margin-top: calc(var(--u) * 34);
+    margin-top: max(52px, calc(var(--u) * 64));
   }
   .hp-nav {
-    gap: calc(var(--u) * 18);
-    height: calc(var(--u) * 34);
-    margin-top: calc(var(--u) * -34);
+    gap: calc(var(--u) * 10);
+    height: max(52px, calc(var(--u) * 64));
+    margin-top: min(-52px, calc(var(--u) * -64));
   }
   .hp-count {
-    font-size: max(11px, calc(var(--u) * 15));
+    font-size: max(13px, calc(var(--u) * 17));
   }
   .hp-arrow {
-    font-size: max(13px, calc(var(--u) * 18));
+    width: max(44px, calc(var(--u) * 58));
+    padding: calc(var(--u) * 14) calc(var(--u) * 8);
   }
 }
 
@@ -143,19 +161,16 @@
     transform: translateY(10px);
   }
 }
+/* 오린 물체는 칸 안 사진과 같은 자리에 통째로 얹힙니다 — 움직이면 바탕과 겹쳐 두 개로 보여서 나타나기만 합니다 */
 .hp-pop {
-  transform: translateY(8%);
   opacity: 0;
-  transition:
-    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s,
-    opacity 0.5s ease 0.15s;
+  transition: opacity 0.6s ease 0.1s;
 }
 .hp-pop-on {
-  transform: none;
   opacity: 1;
 }
 .hp-shadow {
-  filter: drop-shadow(calc(var(--u) * 10) calc(var(--u) * 14) calc(var(--u) * 10) rgb(15 26 25 / 0.22));
+  filter: drop-shadow(calc(var(--u) * 8) calc(var(--u) * 12) calc(var(--u) * 12) rgb(15 26 25 / 0.28));
 }
 @media (prefers-reduced-motion: reduce) {
   .hp-in {

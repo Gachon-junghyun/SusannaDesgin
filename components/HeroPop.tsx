@@ -113,33 +113,12 @@ export default function HeroPop({
               draggable={false}
             />
             {sl.pop && (
-              /* 그림자 — 칸 윗변 위(종이)에만 드리웁니다. 칸 안 사진까지 내려오면 회색 띠가 생깁니다(시안에서 한 번 밟음). */
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute left-0 w-full overflow-hidden"
-                style={{ top: `${(sl.pop.y / FRAME.h) * 100 - 10}%`, height: `${(-sl.pop.y / FRAME.h) * 100 + 10}%` }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={sl.pop.src}
-                  alt=""
-                  className={`hp-pop hp-shadow absolute max-w-none ${k === i ? "hp-pop-on" : ""}`}
-                  style={{
-                    left: `${(sl.pop.x / FRAME.w) * 100}%`,
-                    top: `${(10 / ((-sl.pop.y / FRAME.h) * 100 + 10)) * 100}%`,
-                    width: `${(sl.pop.w / FRAME.w) * 100}%`,
-                  }}
-                  draggable={false}
-                />
-              </div>
-            )}
-            {sl.pop && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={sl.pop.src}
                 alt=""
                 aria-hidden="true"
-                className={`hp-pop absolute max-w-none select-none ${k === i ? "hp-pop-on" : ""}`}
+                className={`hp-pop hp-shadow absolute max-w-none select-none ${k === i ? "hp-pop-on" : ""}`}
                 style={{
                   left: `${(sl.pop.x / FRAME.w) * 100}%`,
                   top: `${(sl.pop.y / FRAME.h) * 100}%`,
@@ -156,11 +135,11 @@ export default function HeroPop({
       {/* 가는 선 + 장 번호·이전·다음 */}
       <div className="hp-rule relative flex items-center justify-end border-t border-ink/85">
         <div className="hp-nav flex items-center text-ink">
-          <button type="button" onClick={() => go(-1)} aria-label="이전 장" className="hp-arrow text-[#6e7574] hover:text-ink">
-            ←
+          <button type="button" onClick={() => go(-1)} aria-label="이전 장" className="hp-arrow">
+            <Arrow dir={-1} />
           </button>
-          <button type="button" onClick={() => go(1)} aria-label="다음 장" className="hp-arrow text-[#6e7574] hover:text-ink">
-            →
+          <button type="button" onClick={() => go(1)} aria-label="다음 장" className="hp-arrow">
+            <Arrow dir={1} />
           </button>
           <span className="hp-count font-semibold tabular-nums" aria-label={`${n}장 중 ${i + 1}번째`}>
             {String(i + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}
@@ -173,5 +152,14 @@ export default function HeroPop({
         SUSANNADESIGN
       </p>
     </section>
+  );
+}
+
+/** 화살표 — 글자(←)는 가늘고 작아 잘 안 보여서 선 그림으로(2026-11-17 사람: «화살표 더 잘 보이게») */
+function Arrow({ dir }: { dir: 1 | -1 }) {
+  return (
+    <svg viewBox="0 0 40 20" aria-hidden="true" className="block h-auto w-full" style={{ transform: dir < 0 ? "scaleX(-1)" : undefined }}>
+      <path d="M1 10h36M28 2l9 8-9 8" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" />
+    </svg>
   );
 }
