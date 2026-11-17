@@ -73,7 +73,9 @@ export default function Header({
   ];
 
   /** 홈은 히어로 사진 위에 헤더가 투명하게 얹힙니다 */
-  const overlay = pathname === "/";
+  /** /new(2026-11-17) — 종이색 첫 화면 위에 투명하게 얹고 먹 글자. 스크롤하면 종이색 바 */
+  const paperHome = pathname === "/new";
+  const overlay = pathname === "/" || paperHome;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > SOLID_AT);
@@ -91,6 +93,8 @@ export default function Header({
 
   // 투명 상태: 홈 + 아직 스크롤 안 함 + 모바일 메뉴 닫힘
   const clear = overlay && !scrolled && !open;
+  /** 흰 글자·흰 로고를 쓰는 상태(사진 위 투명 머리띠). /new 는 종이색 바탕이라 늘 먹 글자 */
+  const light = clear && !paperHome;
 
   return (
     <header
@@ -99,7 +103,7 @@ export default function Header({
       }`}
     >
       {/* 사진 위 텍스트 가독성용 상단 스크림 */}
-      {clear && (
+      {light && (
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/45 to-transparent"
@@ -109,11 +113,11 @@ export default function Header({
       {/* 상단 유틸 바 */}
       <div
         className={`relative hidden transition-colors duration-300 md:block ${
-          clear ? "text-white" : "bg-ink text-white"
+          light ? "text-white" : paperHome ? (clear ? "text-ink" : "bg-paper/95 text-ink") : "bg-ink text-white"
         }`}
       >
         <div className="wrap flex h-9 items-center justify-between text-[13px]">
-          <p className={clear ? "text-white/70" : "text-white/60"}>
+          <p className={light ? "text-white/70" : paperHome ? "text-ink-500" : "text-white/60"}>
             {site.hours} · {site.hoursNote}
           </p>
           <div className="flex items-center gap-5">
@@ -122,7 +126,7 @@ export default function Header({
             </a>
             <Link
               href="/support#location"
-              className={clear ? "text-white/70 hover:text-white" : "text-white/60 hover:text-white"}
+              className={light ? "text-white/70 hover:text-white" : paperHome ? "text-ink-500 hover:text-ink" : "text-white/60 hover:text-white"}
             >
               오시는길
             </Link>
@@ -135,13 +139,15 @@ export default function Header({
         className={`relative border-b transition-colors duration-300 ${
           clear
             ? "border-transparent"
-            : "border-line bg-white/95 shadow-[0_1px_16px_rgba(0,0,0,.06)] backdrop-blur"
+            : paperHome
+              ? "border-ink/10 bg-paper/95 backdrop-blur"
+              : "border-line bg-white/95 shadow-[0_1px_16px_rgba(0,0,0,.06)] backdrop-blur"
         }`}
       >
         <div className="wrap flex h-16 items-center justify-between md:h-20">
           <Link href="/" className="flex items-center" aria-label={`${site.name} 홈`}>
             <Image
-              src={clear ? site.logoWhite : site.logo}
+              src={light ? site.logoWhite : site.logo}
               alt={`${site.legalName} ${site.nameEn}`}
               width={1000}
               height={251}
@@ -161,7 +167,7 @@ export default function Header({
                       href={n.href}
                       aria-current={active ? "page" : undefined}
                       className={`relative text-[16px] font-semibold transition-colors ${
-                        clear
+                        light
                           ? "text-white/90 hover:text-white"
                           : active
                             ? "text-brand"
@@ -169,8 +175,8 @@ export default function Header({
                       }`}
                     >
                       {n.label}
-                      {n.tag && <Tag clear={clear}>{n.tag}</Tag>}
-                      {active && !clear && (
+                      {n.tag && <Tag clear={light}>{n.tag}</Tag>}
+                      {active && !light && (
                         <span className="absolute -bottom-1.5 left-0 h-0.5 w-full bg-brand" />
                       )}
                     </Link>
@@ -184,7 +190,7 @@ export default function Header({
             <a
               href={site.phoneHref}
               className={`flex items-center gap-1.5 rounded-lg px-2 py-2 lg:hidden ${
-                clear ? "text-white" : ""
+                light ? "text-white" : ""
               }`}
               aria-label={`전화 걸기 ${site.phone}`}
             >
@@ -212,7 +218,7 @@ export default function Header({
                   <span
                     key={i}
                     className={`absolute left-0 block h-0.5 w-6 transition-all ${
-                      clear ? "bg-white" : "bg-ink"
+                      light ? "bg-white" : "bg-ink"
                     } ${
                       i === 0
                         ? open
