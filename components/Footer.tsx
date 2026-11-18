@@ -69,6 +69,8 @@ export default function Footer() {
               { href: "/sign-design", label: "간판디자인" },
               { href: "/process", label: "업무프로세스" },
               { href: "/works", label: "주요실적" },
+              // 두 번째 홈(전국 광고용) — 2026-11-18 검색엔진에 열면서 사이트 안에서도 닿게 이음
+              { href: "/new", label: "전국 간판 시공" },
             ]}
           />
           <FooterCol

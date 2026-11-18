@@ -9,10 +9,12 @@ import QuickQuoteForm from "@/components/QuickQuoteForm";
 import Reveal from "@/components/Reveal";
 import { SectionHeading } from "@/components/Section";
 import { SHOW_DETAIL_POPUPS, stepPhotoAlt, workCategories } from "@/config/content";
-import { site } from "@/config/site";
+import { seo, site } from "@/config/site";
 import { getBlocks, getWorks } from "@/lib/cms";
+import JsonLd from "@/components/JsonLd";
 import { imageExists } from "@/lib/images";
 import { getPreview } from "@/lib/preview";
+import { pageMetadata } from "@/lib/seo";
 import hero from "@/public/images/hero-new/slides.json";
 import "./new.css";
 
@@ -26,16 +28,14 @@ import "./new.css";
  * - 바탕은 처음부터 끝까지 종이색 한 장 — 흰 칸·먹색 띠·구역 경계선을 두지 않습니다(`new.css`).
  * - 🔴 «대전»은 이 페이지 문구에서 뺍니다. CMS 문구에 들어 있어도 `national()` 이 지웁니다(시공 사례의 «지역» 칸은 사실이라 둡니다).
  * - 🔴 공장 평수는 적지 않습니다(2026-11-17 사람: «홈페이지에 이제 평수는 안 적을거야»).
- * - 검색엔진에는 올리지 않습니다(noindex) — 예전 홈과 문구가 겹쳐 검색 순위가 갈리지 않게. 광고 링크로만 들어옵니다.
+ * - 🔴 검색엔진에 엽니다(2026-11-18 사람: «new 페이지 모든 곳에서 로봇 및 구글 네이버가 막 접근할 수 있게 다 열어줘, 구조로도 다 연결해주고»).
+ *   예전(11-17)엔 noindex 였습니다 — 예전 홈과 문구가 겹쳐 검색 순위가 갈리지 않게. 그 위험은 그대로 남아 있어 ARCHITECTURE §7 부채에 적었습니다.
+ *   제목·설명은 `config/site.ts` `seo.pages["/new"]` 한 곳 — 메타·OG·사이트맵·llms.txt 가 다 거기서 나옵니다.
+ *   연결: 사이트맵(`app/sitemap.ts`) · 푸터 «사업» 열 · llms.txt «주요 페이지» · 아래 WebPage 구조화 데이터(회사 `#business` 에 이음).
  */
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "간판 디자인, 제작, 시공 | 수산나디자인",
-  description: "간판을 디자인하고, 자체 공장에서 직접 만들어 설치합니다. 상담부터 시공 후 관리까지 한자리에서 맡습니다.",
-  robots: { index: false, follow: true },
-  alternates: { canonical: "/new" },
-};
+export const metadata: Metadata = pageMetadata("/new");
 
 const pretendard = localFont({
   src: [
@@ -111,6 +111,20 @@ export default async function NewHome() {
 
   return (
     <div className={`new-home ${pretendard.variable} ${archivo.variable}`}>
+      {/* 이 페이지가 회사(layout 의 `#business`)의 한 페이지임을 검색엔진에 알립니다 */}
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "@id": `${site.url}/new#webpage`,
+          url: `${site.url}/new`,
+          name: `${seo.pages["/new"].title} | ${site.name}`,
+          description: seo.pages["/new"].description,
+          inLanguage: "ko-KR",
+          isPartOf: { "@type": "WebSite", name: site.name, url: `${site.url}/` },
+          about: { "@id": `${site.url}/#business` },
+        }}
+      />
       <HeroPop
         slides={slides}
         eyebrow="간판 제작 및 시공"

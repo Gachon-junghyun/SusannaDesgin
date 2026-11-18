@@ -53,19 +53,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    */
   const sites = await getPublishedSites();
   const casesLatest = sites.reduce((m, c) => Math.max(m, new Date(c.updated_at).getTime() || 0), 0);
-  const [homeLatest, worksLatest] = await Promise.all([
+  const [homeLatest, worksLatest, newLatest] = await Promise.all([
     latestUpdate(["hero_slides", "works", "content_blocks"]),
     latestUpdate(["works"]),
+    // /new 첫 화면은 파일(slides.json)이라 DB 날짜가 없고, 아래 구역(실적·문구 블록)만 CMS 입니다
+    latestUpdate(["works", "content_blocks"]),
   ]);
   const worksDate = Math.max(worksLatest?.getTime() ?? 0, casesLatest);
   const lastmod: Record<string, Date | undefined> = {
     "": homeLatest ?? undefined,
+    "/new": newLatest ?? undefined,
     "/works": worksDate ? new Date(worksDate) : undefined,
   };
 
   const routes: { path: string; priority: number; freq: "weekly" | "monthly" | "yearly" }[] =
     [
       { path: "", priority: 1, freq: "weekly" },
+      // 두 번째 홈(전국 광고용, 2026-11-18 검색엔진에 엶). 실적·문구 블록이 CMS 라 그 날짜를 씁니다(위 lastmod)
+      { path: "/new", priority: 0.9, freq: "weekly" },
       { path: "/quote", priority: 0.9, freq: "monthly" },
       { path: "/signs", priority: 0.8, freq: "monthly" },
       { path: "/sign-design", priority: 0.8, freq: "monthly" },
