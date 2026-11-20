@@ -4,7 +4,7 @@
  * 사람: «new 페이지로 온 사람은 캐시로 저장했다가 홈 로고 누르면 new 페이지가 뜰 수 있도록
  *       … 전국, 원래 잘 안 되는 사람들을 기준으로 조금 비교하고 싶거든».
  *
- * - `/new` 에 한 번이라도 들어온 브라우저는 `localStorage` 에 «new» 를 남깁니다(`components/RememberHome.tsx`).
+ * - `/new` 에 들어온 브라우저는 `localStorage` 에 «new», `/` 에 들어온 브라우저는 «classic» 을 남깁니다(`components/RememberHome.tsx`, 마지막 것이 이김).
  * - 그 브라우저에서는 머리띠 로고(홈)가 `/` 대신 `/new` 로 갑니다(`components/Header.tsx`).
  * - GA 에는 `home_variant`(new / classic) 를 사용자 속성으로 실어 둡니다. GA 보고서에서 이 값으로 가르려면
  *   GA 관리 화면에서 «맞춤 측정기준» 하나를 등록해야 합니다 — 사람이 합니다. 등록 전에도 «방문 페이지»(/new 와 /) 로 가를 수 있습니다.
@@ -29,13 +29,12 @@ export function homeHref(): "/" | "/new" {
 }
 
 /**
- * 들어온 홈을 기록합니다. «new» 는 한 번 붙으면 유지하고, «classic» 은 아직 아무 값이 없을 때만 붙입니다
- * — `/new` 로 들어왔던 사람이 나중에 `/` 를 직접 쳐서 와도 «new» 묶음에 남습니다.
+ * 들어온 홈을 기록합니다 — 마지막에 들어온 홈이 이깁니다(2026-11-20 사람: «new 에서 다시 홈으로 들어가면 홈으로 업데이트되게»).
+ * `/new` 를 거친 사람도 `/` 에 직접 들어오면(주소 입력, 검색 결과) «classic» 으로 바뀌고, 그 뒤 로고는 `/` 로 갑니다.
  */
 export function rememberHome(v: HomeVariant) {
   try {
-    const cur = readHomeVariant();
-    if (v === "new" || !cur) window.localStorage.setItem(HOME_VARIANT_KEY, v);
+    window.localStorage.setItem(HOME_VARIANT_KEY, v);
   } catch {
     /* 저장 못 하면 나누지 않습니다 */
   }

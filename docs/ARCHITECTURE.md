@@ -2429,7 +2429,7 @@ components/HeroSlider.tsx 휴대폰 머리글 15 → 13 · PC 조작부 shrink-0
 ### F37. 두 홈 나눠 보기 — `/new` 로 온 사람은 로고도 `/new` (2026-11-20 신설)
 
 - 사람: *«new 페이지로 온 사람은 캐시로 저장했다가 홈 로고 누르면 new 페이지가 뜰 수 있도록 … 전국, 원래 잘 안 되는 사람들을 기준으로 조금 비교하고 싶거든»*.
-- `components/RememberHome.tsx` 가 `/new` 에서 `localStorage["susanna_home_variant"]="new"`, `/` 에서 값이 없을 때만 `"classic"` 을 남깁니다. «new» 는 한 번 붙으면 유지.
+- `components/RememberHome.tsx` 가 `/new` 에서 `localStorage["susanna_home_variant"]="new"`, `/` 에서 `"classic"` 을 남깁니다. 마지막에 들어온 홈이 이깁니다(2026-11-20 사람: «new 에서 다시 홈으로 들어가면 홈으로 업데이트되게»).
 - `components/Header.tsx` 로고는 주소를 `/` 로 그리고, 누를 때 저장값이 «new» 면 `/new` 로 보냅니다(새 탭 열기는 그대로). 서버 cookies 를 안 써서 A3 그대로.
 - GA: `gtag('set','user_properties',{home_variant})`. 보고서에서 이 값으로 가르려면 **GA 관리 «맞춤 측정기준» 등록이 필요합니다(사람)**. 등록 전에는 «방문 페이지» `/new`·`/` 로 비교합니다.
 - 한계: 주소창에 `/` 를 직접 치면 예전 홈이 보입니다(묶음 값은 «new» 그대로). 저장소가 막힌 브라우저(사생활 모드 일부)는 나누지 않습니다.
