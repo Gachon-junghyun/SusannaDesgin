@@ -35,15 +35,18 @@
   line-height: 1.3;
   padding-bottom: 3px;
 }
-/* 휴대폰 제목·설명 크기 26→31px · 14→15px (2026-11-20 사람: «이건 글씨 좀 키워도 되겠다») */
+/* 휴대폰 제목 — 화면 폭에 맞춰 크게(375px 에서 약 47px, 예전 26px). 2026-11-20 사람: «이건 글씨 좀 키워도 되겠다»
+   → «정말 훨씬 더 크게, 빈 공간 적어도 반을 차지할 수 있게». 줄은 문구에 박은 자리(`\n`, `|`)에서만 나뉘고
+   (HeroPop `MobileBreaks`), 낱말 중간에서 안 끊기게 keep-all. 가장 긴 줄 «만들어 보세요»가 375px 에 들어가는 크기다. */
 .hp-title {
-  font-size: 31px;
-  line-height: 1.22;
+  font-size: clamp(32px, 12.6vw, 56px);
+  line-height: 1.2;
   letter-spacing: -0.02em;
+  word-break: keep-all;
 }
-/* 휴대폰: 설명 줄이 있는 장·없는 장이 번갈아도 사진 칸이 오르내리지 않게(제목이 두 줄로 커져 132→176px) */
+/* 휴대폰: 설명 줄이 있는 장·없는 장이 번갈아도 사진 칸이 오르내리지 않게(제목이 커져 132→200px) */
 .hp-copy {
-  min-height: 176px;
+  min-height: 226px;
 }
 .hp-sub {
   margin-top: 10px;
@@ -55,7 +58,9 @@
 .hp-frame {
   width: 160%;
   margin-left: -30%;
-  margin-top: calc(var(--u) * 270 * 1.6 + 16px);
+  /* 튀어나온 간판이 사진 칸 위로 올라오는 높이(375px 실측 최대 76px)만큼만 비웁니다 — 빈 공간을 글씨가 반 넘게 차지하도록(2026-11-20).
+     예전 값 calc(var(--u) * 270 * 1.6 + 16px) 는 375px 에서 100px 이었습니다. */
+  margin-top: calc(var(--u) * 270 * 1.6 + 2px);
 }
 .hp-rule {
   margin-top: 52px;

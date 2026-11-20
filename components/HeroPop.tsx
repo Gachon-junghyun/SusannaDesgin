@@ -84,7 +84,7 @@ export default function HeroPop({
         <div className="hp-copy md:text-right" aria-live="polite">
           {/* 장이 바뀔 때마다 다시 그려 살짝 떠오르게 */}
           <h1 key={`t${i}`} className={`hp-title hp-in font-extrabold text-ink ${s.sub ? "hp-title-s" : ""}`}>
-            {s.title}
+            <MobileBreaks text={s.title} />
           </h1>
           {s.sub && (
             <p key={`s${i}`} className="hp-sub hp-in text-[#3b4443]">
@@ -152,6 +152,31 @@ export default function HeroPop({
         SUSANNADESIGN
       </p>
     </section>
+  );
+}
+
+/**
+ * 휴대폰에서만 줄을 나눕니다(2026-11-20 사람: «정말 훨씬 더 크게, 빈 공간 적어도 반을 차지할 수 있게»).
+ * 문구 안의 `\n` 은 «PC 에선 띄어쓰기, 휴대폰에선 줄바꿈», `|` 는 «PC 에선 붙여 쓰기, 휴대폰에선 줄바꿈».
+ * 글자가 커지면 «수산나디자인입니다» 같은 긴 낱말이 화면 폭을 넘어서, 낱말 중간이 아닌 정한 자리에서만 끊기게 합니다.
+ */
+function MobileBreaks({ text }: { text: string }) {
+  const parts = text.split(/(\n|\|)/);
+  return (
+    <>
+      {parts.map((p, k) =>
+        p === "\n" ? (
+          <span key={k}>
+            {" "}
+            <br className="md:hidden" />
+          </span>
+        ) : p === "|" ? (
+          <br key={k} className="md:hidden" />
+        ) : (
+          <span key={k}>{p}</span>
+        ),
+      )}
+    </>
   );
 }
 
