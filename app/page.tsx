@@ -6,6 +6,7 @@ import Img from "@/components/Img";
 import JsonLd from "@/components/JsonLd";
 import MakerShowcase from "@/components/MakerShowcaseLoader";
 import ProcessPanels from "@/components/ProcessPanels";
+import RememberHome from "@/components/RememberHome";
 import Reveal from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
 import { SHOW_DETAIL_POPUPS, SHOW_FABRICATION, makerShowcase, stepPhotoAlt, workCategories } from "@/config/content";
@@ -81,6 +82,8 @@ export default async function Home() {
   return (
     <>
       <JsonLd data={websiteJsonLd} />
+      {/* 두 홈 나눠 보기(F37) — 아직 묶음이 없는 브라우저만 «classic» 으로 남깁니다 */}
+      <RememberHome variant="classic" />
       <HeroSlider slides={heroSlides} />
 
       {/* 모바일에서는 히어로 아래에 간편 상담 폼.

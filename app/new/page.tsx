@@ -6,9 +6,11 @@ import HomeWorks from "@/components/HomeWorks";
 import Img from "@/components/Img";
 import ProcessPanels from "@/components/ProcessPanels";
 import QuickQuoteForm from "@/components/QuickQuoteForm";
+import RememberHome from "@/components/RememberHome";
 import Reveal from "@/components/Reveal";
 import { SectionHeading } from "@/components/Section";
 import { SHOW_DETAIL_POPUPS, stepPhotoAlt, workCategories } from "@/config/content";
+import { newFaq, newKeywords, signGuides } from "@/config/new-landing";
 import { seo, site } from "@/config/site";
 import { getBlocks, getWorks } from "@/lib/cms";
 import JsonLd from "@/components/JsonLd";
@@ -35,7 +37,8 @@ import "./new.css";
  */
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = pageMetadata("/new");
+/** 홈(layout)의 «대전 …» keywords 대신 전국 검색어(F38) */
+export const metadata: Metadata = { ...pageMetadata("/new"), keywords: newKeywords };
 
 const pretendard = localFont({
   src: [
@@ -125,6 +128,8 @@ export default async function NewHome() {
           about: { "@id": `${site.url}/#business` },
         }}
       />
+      {/* 두 홈 나눠 보기(F37) — 이 브라우저는 이제 로고를 눌러도 /new 로 옵니다 */}
+      <RememberHome variant="new" />
       <HeroPop
         slides={slides}
         eyebrow="간판 제작 및 시공"
@@ -258,6 +263,76 @@ export default async function NewHome() {
           />
         </div>
       </section>
+
+      {/*
+        간판 종류 안내(F38, 2026-11-20) — 전국 검색량이 큰 간판 종류마다 «무엇인지, 무엇을 먼저 정하나»를 답합니다.
+        같은 종이색 바탕, 칸·상자 없이 글자만(위 «사업 영역»과 같은 결).
+      */}
+      <section aria-labelledby="sign-guide" className="sec-y">
+        <div className="wrap">
+          <SectionHeading
+            eyebrow="SIGN TYPES"
+            title={<span id="sign-guide">간판 종류별 제작 안내</span>}
+            desc="채널 간판, 현판, 스카시, 입간판, 네온 사인까지. 많이 찾는 간판 종류와 정할 것을 정리했습니다."
+          />
+          <ul className="mt-10 grid gap-x-12 gap-y-9 md:grid-cols-2 lg:grid-cols-3">
+            {signGuides.map((g) => (
+              <li key={g.name}>
+                <h3 className="text-xl font-black">{g.name}</h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-ink-500">{g.also}</p>
+                <p className="mt-3 text-[15px] leading-relaxed md:text-base">{g.body}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* 자주 묻는 것(F38) — FAQPage 구조화 데이터와 같은 문장 */}
+      <section aria-labelledby="sign-faq" className="sec-y">
+        <div className="wrap max-w-3xl">
+          <SectionHeading eyebrow="FAQ" title={<span id="sign-faq">간판 제작, 자주 묻는 것</span>} />
+          <div className="mt-8 divide-y divide-ink/10">
+            {newFaq.map((f) => (
+              <details key={f.q} className="group py-5">
+                <summary className="cursor-pointer list-none text-lg font-bold">
+                  <h3 className="inline">{f.q}</h3>
+                </summary>
+                <p className="mt-3 text-[15px] leading-relaxed text-ink-500 md:text-base">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "@id": `${site.url}/new#faq`,
+          mainEntity: newFaq.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Service",
+          "@id": `${site.url}/new#service`,
+          serviceType: "간판 디자인, 제작, 시공",
+          provider: { "@id": `${site.url}/#business` },
+          areaServed: { "@type": "Country", name: "대한민국" },
+          hasOfferCatalog: {
+            "@type": "OfferCatalog",
+            name: "간판 종류",
+            itemListElement: signGuides.map((g) => ({
+              "@type": "Offer",
+              itemOffered: { "@type": "Service", name: g.name, description: g.body },
+            })),
+          },
+        }}
+      />
 
       {/* 마무리 — 예전 홈과 같은 문구·단추, 위 경계선 없이 */}
       <section className="sec-y text-center">

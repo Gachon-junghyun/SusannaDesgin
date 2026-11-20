@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { site } from "@/config/site";
+import { homeHref } from "@/lib/homeVariant";
 
 const NAV = [
   { href: "/about", label: "회사소개" },
@@ -84,6 +85,19 @@ export default function Header({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  /**
+   * 두 홈 나눠 보기(F37, 2026-11-20) — `/new` 로 들어왔던 브라우저는 로고가 `/new` 로 갑니다.
+   * 주소는 늘 `/` 로 그리고, 누르는 순간 저장값을 읽어 `/new` 로 보냅니다(A3: 공개 페이지에서 cookies 안 씀).
+   */
+  const router = useRouter();
+  const goHome = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; // 새 탭 열기는 그대로
+    if (homeHref() === "/new") {
+      e.preventDefault();
+      router.push("/new");
+    }
+  };
+
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
@@ -145,7 +159,7 @@ export default function Header({
         }`}
       >
         <div className="wrap flex h-16 items-center justify-between md:h-20">
-          <Link href="/" className="flex items-center" aria-label={`${site.name} 홈`}>
+          <Link href="/" onClick={goHome} className="flex items-center" aria-label={`${site.name} 홈`}>
             <Image
               src={light ? site.logoWhite : site.logo}
               alt={`${site.legalName} ${site.nameEn}`}
